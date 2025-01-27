@@ -7,3 +7,5 @@ server.connect( "ws://172.201.217.153:80", "CHAT5_roomnametest");
 server.on_connect = function(){
   console.log("Connected to server");
 };
+
+console.log("testconnection.js loaded");
