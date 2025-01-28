@@ -19,13 +19,13 @@ function restoreUsers(userList) {
 
   // Rebuild UI list of online users
   for (let i = 0; i < onlineUsers.length; i++) {
-    appendUser(onlineUsers[i], userList);
+    appendUser(onlineUsers[i].username, userList);
   }
 }
 
-function appendUser(user, userList) {
+function appendUser(username, userList) {
   const users = document.createElement('div'); // `user` is being redeclared here, which overwrites the parameter.
-  users.textContent = user.username;
+  users.textContent = username;
   userList.appendChild(users);
   userList.scrollTop = userList.scrollHeight; // `chatBox` is undefined here.
 }
@@ -69,7 +69,7 @@ document.addEventListener("DOMContentLoaded", () => {
             ID: my_id
           }
           onlineUsers.push(myself_as_user);
-          appendUser(myself_as_user, userList);
+          appendUser(usernameInput.value, userList);
       };
     
       server.on_room_info = (info) => {
@@ -86,6 +86,7 @@ document.addEventListener("DOMContentLoaded", () => {
             text: chatHistory
           }));
 
+          //TODO: Make only 1 user (oldest/newest) send the online users (track who should send it)
           server.sendMessage(JSON.stringify({
             type: "online_users",
             text: onlineUsers
@@ -112,7 +113,12 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         else if (parsed_msg.type === "online_users"){
           console.log("Received users: " + JSON.stringify(parsed_msg.text));
-          onlineUsers.push(parsed_msg.text);
+
+          // Push each online user into array
+          for (let i = 0; i < parsed_msg.text.length; i++) {
+            onlineUsers.push(parsed_msg.text[i]);
+          }
+          console.log(JSON.stringify(onlineUsers));
 
           //TODO
           restoreUsers(userList);
