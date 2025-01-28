@@ -6,6 +6,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const messageInput = document.getElementById("message");
   const sendMessageBtn = document.getElementById("send-message-btn");
 
+  const chatHistory = [];
+
   connectBtn.addEventListener("click", () => {
       const room = roomInput.value.trim();
 
@@ -27,6 +29,12 @@ document.addEventListener("DOMContentLoaded", () => {
       
       server.on_user_connected = id => {
           console.log(`User connected: ${id}`);
+
+          // Make all conected users send to him the room's chat history
+          server.sendMessage(JSON.stringify({
+            type: "chat_history",
+            text: chatHistory
+          }));
       };
 
       server.on_user_disconnected = id => {
@@ -34,20 +42,26 @@ document.addEventListener("DOMContentLoaded", () => {
       };
 
       server.on_message = (author_id, msg) => {
-        msg = JSON.parse(msg);
+        parsed_msg = JSON.parse(msg);
 
-        //Distinguish between chat history message and regular message
-        if (msg.type === "chat_history") {
-          console.log("Received chat history: " + msg.text);
+        // Distinguish between chat history message and regular message
+        if (parsed_msg.type === "chat_history") {
+          console.log("Received chat history: " + parsed_msg.text);
+          chatHistory = JSON.stringify(parsed_msg.text);
+
+        //TODO: Restore chats and their messages on html
         }
         else { // A regular chat message
-          console.log("Received message sent by " + msg.username + " (ID: " + author_id + "): " + msg.text);
+          console.log("Received message sent by " + parsed_msg.username + " (ID: " + author_id + "): " + parsed_msg.text);
+          
+          // Update local chat history on receive
+          
         }
       }
 
 
       sendMessageBtn.addEventListener("click", () => {
-        //Construct the message as a JSON using the text on the input field + the username
+        // Construct the message as a JSON using the text on the input field + the username
         const message = JSON.stringify({
             type: "chat_message",
             username: usernameInput.value,
@@ -57,6 +71,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (message) {
             server.sendMessage(message);  
             console.log("Message sent by: " + usernameInput.value + ": " + messageInput.value);
+
+            // Update your own chat history
         } else {
             console.log("Message cannot be empty!");
         }
