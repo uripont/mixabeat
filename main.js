@@ -40,6 +40,7 @@ function appendUser(user, userList, index) {
     userBtn.addEventListener('click', () => {
       // User object is directly accessible through onlineUsers[index]
       console.log("Clicked user:", onlineUsers[index]);
+      switchToPrivateChat(onlineUsers[index]);
     });
   }
   
@@ -52,7 +53,22 @@ function addGeneralChatButton(userList) {
   generalBtn.textContent = "General Chat";
   generalBtn.classList.add('user-button', 'general-chat');
   generalBtn.id = 'general-chat-btn';
+  generalBtn.addEventListener('click', switchToGeneralChat);
   userList.appendChild(generalBtn);
+}
+
+function switchToPrivateChat(user) {
+  activeChat = user.id;
+  document.getElementById('chat-header').textContent = `Private chat with ${user.username}`;
+  document.getElementById('general-chat-btn').classList.remove('active');
+  chatBox.innerHTML = ''; // Empty current chat
+}
+
+function switchToGeneralChat() {
+  activeChat = "general";
+  document.getElementById('chat-header').textContent = "General Chat";
+  document.getElementById('general-chat-btn').classList.add('active');
+  restoreChat(chatBox, chatHistories.general);
 }
 
 var chatHistories = {
@@ -62,12 +78,13 @@ var chatHistories = {
 var onlineUsers = [];
 var activeChat = "general";
 var myself_as_user = null;
+var chatBox = null; // chatBox accessible globally
 
 document.addEventListener("DOMContentLoaded", () => {
   const connectBtn = document.getElementById("connect-btn");
   const roomInput = document.getElementById("room");
   const usernameInput = document.getElementById("username");
-  const chatBox = document.getElementById('chat-box');
+  chatBox = document.getElementById('chat-box'); // Assign to global variable
   const userList = document.getElementById('user-list');
   const messageInput = document.getElementById("message");
   const sendMessageBtn = document.getElementById("send-message-btn");
