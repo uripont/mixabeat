@@ -29,14 +29,20 @@ function restoreUsers(userList) {
 
 function appendUser(user, userList, index) {
   const userBtn = document.createElement('button');
-  userBtn.textContent = user.username;
   userBtn.classList.add('user-button');
-  userBtn.addEventListener('click', () => {
-    // User object is directly accessible through onlineUsers[index]
-    if (user.id !== myself_as_user.id) { // Don't handle clicks on your own button
+  
+  // Special handling for current user's button
+  if (user.id === myself_as_user?.id) {
+    userBtn.textContent = `${user.username} (You)`;
+    userBtn.disabled = true;
+  } else {
+    userBtn.textContent = user.username;
+    userBtn.addEventListener('click', () => {
+      // User object is directly accessible through onlineUsers[index]
       console.log("Clicked user:", onlineUsers[index]);
-    }
-  });
+    });
+  }
+  
   userList.appendChild(userBtn);
   userList.scrollTop = userList.scrollHeight;
 }
