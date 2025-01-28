@@ -51,8 +51,12 @@ document.addEventListener("DOMContentLoaded", () => {
           return;
       }
 
-      var server = new SillyClient();
+      // For public-facing server
       server.connect( "ws://172.201.217.153:80", `CHAT5_${room}`);
+
+      // For server using VPN
+      //server.connect( "ecv-2025.doc.upf.edu/port/55000/ws", `CHAT5_${room}`);
+
 
       server.on_ready = (my_id) => {
           console.log("Connected to server with ID: " + my_id);
