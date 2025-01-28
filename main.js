@@ -1,8 +1,15 @@
+function appendMessage(sender, message, chatBox) {
+  const msg = document.createElement('div');
+  msg.textContent = `${sender}: ${message}`;
+  chatBox.appendChild(msg);
+  chatBox.scrollTop = chatBox.scrollHeight; 
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   const connectBtn = document.getElementById("connect-btn");
   const roomInput = document.getElementById("room");
   const usernameInput = document.getElementById("username");
-
+  const chatBox = document.getElementById('chat-box');
   const messageInput = document.getElementById("message");
   const sendMessageBtn = document.getElementById("send-message-btn");
 
@@ -53,7 +60,8 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         else { // A regular chat message
           console.log("Received message sent by " + parsed_msg.username + " (ID: " + author_id + "): " + parsed_msg.text);
-          
+          appendMessage(msg.username, msg.text, chatBox);
+
           // Update local chat history on receive
           const latest = {
             username: parsed_msg.username,
@@ -76,6 +84,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (message) {
             server.sendMessage(message);  
             console.log("Message sent by: " + usernameInput.value + ": " + messageInput.value);
+            appendMessage(usernameInput.value, messageInput.value, chatBox);
 
             // Update your own chat history
             const latest = {
