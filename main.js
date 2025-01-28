@@ -202,16 +202,41 @@ document.addEventListener("DOMContentLoaded", () => {
 
           restoreUsers(userList);
         }
+        else if (parsed_msg.type === "private_message") {
+          console.log("Received private message from " + parsed_msg.username + " (ID: " + author_id + "): " + parsed_msg.text);
+          
+          // Store in private chat history
+          const chatKey = getChatKey(myself_as_user.id, author_id);
+          if (!chatHistories.private[chatKey]) {
+            chatHistories.private[chatKey] = [];
+          }
+          
+          // Update private chat history
+          const latest = {
+            username: parsed_msg.username,
+            text: parsed_msg.text
+          };
+          chatHistories.private[chatKey].push(latest);
+
+          // Only display if in private chat with sender
+          if (activeChat === author_id) {
+            appendMessage(parsed_msg.username, parsed_msg.text, chatBox);
+          }
+        }
         else { // A regular chat message
           console.log("Received message sent by " + parsed_msg.username + " (ID: " + author_id + "): " + parsed_msg.text);
-          appendMessage(parsed_msg.username, parsed_msg.text, chatBox);
-
-          // Update local chat history on receive
+          
+          // Update general chat history
           const latest = {
             username: parsed_msg.username,
             text: parsed_msg.text
           };
           chatHistories.general.push(latest);
+          
+          // Only display if in general chat
+          if (activeChat === "general") {
+            appendMessage(parsed_msg.username, parsed_msg.text, chatBox);
+          }
           console.log("Local chat history updated after receive: " + JSON.stringify(chatHistories.general));
         }
       }
@@ -222,23 +247,46 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        const message = JSON.stringify({
+        let message;
+        const messageText = messageInput.value;
+        
+        if (activeChat === "general") {
+          message = {
             type: "chat_message",
             username: usernameInput.value,
-            text: messageInput.value
-        });
+            text: messageText
+          };
+          server.sendMessage(JSON.stringify(message));
+        } else {
+          message = {
+            type: "private_message",
+            username: usernameInput.value,
+            text: messageText,
+            recipientId: activeChat
+          };
+          // Send only to recipient and self
+          server.sendMessage(JSON.stringify(message), [activeChat, myself_as_user.id]);
+        }
         
-        server.sendMessage(message);  
-        console.log("Message sent by: " + usernameInput.value + ": " + messageInput.value);
-        appendMessage(usernameInput.value, messageInput.value, chatBox);
+        console.log("Message sent by: " + usernameInput.value + ": " + messageText);
+        appendMessage(usernameInput.value, messageText, chatBox);
 
-        // Update your own chat history
+        // Store in appropriate history
         const latest = {
           username: usernameInput.value,
-          text: messageInput.value
+          text: messageText
         };
-        chatHistories.general.push(latest);
-        console.log("Local chat history updated after receive: " + JSON.stringify(chatHistories.general));
+        
+        if (activeChat === "general") {
+          chatHistories.general.push(latest);
+          console.log("Local chat history updated after send: " + JSON.stringify(chatHistories.general));
+        } else {
+          const chatKey = getChatKey(myself_as_user.id, activeChat);
+          if (!chatHistories.private[chatKey]) {
+            chatHistories.private[chatKey] = [];
+          }
+          chatHistories.private[chatKey].push(latest);
+        }
 
         messageInput.value = ''; // Clear input after sending
       });
