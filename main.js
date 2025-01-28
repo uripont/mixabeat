@@ -28,15 +28,22 @@ function restoreUsers(userList) {
 }
 
 function appendUser(user, userList, index) {
+  const container = document.createElement('div');
+  container.classList.add('user-container');
+
   const userBtn = document.createElement('button');
   userBtn.classList.add('user-button');
+  userBtn.classList.add(`avatar-${user.avatar}`);
+  
+  const nameLabel = document.createElement('div');
+  nameLabel.classList.add('user-name');
   
   // Special handling for current user's button
   if (user.id === myself_as_user?.id) {
-    userBtn.textContent = `${user.username} (You)`;
+    nameLabel.textContent = `${user.username} (You)`;
     userBtn.disabled = true;
   } else {
-    userBtn.textContent = user.username;
+    nameLabel.textContent = user.username;
     userBtn.addEventListener('click', () => {
       // User object is directly accessible through onlineUsers[index]
       console.log("Clicked user:", onlineUsers[index]);
@@ -44,7 +51,9 @@ function appendUser(user, userList, index) {
     });
   }
   
-  userList.appendChild(userBtn);
+  container.appendChild(userBtn);
+  container.appendChild(nameLabel);
+  userList.appendChild(container);
   userList.scrollTop = userList.scrollHeight;
 }
 
@@ -124,19 +133,39 @@ document.addEventListener("DOMContentLoaded", () => {
       server.on_ready = (my_id) => {
           console.log("Connected to server with ID: " + my_id);
           
+          const avatarId = document.getElementById("avatar").value;
           server.sendMessage(JSON.stringify({
             type: "online",
             username: usernameInput.value,
-            id: my_id
+            id: my_id,
+            avatar: avatarId
           }));
 
           // Update local users history on ready
           myself_as_user = {
             username: usernameInput.value,
-            id: my_id
+            id: my_id,
+            avatar: avatarId
           };
           onlineUsers.push(myself_as_user);
           appendUser(myself_as_user, userList, onlineUsers.length - 1);
+
+          // Setup avatar change handler
+          const changeAvatarSelect = document.getElementById("change-avatar");
+          changeAvatarSelect.value = avatarId; // Set initial value
+          changeAvatarSelect.addEventListener("change", () => {
+            const newAvatarId = changeAvatarSelect.value;
+            myself_as_user.avatar = newAvatarId;
+            
+            // Send to everyone in the room (yet new message type)
+            server.sendMessage(JSON.stringify({
+              type: "avatar_update",
+              userId: myself_as_user.id,
+              newAvatar: newAvatarId
+            }));
+            // Refresh display
+            restoreUsers(userList);
+          });
       };
     
       server.on_room_info = (info) => {
@@ -186,11 +215,11 @@ document.addEventListener("DOMContentLoaded", () => {
           restoreChat(chatBox, chatHistories.general);
         }
         else if (parsed_msg.type === "online"){
-          
           // Update local users history when receiving "online"
           newly_joined_user = {
             username: parsed_msg.username,
-            id: parsed_msg.id
+            id: parsed_msg.id,
+            avatar: parsed_msg.avatar
           }
           onlineUsers.push(newly_joined_user);
           appendUser(newly_joined_user, userList, onlineUsers.length - 1);
@@ -205,6 +234,14 @@ document.addEventListener("DOMContentLoaded", () => {
           console.log(JSON.stringify(onlineUsers));
 
           restoreUsers(userList);
+        }
+        else if (parsed_msg.type === "avatar_update") {
+          // Find and update user's avatar
+          const userToUpdate = onlineUsers.find(u => u.id === parsed_msg.userId);
+          if (userToUpdate) {
+            userToUpdate.avatar = parsed_msg.newAvatar;
+            restoreUsers(userList);
+          }
         }
         else if (parsed_msg.type === "private_message") {
           console.log("Received private message from " + parsed_msg.username + " (ID: " + author_id + "): " + parsed_msg.text);
