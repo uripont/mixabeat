@@ -5,6 +5,14 @@ function appendMessage(sender, message, chatBox) {
   chatBox.scrollTop = chatBox.scrollHeight; 
 }
 
+var chatHistory = [];
+
+function restoreChat(chatBox) {
+  for (let i = 0; i < chatHistory.length; i++) {
+    appendMessage(chatHistory[i].username, chatHistory[i].text, chatBox);
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   const connectBtn = document.getElementById("connect-btn");
   const roomInput = document.getElementById("room");
@@ -13,7 +21,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const messageInput = document.getElementById("message");
   const sendMessageBtn = document.getElementById("send-message-btn");
 
-  var chatHistory = [];
 
   connectBtn.addEventListener("click", () => {
       const room = roomInput.value.trim();
@@ -54,9 +61,9 @@ document.addEventListener("DOMContentLoaded", () => {
         // Distinguish between chat history message and regular message
         if (parsed_msg.type === "chat_history") {
           console.log("Received chat history: " + JSON.stringify(parsed_msg.text));
-            chatHistory = parsed_msg.text;
+          chatHistory = parsed_msg.text;
 
-        //TODO: Restore chats and their messages on html
+          restoreChat(chatBox);
         }
         else { // A regular chat message
           console.log("Received message sent by " + parsed_msg.username + " (ID: " + author_id + "): " + parsed_msg.text);
