@@ -35,8 +35,21 @@
 
             <!-- User List -->
             <div style="flex: 1;">
-                <h3>Connected Users</h3>
-                <div id="user-list" style="height: 300px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px;"></div>
+                <!-- Extra avatar selector on list (the one allowing realtime changes)-->
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <h3>Connected Users</h3>
+                    <div id="user-list" style="height: 300px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px;"></div>
+                    <div>
+                        <label for="change-avatar">Change Avatar:</label>
+                        <select id="change-avatar">
+                            <option value="1">Avatar 1 (Red)</option>
+                            <option value="2">Avatar 2 (Turquoise)</option>
+                            <option value="3">Avatar 3 (Blue)</option>
+                            <option value="4">Avatar 4 (Green)</option>
+                            <option value="5">Avatar 5 (Yellow)</option>
+                        </select>
+                    </div>
+                </div>
             </div>
         </div>
         <label for="message">Message:</label>
