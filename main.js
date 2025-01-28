@@ -18,17 +18,35 @@ function restoreUsers(userList) {
     userList.removeChild(userList.firstChild)
   }
 
+  // Add back the general chat button first
+  addGeneralChatButton(userList);
+
   // Rebuild UI list of online users
   for (let i = 0; i < onlineUsers.length; i++) {
-    appendUser(onlineUsers[i].username, userList);
+    appendUser(onlineUsers[i], userList, i);
   }
 }
 
-function appendUser(username, userList) {
-  const users = document.createElement('div'); // `user` is being redeclared here, which overwrites the parameter.
-  users.textContent = username;
-  userList.appendChild(users);
-  userList.scrollTop = userList.scrollHeight; // `chatBox` is undefined here.
+function appendUser(user, userList, index) {
+  const userBtn = document.createElement('button');
+  userBtn.textContent = user.username;
+  userBtn.classList.add('user-button');
+  userBtn.addEventListener('click', () => {
+    // User object is directly accessible through onlineUsers[index]
+    if (user.id !== myself_as_user.id) { // Don't handle clicks on your own button
+      console.log("Clicked user:", onlineUsers[index]);
+    }
+  });
+  userList.appendChild(userBtn);
+  userList.scrollTop = userList.scrollHeight;
+}
+
+function addGeneralChatButton(userList) {
+  const generalBtn = document.createElement('button');
+  generalBtn.textContent = "General Chat";
+  generalBtn.classList.add('user-button', 'general-chat');
+  generalBtn.id = 'general-chat-btn';
+  userList.appendChild(generalBtn);
 }
 
 var chatHistories = {
@@ -36,6 +54,8 @@ var chatHistories = {
   private: {}
 };
 var onlineUsers = [];
+var activeChat = "general";
+var myself_as_user = null;
 
 document.addEventListener("DOMContentLoaded", () => {
   const connectBtn = document.getElementById("connect-btn");
@@ -45,6 +65,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const userList = document.getElementById('user-list');
   const messageInput = document.getElementById("message");
   const sendMessageBtn = document.getElementById("send-message-btn");
+
+  // Add initial general chat button
+  addGeneralChatButton(userList);
 
   connectBtn.addEventListener("click", () => {
       const room = roomInput.value.trim();
@@ -74,9 +97,9 @@ document.addEventListener("DOMContentLoaded", () => {
           myself_as_user = {
             username: usernameInput.value,
             id: my_id
-          }
+          };
           onlineUsers.push(myself_as_user);
-          appendUser(usernameInput.value, userList);
+          appendUser(myself_as_user, userList, onlineUsers.length - 1);
       };
     
       server.on_room_info = (info) => {
@@ -115,31 +138,29 @@ document.addEventListener("DOMContentLoaded", () => {
 
           console.log(JSON.stringify(onlineUsers));
           restoreUsers(userList);
-          
       };
 
       server.on_message = (author_id, msg) => {
-        parsed_msg = JSON.parse(msg);
+        const parsed_msg = JSON.parse(msg);
 
-        // Distinguish between chat history message and regular message
         if (parsed_msg.type === "chat_history") {
           console.log("Received chat history: " + JSON.stringify(parsed_msg.text));
           chatHistories.general = parsed_msg.text;
           restoreChat(chatBox, chatHistories.general);
         }
         else if (parsed_msg.type === "online"){
-
+          
           // Update local users history when receiving "online"
           newly_joined_user = {
             username: parsed_msg.username,
             id: parsed_msg.id
           }
           onlineUsers.push(newly_joined_user);
-          appendUser(parsed_msg.username, userList);
+          appendUser(newly_joined_user, userList, onlineUsers.length - 1);
         }
         else if (parsed_msg.type === "online_users"){
           console.log("Received users: " + JSON.stringify(parsed_msg.text));
-
+          
           // Push each online user into array
           for (let i = 0; i < parsed_msg.text.length; i++) {
             onlineUsers.push(parsed_msg.text[i]);
@@ -148,7 +169,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
           restoreUsers(userList);
         }
-        
         else { // A regular chat message
           console.log("Received message sent by " + parsed_msg.username + " (ID: " + author_id + "): " + parsed_msg.text);
           appendMessage(parsed_msg.username, parsed_msg.text, chatBox);
@@ -164,29 +184,30 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       sendMessageBtn.addEventListener("click", () => {
-        // Construct the message as a JSON using the text on the input field + the username
+        if (!messageInput.value) {
+            console.log("Message cannot be empty!");
+            return;
+        }
+
         const message = JSON.stringify({
             type: "chat_message",
             username: usernameInput.value,
             text: messageInput.value
         });
         
-        if (message) {
-            server.sendMessage(message);  
-            console.log("Message sent by: " + usernameInput.value + ": " + messageInput.value);
-            appendMessage(usernameInput.value, messageInput.value, chatBox);
+        server.sendMessage(message);  
+        console.log("Message sent by: " + usernameInput.value + ": " + messageInput.value);
+        appendMessage(usernameInput.value, messageInput.value, chatBox);
 
-            // Update your own chat history
-            const latest = {
-              username: usernameInput.value,
-              text: messageInput.value
-            };
-            chatHistories.general.push(latest);
-            console.log("Local chat history updated after receive: " + JSON.stringify(chatHistories.general));
-        } else {
-            console.log("Message cannot be empty!");
-        }
+        // Update your own chat history
+        const latest = {
+          username: usernameInput.value,
+          text: messageInput.value
+        };
+        chatHistories.general.push(latest);
+        console.log("Local chat history updated after receive: " + JSON.stringify(chatHistories.general));
+
+        messageInput.value = ''; // Clear input after sending
       });
-
   });
 });
