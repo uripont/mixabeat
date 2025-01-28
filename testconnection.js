@@ -3,6 +3,7 @@ console.log("testconnection.js loaded");
 document.addEventListener("DOMContentLoaded", () => {
   const connectBtn = document.getElementById("connect-btn");
   const roomInput = document.getElementById("room");
+  const usernameInput = document.getElementById("username");
 
   connectBtn.addEventListener("click", () => {
       const room = roomInput.value.trim();
