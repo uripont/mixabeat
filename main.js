@@ -66,7 +66,7 @@ document.addEventListener("DOMContentLoaded", () => {
           // Update local users history on ready
           myself_as_user = {
             username: usernameInput.value,
-            ID: my_id
+            id: my_id
           }
           onlineUsers.push(myself_as_user);
           appendUser(usernameInput.value, userList);
@@ -95,8 +95,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
       server.on_user_disconnected = id => {
           console.log(`User disconnected: ${id}`);
+          console.log("Before loop: " + JSON.stringify(onlineUsers));
+
 
           //TODO: remove the user that has disconnected from connected list
+          for (let i = 0; i < onlineUsers.length; i++){
+            if (onlineUsers[i].id == id){
+              console.log (id);
+              console.log(i);
+              onlineUsers.splice(i,1); // removes 1 element at position i
+            }
+          }
+
+          console.log(JSON.stringify(onlineUsers));
+          restoreUsers(userList);
+          
       };
 
       server.on_message = (author_id, msg) => {
@@ -109,6 +122,13 @@ document.addEventListener("DOMContentLoaded", () => {
           restoreChat(chatBox);
         }
         else if (parsed_msg.type === "online"){
+
+          // Update local users history when receiving "online"
+          newly_joined_user = {
+            username: parsed_msg.username,
+            id: parsed_msg.id
+          }
+          onlineUsers.push(newly_joined_user);
           appendUser(parsed_msg.username, userList);
         }
         else if (parsed_msg.type === "online_users"){
@@ -120,9 +140,9 @@ document.addEventListener("DOMContentLoaded", () => {
           }
           console.log(JSON.stringify(onlineUsers));
 
-          //TODO
           restoreUsers(userList);
         }
+        
         else { // A regular chat message
           console.log("Received message sent by " + parsed_msg.username + " (ID: " + author_id + "): " + parsed_msg.text);
           appendMessage(parsed_msg.username, parsed_msg.text, chatBox);
