@@ -5,19 +5,40 @@ function appendMessage(sender, message, chatBox) {
   chatBox.scrollTop = chatBox.scrollHeight; 
 }
 
-var chatHistory = [];
-
 function restoreChat(chatBox) {
   for (let i = 0; i < chatHistory.length; i++) {
     appendMessage(chatHistory[i].username, chatHistory[i].text, chatBox);
   }
 }
 
+function restoreUsers(userList) {
+  // Reset UI list of online users
+  while (userList.firstChild){
+    userList.removeChild(userList.firstChild)
+  }
+
+  // Rebuild UI list of online users
+  for (let i = 0; i < onlineUsers.length; i++) {
+    appendUser(onlineUsers[i].username, userList);
+  }
+}
+
+function appendUser(username, userList) {
+  const users = document.createElement('div'); // `user` is being redeclared here, which overwrites the parameter.
+  users.textContent = username;
+  userList.appendChild(users);
+  userList.scrollTop = userList.scrollHeight; // `chatBox` is undefined here.
+}
+
+var chatHistory = [];
+var onlineUsers = [];
+
 document.addEventListener("DOMContentLoaded", () => {
   const connectBtn = document.getElementById("connect-btn");
   const roomInput = document.getElementById("room");
   const usernameInput = document.getElementById("username");
   const chatBox = document.getElementById('chat-box');
+  const userList = document.getElementById('user-list');
   const messageInput = document.getElementById("message");
   const sendMessageBtn = document.getElementById("send-message-btn");
 
@@ -35,6 +56,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
       server.on_ready = (my_id) => {
           console.log("Connected to server with ID: " + my_id);
+          
+          server.sendMessage(JSON.stringify({
+            type: "online",
+            username: usernameInput.value,
+            id: my_id
+          }));
+
+          // Update local users history on ready
+          myself_as_user = {
+            username: usernameInput.value,
+            id: my_id
+          }
+          onlineUsers.push(myself_as_user);
+          appendUser(usernameInput.value, userList);
       };
     
       server.on_room_info = (info) => {
@@ -50,10 +85,31 @@ document.addEventListener("DOMContentLoaded", () => {
             type: "chat_history",
             text: chatHistory
           }));
+
+          //TODO: Make only 1 user (oldest/newest) send the online users (track who should send it)
+          server.sendMessage(JSON.stringify({
+            type: "online_users",
+            text: onlineUsers
+          }));
       };
 
       server.on_user_disconnected = id => {
           console.log(`User disconnected: ${id}`);
+          console.log("Before loop: " + JSON.stringify(onlineUsers));
+
+
+          //TODO: remove the user that has disconnected from connected list
+          for (let i = 0; i < onlineUsers.length; i++){
+            if (onlineUsers[i].id == id){
+              console.log (id);
+              console.log(i);
+              onlineUsers.splice(i,1); // removes 1 element at position i
+            }
+          }
+
+          console.log(JSON.stringify(onlineUsers));
+          restoreUsers(userList);
+          
       };
 
       server.on_message = (author_id, msg) => {
@@ -63,9 +119,30 @@ document.addEventListener("DOMContentLoaded", () => {
         if (parsed_msg.type === "chat_history") {
           console.log("Received chat history: " + JSON.stringify(parsed_msg.text));
           chatHistory = parsed_msg.text;
-
           restoreChat(chatBox);
         }
+        else if (parsed_msg.type === "online"){
+
+          // Update local users history when receiving "online"
+          newly_joined_user = {
+            username: parsed_msg.username,
+            id: parsed_msg.id
+          }
+          onlineUsers.push(newly_joined_user);
+          appendUser(parsed_msg.username, userList);
+        }
+        else if (parsed_msg.type === "online_users"){
+          console.log("Received users: " + JSON.stringify(parsed_msg.text));
+
+          // Push each online user into array
+          for (let i = 0; i < parsed_msg.text.length; i++) {
+            onlineUsers.push(parsed_msg.text[i]);
+          }
+          console.log(JSON.stringify(onlineUsers));
+
+          restoreUsers(userList);
+        }
+        
         else { // A regular chat message
           console.log("Received message sent by " + parsed_msg.username + " (ID: " + author_id + "): " + parsed_msg.text);
           appendMessage(parsed_msg.username, parsed_msg.text, chatBox);

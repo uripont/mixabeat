@@ -16,8 +16,16 @@
         <input type="text" id="username" placeholder="Enter username">
         <button id="connect-btn">Connect</button>
 
-        <div id="chat-box" style="height: 300px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px;"></div>
-        
+        <div style="display: flex; gap: 20px;">
+            <!-- Chat Box -->
+            <div id="chat-box" style="flex: 2; height: 300px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px;"></div>
+
+            <!-- User List -->
+            <h3>Connected Users</h3>
+            <div id="user-list" style="flex: 1; height: 300px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px;">
+                <ul id="users" style="list-style-type: none; padding: 0; margin: 0;"></ul>
+            </div>
+        </div>
         <label for="message">Message:</label>
         <input type="text" id="message" placeholder="Type your message">
         <button id="send-message-btn">Send Message</button>
