@@ -177,12 +177,12 @@ document.addEventListener("DOMContentLoaded", () => {
             username: usernameInput.value,
             text: messageInput.value
         });
-        
+        messageInput.value = ""; //delete message written in input container
         if (message) {
             server.sendMessage(message);  
             console.log("Message sent by: " + usernameInput.value + ": " + messageInput.value);
             appendMessage(usernameInput.value, messageInput.value, chatBox);
-
+            
             // Update your own chat history
             const latest = {
               username: usernameInput.value,
