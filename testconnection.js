@@ -1,3 +1,7 @@
+function onMessageReceivedCallback (author_id, msg){
+    console.log("Received message sent by: " + author_id + ": " + msg);
+  }
+
 document.addEventListener("DOMContentLoaded", () => {
   const connectBtn = document.getElementById("connect-btn");
   const roomInput = document.getElementById("room");
@@ -40,6 +44,9 @@ document.addEventListener("DOMContentLoaded", () => {
             server.sendMessage(`CHAT5_${room}`, message);  
             console.log("Message sent: " + message);
             //messageInput.value = "";  
+            server.on_message = onMessageReceivedCallback;
+
+        
         } else {
             console.log("Message cannot be empty!");
         }
