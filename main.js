@@ -35,13 +35,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
       server.on_message = (author_id, msg) => {
         msg = JSON.parse(msg);
-        console.log("Received message sent by: " + msg.username + " (ID: " + author_id + "): " + msg.text);
+
+        //Distinguish between chat history message and regular message
+        if (msg.type === "chat_history") {
+          console.log("Received chat history: " + msg.text);
+        }
+        else { // A regular chat message
+          console.log("Received message sent by " + msg.username + " (ID: " + author_id + "): " + msg.text);
+        }
       }
 
 
       sendMessageBtn.addEventListener("click", () => {
         //Construct the message as a JSON using the text on the input field + the username
         const message = JSON.stringify({
+            type: "chat_message",
             username: usernameInput.value,
             text: messageInput.value
         });
