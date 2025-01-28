@@ -1,3 +1,40 @@
+.user-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 10px 0;
+}
+
+.user-name {
+  margin-top: 5px;
+  font-size: 12px;
+  text-align: center;
+}
+
+.user-button {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  padding: 0;
+  background-size: cover;
+  background-position: center;
+  border: 2px solid #ccc;
+  cursor: pointer;
+}
+
+.user-button.general-chat {
+  width: 100%;
+  height: auto;
+  border-radius: 4px;
+  padding: 8px;
+  margin: 10px 0;
+}
+
+.avatar-1 { background-color: #FF6B6B; }
+.avatar-2 { background-color: #4ECDC4; }
+.avatar-3 { background-color: #45B7D1; }
+.avatar-4 { background-color: #96CEB4; }
+.avatar-5 { background-color: #FFEEAD; }
 /* Basic resets */
 * {
     margin: 0;
