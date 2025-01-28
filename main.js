@@ -5,9 +5,10 @@ function appendMessage(sender, message, chatBox) {
   chatBox.scrollTop = chatBox.scrollHeight; 
 }
 
-function restoreChat(chatBox) {
-  for (let i = 0; i < chatHistory.length; i++) {
-    appendMessage(chatHistory[i].username, chatHistory[i].text, chatBox);
+function restoreChat(chatBox, history) {
+  if (!history) return;
+  for (let i = 0; i < history.length; i++) {
+    appendMessage(history[i].username, history[i].text, chatBox);
   }
 }
 
@@ -30,7 +31,10 @@ function appendUser(username, userList) {
   userList.scrollTop = userList.scrollHeight; // `chatBox` is undefined here.
 }
 
-var chatHistory = [];
+var chatHistories = {
+  general: [],
+  private: {}
+};
 var onlineUsers = [];
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -42,7 +46,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const messageInput = document.getElementById("message");
   const sendMessageBtn = document.getElementById("send-message-btn");
 
-
   connectBtn.addEventListener("click", () => {
       const room = roomInput.value.trim();
 
@@ -51,12 +54,12 @@ document.addEventListener("DOMContentLoaded", () => {
           return;
       }
 
+      var server = new SillyClient();
       // For public-facing server
       server.connect( "ws://172.201.217.153:80", `CHAT5_${room}`);
 
       // For server using VPN
       //server.connect( "ecv-2025.doc.upf.edu/port/55000/ws", `CHAT5_${room}`);
-
 
       server.on_ready = (my_id) => {
           console.log("Connected to server with ID: " + my_id);
@@ -87,7 +90,7 @@ document.addEventListener("DOMContentLoaded", () => {
           //TODO: Make only 1 user (oldest/newest) send the chat history (track who should send it)
           server.sendMessage(JSON.stringify({
             type: "chat_history",
-            text: chatHistory
+            text: chatHistories.general
           }));
 
           //TODO: Make only 1 user (oldest/newest) send the online users (track who should send it)
@@ -101,11 +104,10 @@ document.addEventListener("DOMContentLoaded", () => {
           console.log(`User disconnected: ${id}`);
           console.log("Before loop: " + JSON.stringify(onlineUsers));
 
-
           //TODO: remove the user that has disconnected from connected list
           for (let i = 0; i < onlineUsers.length; i++){
             if (onlineUsers[i].id == id){
-              console.log (id);
+              console.log(id);
               console.log(i);
               onlineUsers.splice(i,1); // removes 1 element at position i
             }
@@ -122,8 +124,8 @@ document.addEventListener("DOMContentLoaded", () => {
         // Distinguish between chat history message and regular message
         if (parsed_msg.type === "chat_history") {
           console.log("Received chat history: " + JSON.stringify(parsed_msg.text));
-          chatHistory = parsed_msg.text;
-          restoreChat(chatBox);
+          chatHistories.general = parsed_msg.text;
+          restoreChat(chatBox, chatHistories.general);
         }
         else if (parsed_msg.type === "online"){
 
@@ -156,11 +158,10 @@ document.addEventListener("DOMContentLoaded", () => {
             username: parsed_msg.username,
             text: parsed_msg.text
           };
-          chatHistory.push(latest);
-          console.log("Local chat history updated after receive: " + JSON.stringify(chatHistory));
+          chatHistories.general.push(latest);
+          console.log("Local chat history updated after receive: " + JSON.stringify(chatHistories.general));
         }
       }
-
 
       sendMessageBtn.addEventListener("click", () => {
         // Construct the message as a JSON using the text on the input field + the username
@@ -180,8 +181,8 @@ document.addEventListener("DOMContentLoaded", () => {
               username: usernameInput.value,
               text: messageInput.value
             };
-            chatHistory.push(latest);
-            console.log("Local chat history updated after receive: " + JSON.stringify(chatHistory));
+            chatHistories.general.push(latest);
+            console.log("Local chat history updated after receive: " + JSON.stringify(chatHistories.general));
         } else {
             console.log("Message cannot be empty!");
         }
