@@ -60,7 +60,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         else { // A regular chat message
           console.log("Received message sent by " + parsed_msg.username + " (ID: " + author_id + "): " + parsed_msg.text);
-          appendMessage(msg.username, msg.text, chatBox);
+          appendMessage(parsed_msg.username, parsed_msg.text, chatBox);
 
           // Update local chat history on receive
           const latest = {
