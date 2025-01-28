@@ -45,6 +45,7 @@ document.addEventListener("DOMContentLoaded", () => {
           console.log(`User connected: ${id}`);
 
           // Make all conected users send to him the room's chat history
+          //TODO: Make only 1 user (oldest/newest) send the chat history (track who should send it)
           server.sendMessage(JSON.stringify({
             type: "chat_history",
             text: chatHistory
