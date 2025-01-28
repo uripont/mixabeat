@@ -57,11 +57,8 @@ document.addEventListener("DOMContentLoaded", () => {
             text: ""
           }));
 
-          // Update local users history on ready
-          
+          // Update local users history on ready, BUT don't render it yet (wait for receiving online_users)
           onlineUsers.push(usernameInput.value);
-          appendUser(usernameInput.value, userList);
-
       };
     
       server.on_room_info = (info) => {
