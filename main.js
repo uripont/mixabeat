@@ -104,6 +104,13 @@ var myself_as_user = null;
 var chatBox = null; // chatBox accessible globally
 var generalChatResponsible = null; // Tracks which user is responsible for general chat
 var waitingForResponsible = false; // Flag to track if we're waiting for responsible user
+var RESPONSIBILITY_TIMEOUT = 3000; // Time to wait for responsible before assuming empty room
+
+function findNextResponsible() {
+  if (onlineUsers.length === 0) return null;
+  // Sort by join time and get earliest joined user
+  return onlineUsers.sort((a, b) => a.joinTime - b.joinTime)[0];
+}
 
 function setGeneralChatResponsible(userId, server) {
   generalChatResponsible = userId;
@@ -115,7 +122,8 @@ function setGeneralChatResponsible(userId, server) {
   console.log('[GENERAL] Broadcasting new responsible:', userId);
   server.sendMessage(JSON.stringify({
     type: "responsible_status",
-    responsibleId: userId
+    responsibleId: userId,
+    timestamp: Date.now() // Include timestamp for synchronization
   }));
 }
 
@@ -180,18 +188,22 @@ document.addEventListener("DOMContentLoaded", () => {
           waitingForResponsible = true;
           
           const avatarId = document.getElementById("avatar").value;
+          const joinTime = Date.now();
+          
           server.sendMessage(JSON.stringify({
             type: "online",
             username: usernameInput.value,
             id: my_id,
-            avatar: avatarId
+            avatar: avatarId,
+            joinTime: joinTime
           }));
 
           // Update local users history on ready
           myself_as_user = {
             username: usernameInput.value,
             id: my_id,
-            avatar: avatarId
+            avatar: avatarId,
+            joinTime: joinTime
           };
           onlineUsers.push(myself_as_user);
           appendUser(myself_as_user, userList, onlineUsers.length - 1);
@@ -199,11 +211,15 @@ document.addEventListener("DOMContentLoaded", () => {
           // Wait for responsible user to contact us
           setTimeout(() => {
             if (waitingForResponsible) {
-              console.log('[GENERAL] No response from responsible, taking responsibility');
-              setGeneralChatResponsible(my_id, server);
+              // Only become responsible if we're the first user
+              const nextResponsible = findNextResponsible();
+              if (nextResponsible && nextResponsible.id === my_id) {
+                console.log('[GENERAL] No response from responsible, taking responsibility as earliest user');
+                setGeneralChatResponsible(my_id, server);
+              }
               waitingForResponsible = false;
             }
-          }, 2000);
+          }, RESPONSIBILITY_TIMEOUT);
 
           // Setup avatar change handler
           const changeAvatarSelect = document.getElementById("change-avatar");
@@ -236,17 +252,20 @@ document.addEventListener("DOMContentLoaded", () => {
             // Send messages only to the new user
             server.sendMessage(JSON.stringify({
               type: "chat_history",
-              text: chatHistories.general
+              text: chatHistories.general,
+              timestamp: Date.now()
             }), [id]);
 
             server.sendMessage(JSON.stringify({
               type: "online_users",
-              text: onlineUsers
+              text: onlineUsers,
+              timestamp: Date.now()
             }), [id]);
 
             server.sendMessage(JSON.stringify({
               type: "responsible_status",
-              responsibleId: generalChatResponsible
+              responsibleId: generalChatResponsible,
+              timestamp: Date.now()
             }), [id]);
           }
       };
@@ -268,9 +287,11 @@ document.addEventListener("DOMContentLoaded", () => {
           // After removing user, if they were responsible, assign new responsible
           if (wasResponsible && onlineUsers.length > 0) {
             console.log('[GENERAL] Responsible user disconnected');
-            // Assign responsibility to the first remaining user (since list is already updated)
-            console.log('[GENERAL] Assigning new responsible:', onlineUsers[0].id);
-            setGeneralChatResponsible(onlineUsers[0].id, server);
+            const nextResponsible = findNextResponsible();
+            if (nextResponsible) {
+              console.log('[GENERAL] Assigning new responsible based on join time:', nextResponsible.id);
+              setGeneralChatResponsible(nextResponsible.id, server);
+            }
           }
       };
 
@@ -287,7 +308,8 @@ document.addEventListener("DOMContentLoaded", () => {
           newly_joined_user = {
             username: parsed_msg.username,
             id: parsed_msg.id,
-            avatar: parsed_msg.avatar
+            avatar: parsed_msg.avatar,
+            joinTime: parsed_msg.joinTime
           }
           onlineUsers.push(newly_joined_user);
           appendUser(newly_joined_user, userList, onlineUsers.length - 1);
