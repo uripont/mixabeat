@@ -102,10 +102,10 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         else if (parsed_msg.type === "online_users"){
           console.log("Received users: " + JSON.stringify(parsed_msg.text));
-          onlineUsers.push(parsed_msg.username);
+          onlineUsers.push(parsed_msg.text);
 
           //TODO
-          //restoreUsers(userList);
+          restoreUsers(userList);
         }
         else { // A regular chat message
           console.log("Received message sent by " + parsed_msg.username + " (ID: " + author_id + "): " + parsed_msg.text);
