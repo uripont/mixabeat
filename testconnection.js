@@ -36,15 +36,17 @@ document.addEventListener("DOMContentLoaded", () => {
           console.log(`User disconnected: ${id}`);
       };
 
+      server.on_message = onMessageReceivedCallback;
+
+
 
       sendMessageBtn.addEventListener("click", () => {
         const message = messageInput.value.trim();
         
         if (message) {
-            server.sendMessage(`CHAT5_${room}`, message);  
+            server.sendMessage(message);  
             console.log("Message sent: " + message);
             //messageInput.value = "";  
-            server.on_message = onMessageReceivedCallback;
 
         
         } else {
