@@ -46,9 +46,21 @@ document.addEventListener("DOMContentLoaded", () => {
   connectBtn.addEventListener("click", () => {
       const room = roomInput.value.trim();
 
-      if (!room) {
-          alert("Room Name is required!");
-          return;
+      
+      const roomName = document.getElementById('room').value;
+      const username = document.getElementById('username').value;
+
+      // Check if room and username are provided
+      if (roomName && username) {
+          // Hide the login screen
+          document.getElementById('login-screen').style.display = 'none';
+          
+          document.getElementById('chat-screen').style.display = 'block';
+          
+
+          // You can add more logic here to connect to the chat room and update user list, etc.
+      } else {
+          alert('Please provide both Room Name and Username.');
       }
 
       var server = new SillyClient();

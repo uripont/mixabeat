@@ -1,0 +1,209 @@
+/* Basic resets */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Apply Montserrat font globally */
+body {
+    font-family: 'Montserrat', sans-serif;
+    background-color: #121212; /* Black background */
+    color: #fff; /* White text */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    font-weight: 300;
+}
+
+/* Wrapper to hold login and chat screens side by side */
+#app-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    width: 100%;
+    height: 100%;
+}
+
+/* Login Screen */
+#login-screen {
+    background: linear-gradient(135deg, #1a1a1a, #333); /* Subtle gradient background */
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.6); /* Soft, blurred shadow */
+    width: 80%;
+    max-width: 900px;
+    text-align: center;
+    animation: fadeIn 0.6s ease-out;
+    flex: 1; /* Allow login screen to take available space */
+}
+
+/* Animations */
+@keyframes fadeIn {
+    0% {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Chat Screen (Initially hidden) */
+#chat-screen {
+    background: linear-gradient(135deg, #2a2a2a, #3c3c3c);
+    padding: 30px;
+    width: 400px;
+    height: 100%;
+    position: fixed;
+    top: 0;
+    right: 0;
+    border-radius: 20px;
+    box-shadow: -5px 0 10px rgba(0, 0, 0, 0.6);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
+/* Headings */
+h2 {
+    font-size: 2.5rem;
+    margin-bottom: 20px;
+    color: #f1f1f1; /* Light color for headings */
+    letter-spacing: 1px;
+    text-shadow: 0px 2px 5px rgba(0, 0, 0, 0.5); /* Soft text shadow */
+}
+
+h3 {
+    font-size: 1.3rem;
+    color: #f1f1f1;
+    margin-bottom: 15px;
+    text-align: left; /* Title aligned to the left */
+}
+
+/* Input fields and buttons */
+label {
+    font-size: 1rem;
+    text-align: left;
+    width: 100%;
+    display: block;
+    margin-top: 20px;
+}
+
+/* Align input fields for Room Name and Username to be as wide as possible */
+#login-screen input[type="text"] {
+    width: 100%; /* Full width */
+    padding: 14px;
+    margin: 10px 0;
+    border: 2px solid #444;
+    border-radius: 25px;
+    background-color: #2a2a2a;
+    color: #fff;
+    font-size: 1rem;
+    transition: all 0.3s ease-in-out;
+}
+
+/* Focus styles for inputs */
+input[type="text"]:focus {
+    border-color: #66b3ff; /* Light blue color */
+    outline: none;
+    box-shadow: 0 0 10px rgba(102, 179, 255, 0.8); /* Soft light blue glow on focus */
+}
+
+/* Buttons */
+button {
+    width: 100%; /* Full width of the container */
+    background-color: #66b3ff; /* Light blue color */
+    color: white;
+    padding: 14px;
+    border: none;
+    border-radius: 30px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: all 0.3s ease-in-out;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); /* Light shadow under button */
+}
+
+button:hover {
+    background-color: #3399ff;
+    transform: translateY(-3px);
+}
+
+button:active {
+    background-color: #1a80cc;
+    transform: translateY(0);
+}
+
+/* Chat Box and User List Containers */
+#user-list-container {
+    margin-bottom: 20px;
+}
+
+#chat-box {
+    height: 400px;
+    overflow-y: scroll;
+    border-radius: 15px;
+    padding: 15px;
+    background: linear-gradient(135deg, #3c3c3c, #2a2a2a);
+    border: 1px solid #444;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+    text-align: left; /* Align messages to the left */
+}
+
+#user-list {
+    height: 100px;
+    overflow-y: scroll;
+    border-radius: 15px;
+    padding: 15px;
+    background-color: #333;
+    border: 1px solid #444;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+}
+
+/* Message input and send button */
+#message {
+    width: 100%; /* Full width of the chat box */
+    padding: 14px;
+    margin: 10px 0;
+    border: 2px solid #444;
+    border-radius: 25px;
+    background-color: #2a2a2a;
+    color: #fff;
+    font-size: 1rem;
+    transition: all 0.3s ease-in-out;
+}
+
+#message:focus {
+    border-color: #66b3ff; /* Light blue color */
+    outline: none;
+    box-shadow: 0 0 10px rgba(102, 179, 255, 0.8);
+}
+
+#send-message-btn {
+    width: 100%; /* Full width of the chat box */
+    padding: 14px;
+    margin: 10px 0;
+    border: none;
+    border-radius: 25px;
+    background-color: #66b3ff; /* Light blue color */
+    color: white;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: all 0.3s ease-in-out;
+    text-transform: uppercase;
+}
+
+#send-message-btn:hover {
+    background-color: #3399ff;
+    transform: translateY(-3px);
+}
+
+#send-message-btn:active {
+    background-color: #1a80cc;
+    transform: translateY(0);
+}
