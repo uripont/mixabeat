@@ -102,6 +102,22 @@ var onlineUsers = [];
 var activeChat = "general";
 var myself_as_user = null;
 var chatBox = null; // chatBox accessible globally
+var generalChatResponsible = null; // Tracks which user is responsible for general chat
+var waitingForResponsible = false; // Flag to track if we're waiting for responsible user
+
+function setGeneralChatResponsible(userId, server) {
+  generalChatResponsible = userId;
+  
+  if (myself_as_user?.id === userId) {
+    console.log('[GENERAL] Now responsible for chat history');
+  }
+  
+  console.log('[GENERAL] Broadcasting new responsible:', userId);
+  server.sendMessage(JSON.stringify({
+    type: "responsible_status",
+    responsibleId: userId
+  }));
+}
 
 document.addEventListener("DOMContentLoaded", () => {
   const connectBtn = document.getElementById("connect-btn");
@@ -161,6 +177,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       server.on_ready = (my_id) => {
           console.log("Connected to server with ID: " + my_id);
+          waitingForResponsible = true;
           
           const avatarId = document.getElementById("avatar").value;
           server.sendMessage(JSON.stringify({
@@ -178,6 +195,15 @@ document.addEventListener("DOMContentLoaded", () => {
           };
           onlineUsers.push(myself_as_user);
           appendUser(myself_as_user, userList, onlineUsers.length - 1);
+
+          // Wait for responsible user to contact us
+          setTimeout(() => {
+            if (waitingForResponsible) {
+              console.log('[GENERAL] No response from responsible, taking responsibility');
+              setGeneralChatResponsible(my_id, server);
+              waitingForResponsible = false;
+            }
+          }, 2000);
 
           // Setup avatar change handler
           const changeAvatarSelect = document.getElementById("change-avatar");
@@ -202,44 +228,57 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       
       server.on_user_connected = id => {
-          console.log(`User connected: ${id}`);
+          console.log(`[GENERAL] User connected:`, id);
 
-          // Make all conected users send to him the room's chat history
-          //TODO: Make only 1 user (oldest/newest) send the chat history (track who should send it)
-          server.sendMessage(JSON.stringify({
-            type: "chat_history",
-            text: chatHistories.general // private chat history not sent
-          }));
+          // Only the responsible user sends data to new users
+          if (myself_as_user?.id === generalChatResponsible) {
+            console.log('[GENERAL] Sending data to new user:', id);
+            // Send messages only to the new user
+            server.sendMessage(JSON.stringify({
+              type: "chat_history",
+              text: chatHistories.general
+            }), [id]);
 
-          //TODO: Make only 1 user (oldest/newest) send the online users (track who should send it)
-          server.sendMessage(JSON.stringify({
-            type: "online_users",
-            text: onlineUsers
-          }));
+            server.sendMessage(JSON.stringify({
+              type: "online_users",
+              text: onlineUsers
+            }), [id]);
+
+            server.sendMessage(JSON.stringify({
+              type: "responsible_status",
+              responsibleId: generalChatResponsible
+            }), [id]);
+          }
       };
 
       server.on_user_disconnected = id => {
-          console.log(`User disconnected: ${id}`);
-          console.log("Before loop: " + JSON.stringify(onlineUsers));
+          console.log(`[GENERAL] User disconnected:`, id);
 
           // Remove the user that has disconnected from connected list
+          let wasResponsible = id === generalChatResponsible;
           for (let i = 0; i < onlineUsers.length; i++){
             if (onlineUsers[i].id == id){
-              console.log(id);
-              console.log(i);
               onlineUsers.splice(i,1); // removes 1 element at position i
+              break;
             }
           }
 
-          console.log(JSON.stringify(onlineUsers));
           restoreUsers(userList);
+
+          // After removing user, if they were responsible, assign new responsible
+          if (wasResponsible && onlineUsers.length > 0) {
+            console.log('[GENERAL] Responsible user disconnected');
+            // Assign responsibility to the first remaining user (since list is already updated)
+            console.log('[GENERAL] Assigning new responsible:', onlineUsers[0].id);
+            setGeneralChatResponsible(onlineUsers[0].id, server);
+          }
       };
 
       server.on_message = (author_id, msg) => {
         const parsed_msg = JSON.parse(msg);
 
         if (parsed_msg.type === "chat_history") {
-          console.log("Received chat history: " + JSON.stringify(parsed_msg.text));
+          console.log('[GENERAL] Received chat history');
           chatHistories.general = parsed_msg.text;
           restoreChat(chatBox, chatHistories.general);
         }
@@ -254,15 +293,19 @@ document.addEventListener("DOMContentLoaded", () => {
           appendUser(newly_joined_user, userList, onlineUsers.length - 1);
         }
         else if (parsed_msg.type === "online_users"){
-          console.log("Received users: " + JSON.stringify(parsed_msg.text));
+          console.log('[GENERAL] Received online users list');
           
           // Push each online user into array
           for (let i = 0; i < parsed_msg.text.length; i++) {
             onlineUsers.push(parsed_msg.text[i]);
           }
-          console.log(JSON.stringify(onlineUsers));
 
           restoreUsers(userList);
+        }
+        else if (parsed_msg.type === "responsible_status") {
+          console.log('[GENERAL] New responsible user:', parsed_msg.responsibleId);
+          generalChatResponsible = parsed_msg.responsibleId;
+          waitingForResponsible = false; // We got our answer about who's responsible
         }
         else if (parsed_msg.type === "avatar_update") {
           // Find and update user's avatar
@@ -273,7 +316,7 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         }
         else if (parsed_msg.type === "private_message") {
-          console.log("Received private message from " + parsed_msg.username + " (ID: " + author_id + "): " + parsed_msg.text);
+          console.log("Private message from", parsed_msg.username);
           
           // Store in private chat history
           const chatKey = getChatKey(myself_as_user.id, author_id);
@@ -294,7 +337,7 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         }
         else { // A regular chat message
-          console.log("Received message sent by " + parsed_msg.username + " (ID: " + author_id + "): " + parsed_msg.text);
+          console.log("Message from", parsed_msg.username);
           
           // Update general chat history
           const latest = {
@@ -307,7 +350,6 @@ document.addEventListener("DOMContentLoaded", () => {
           if (activeChat === "general") {
             appendMessage(parsed_msg.username, parsed_msg.text, chatBox);
           }
-          console.log("Local chat history updated after receive: " + JSON.stringify(chatHistories.general));
         }
       }
 
@@ -338,7 +380,7 @@ document.addEventListener("DOMContentLoaded", () => {
           server.sendMessage(JSON.stringify(message), [activeChat, myself_as_user.id]);
         }
         
-        console.log("Message sent by: " + usernameInput.value + ": " + messageText);
+        console.log("Message sent by", usernameInput.value);
         appendMessage(usernameInput.value, messageText, chatBox);
 
         // Store in appropriate history
@@ -349,7 +391,6 @@ document.addEventListener("DOMContentLoaded", () => {
         
         if (activeChat === "general") {
           chatHistories.general.push(latest);
-          console.log("Local chat history updated after send: " + JSON.stringify(chatHistories.general));
         } else {
           const chatKey = getChatKey(myself_as_user.id, activeChat);
           if (!chatHistories.private[chatKey]) {
