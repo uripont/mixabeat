@@ -5,9 +5,10 @@ function appendMessage(sender, message, chatBox) {
   chatBox.scrollTop = chatBox.scrollHeight; 
 }
 
-function restoreChat(chatBox) {
-  for (let i = 0; i < chatHistory.length; i++) {
-    appendMessage(chatHistory[i].username, chatHistory[i].text, chatBox);
+function restoreChat(chatBox, history) {
+  if (!history) return;
+  for (let i = 0; i < history.length; i++) {
+    appendMessage(history[i].username, history[i].text, chatBox);
   }
 }
 
@@ -17,31 +18,93 @@ function restoreUsers(userList) {
     userList.removeChild(userList.firstChild)
   }
 
+  // Add back the general chat button first
+  addGeneralChatButton(userList);
+
   // Rebuild UI list of online users
   for (let i = 0; i < onlineUsers.length; i++) {
-    appendUser(onlineUsers[i].username, userList);
+    appendUser(onlineUsers[i], userList, i);
   }
 }
 
-function appendUser(username, userList) {
-  const users = document.createElement('div'); // `user` is being redeclared here, which overwrites the parameter.
-  users.textContent = username;
-  userList.appendChild(users);
-  userList.scrollTop = userList.scrollHeight; // `chatBox` is undefined here.
+function appendUser(user, userList, index) {
+  const userBtn = document.createElement('button');
+  userBtn.classList.add('user-button');
+  
+  // Special handling for current user's button
+  if (user.id === myself_as_user?.id) {
+    userBtn.textContent = `${user.username} (You)`;
+    userBtn.disabled = true;
+  } else {
+    userBtn.textContent = user.username;
+    userBtn.addEventListener('click', () => {
+      // User object is directly accessible through onlineUsers[index]
+      console.log("Clicked user:", onlineUsers[index]);
+      switchToPrivateChat(onlineUsers[index]);
+    });
+  }
+  
+  userList.appendChild(userBtn);
+  userList.scrollTop = userList.scrollHeight;
 }
 
-var chatHistory = [];
+function addGeneralChatButton(userList) {
+  const generalBtn = document.createElement('button');
+  generalBtn.textContent = "General Chat";
+  generalBtn.classList.add('user-button', 'general-chat');
+  generalBtn.id = 'general-chat-btn';
+  generalBtn.addEventListener('click', switchToGeneralChat);
+  userList.appendChild(generalBtn);
+}
+
+function getChatKey(id1, id2) { // In format "id1-id2"
+  return [id1, id2].sort().join('-'); // Sort to ensure same key regardless of order
+}
+
+function switchToPrivateChat(user) {
+  activeChat = user.id;
+  document.getElementById('chat-header').textContent = `Private chat with ${user.username}`;
+  document.getElementById('general-chat-btn').classList.remove('active');
+  
+  // Clear current chat before showing new one
+  chatBox.innerHTML = '';
+  
+  // Initialize or restore private chat history
+  const chatKey = getChatKey(myself_as_user.id, user.id);
+  if (!chatHistories.private[chatKey]) {
+    chatHistories.private[chatKey] = [];
+  }
+  restoreChat(chatBox, chatHistories.private[chatKey]);
+}
+
+function switchToGeneralChat() {
+  activeChat = "general";
+  document.getElementById('chat-header').textContent = "General Chat";
+  document.getElementById('general-chat-btn').classList.add('active');
+  chatBox.innerHTML = ''; // Clear chat
+  restoreChat(chatBox, chatHistories.general);
+}
+
+var chatHistories = {
+  general: [],
+  private: {}
+};
 var onlineUsers = [];
+var activeChat = "general";
+var myself_as_user = null;
+var chatBox = null; // chatBox accessible globally
 
 document.addEventListener("DOMContentLoaded", () => {
   const connectBtn = document.getElementById("connect-btn");
   const roomInput = document.getElementById("room");
   const usernameInput = document.getElementById("username");
-  const chatBox = document.getElementById('chat-box');
+  chatBox = document.getElementById('chat-box'); // Assign to global variable
   const userList = document.getElementById('user-list');
   const messageInput = document.getElementById("message");
   const sendMessageBtn = document.getElementById("send-message-btn");
 
+  // Add initial general chat button
+  addGeneralChatButton(userList);
 
   connectBtn.addEventListener("click", () => {
       const room = roomInput.value.trim();
@@ -52,7 +115,11 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       var server = new SillyClient();
+      // For public-facing server
       server.connect( "ws://172.201.217.153:80", `CHAT5_${room}`);
+
+      // For server using VPN
+      //server.connect( "ecv-2025.doc.upf.edu/port/55000/ws", `CHAT5_${room}`);
 
       server.on_ready = (my_id) => {
           console.log("Connected to server with ID: " + my_id);
@@ -67,9 +134,9 @@ document.addEventListener("DOMContentLoaded", () => {
           myself_as_user = {
             username: usernameInput.value,
             id: my_id
-          }
+          };
           onlineUsers.push(myself_as_user);
-          appendUser(usernameInput.value, userList);
+          appendUser(myself_as_user, userList, onlineUsers.length - 1);
       };
     
       server.on_room_info = (info) => {
@@ -83,7 +150,7 @@ document.addEventListener("DOMContentLoaded", () => {
           //TODO: Make only 1 user (oldest/newest) send the chat history (track who should send it)
           server.sendMessage(JSON.stringify({
             type: "chat_history",
-            text: chatHistory
+            text: chatHistories.general // private chat history not sent
           }));
 
           //TODO: Make only 1 user (oldest/newest) send the online users (track who should send it)
@@ -97,11 +164,10 @@ document.addEventListener("DOMContentLoaded", () => {
           console.log(`User disconnected: ${id}`);
           console.log("Before loop: " + JSON.stringify(onlineUsers));
 
-
-          //TODO: remove the user that has disconnected from connected list
+          // Remove the user that has disconnected from connected list
           for (let i = 0; i < onlineUsers.length; i++){
             if (onlineUsers[i].id == id){
-              console.log (id);
+              console.log(id);
               console.log(i);
               onlineUsers.splice(i,1); // removes 1 element at position i
             }
@@ -109,31 +175,29 @@ document.addEventListener("DOMContentLoaded", () => {
 
           console.log(JSON.stringify(onlineUsers));
           restoreUsers(userList);
-          
       };
 
       server.on_message = (author_id, msg) => {
-        parsed_msg = JSON.parse(msg);
+        const parsed_msg = JSON.parse(msg);
 
-        // Distinguish between chat history message and regular message
         if (parsed_msg.type === "chat_history") {
           console.log("Received chat history: " + JSON.stringify(parsed_msg.text));
-          chatHistory = parsed_msg.text;
-          restoreChat(chatBox);
+          chatHistories.general = parsed_msg.text;
+          restoreChat(chatBox, chatHistories.general);
         }
         else if (parsed_msg.type === "online"){
-
+          
           // Update local users history when receiving "online"
           newly_joined_user = {
             username: parsed_msg.username,
             id: parsed_msg.id
           }
           onlineUsers.push(newly_joined_user);
-          appendUser(parsed_msg.username, userList);
+          appendUser(newly_joined_user, userList, onlineUsers.length - 1);
         }
         else if (parsed_msg.type === "online_users"){
           console.log("Received users: " + JSON.stringify(parsed_msg.text));
-
+          
           // Push each online user into array
           for (let i = 0; i < parsed_msg.text.length; i++) {
             onlineUsers.push(parsed_msg.text[i]);
@@ -142,46 +206,93 @@ document.addEventListener("DOMContentLoaded", () => {
 
           restoreUsers(userList);
         }
-        
-        else { // A regular chat message
-          console.log("Received message sent by " + parsed_msg.username + " (ID: " + author_id + "): " + parsed_msg.text);
-          appendMessage(parsed_msg.username, parsed_msg.text, chatBox);
-
-          // Update local chat history on receive
+        else if (parsed_msg.type === "private_message") {
+          console.log("Received private message from " + parsed_msg.username + " (ID: " + author_id + "): " + parsed_msg.text);
+          
+          // Store in private chat history
+          const chatKey = getChatKey(myself_as_user.id, author_id);
+          if (!chatHistories.private[chatKey]) {
+            chatHistories.private[chatKey] = [];
+          }
+          
+          // Update private chat history
           const latest = {
             username: parsed_msg.username,
             text: parsed_msg.text
           };
-          chatHistory.push(latest);
-          console.log("Local chat history updated after receive: " + JSON.stringify(chatHistory));
+          chatHistories.private[chatKey].push(latest);
+
+          // Only display if in private chat with sender
+          if (activeChat === author_id) {
+            appendMessage(parsed_msg.username, parsed_msg.text, chatBox);
+          }
+        }
+        else { // A regular chat message
+          console.log("Received message sent by " + parsed_msg.username + " (ID: " + author_id + "): " + parsed_msg.text);
+          
+          // Update general chat history
+          const latest = {
+            username: parsed_msg.username,
+            text: parsed_msg.text
+          };
+          chatHistories.general.push(latest);
+          
+          // Only display if in general chat
+          if (activeChat === "general") {
+            appendMessage(parsed_msg.username, parsed_msg.text, chatBox);
+          }
+          console.log("Local chat history updated after receive: " + JSON.stringify(chatHistories.general));
         }
       }
 
-
       sendMessageBtn.addEventListener("click", () => {
-        // Construct the message as a JSON using the text on the input field + the username
-        const message = JSON.stringify({
+        if (!messageInput.value) {
+            console.log("Message cannot be empty!");
+            return;
+        }
+
+        let message;
+        const messageText = messageInput.value;
+        
+        if (activeChat === "general") {
+          message = {
             type: "chat_message",
             username: usernameInput.value,
-            text: messageInput.value
-        });
-        
-        if (message) {
-            server.sendMessage(message);  
-            console.log("Message sent by: " + usernameInput.value + ": " + messageInput.value);
-            appendMessage(usernameInput.value, messageInput.value, chatBox);
-
-            // Update your own chat history
-            const latest = {
-              username: usernameInput.value,
-              text: messageInput.value
-            };
-            chatHistory.push(latest);
-            console.log("Local chat history updated after receive: " + JSON.stringify(chatHistory));
+            text: messageText
+          };
+          server.sendMessage(JSON.stringify(message));
         } else {
-            console.log("Message cannot be empty!");
+          message = {
+            type: "private_message",
+            username: usernameInput.value,
+            text: messageText,
+            recipientId: activeChat
+          };
+          // Private chats: send only to recipient and self
+          server.sendMessage(JSON.stringify(message), [activeChat, myself_as_user.id]);
         }
-      });
+        
+        console.log("Message sent by: " + usernameInput.value + ": " + messageText);
+        appendMessage(usernameInput.value, messageText, chatBox);
 
+        // Store in appropriate history
+        const latest = {
+          username: usernameInput.value,
+          text: messageText
+        };
+        
+        if (activeChat === "general") {
+          chatHistories.general.push(latest);
+          console.log("Local chat history updated after send: " + JSON.stringify(chatHistories.general));
+        } else {
+          const chatKey = getChatKey(myself_as_user.id, activeChat);
+          if (!chatHistories.private[chatKey]) {
+            chatHistories.private[chatKey] = [];
+          }
+          chatHistories.private[chatKey].push(latest);
+        }
+
+        messageInput.value = ''; // Clear input after sending
+      });
   });
 });
