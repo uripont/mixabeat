@@ -15,6 +15,12 @@ function restoreChat(chatBox) {
 }
 
 function restoreUsers(userList) {
+  // Reset UI list of online users
+  while (userList.firstChild){
+    userList.removeChild(userList.firstChild)
+  }
+
+  // Rebuild UI list of online users
   for (let i = 0; i < onlineUsers.length; i++) {
     appendUser(onlineUsers[i], userList);
   }
@@ -57,8 +63,9 @@ document.addEventListener("DOMContentLoaded", () => {
             text: ""
           }));
 
-          // Update local users history on ready, BUT don't render it yet (wait for receiving online_users)
+          // Update local users history on ready
           onlineUsers.push(usernameInput.value);
+          appendUser(usernameInput.value, userList);
       };
     
       server.on_room_info = (info) => {
@@ -83,6 +90,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       server.on_user_disconnected = id => {
           console.log(`User disconnected: ${id}`);
+
+          //TODO: remove the user that has disconnected from connected list
       };
 
       server.on_message = (author_id, msg) => {
