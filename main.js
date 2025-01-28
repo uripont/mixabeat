@@ -5,11 +5,19 @@ function appendMessage(sender, message, chatBox) {
   chatBox.scrollTop = chatBox.scrollHeight; 
 }
 
+function appendUser(user, userList) {
+  const users = document.createElement('div'); // `user` is being redeclared here, which overwrites the parameter.
+  users.textContent = user;
+  userList.appendChild(users);
+  userList.scrollTop = chatBox.scrollHeight; // `chatBox` is undefined here.
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   const connectBtn = document.getElementById("connect-btn");
   const roomInput = document.getElementById("room");
   const usernameInput = document.getElementById("username");
   const chatBox = document.getElementById('chat-box');
+  const userList = document.getElementById('user-list');
   const messageInput = document.getElementById("message");
   const sendMessageBtn = document.getElementById("send-message-btn");
 
@@ -27,6 +35,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       server.on_ready = (my_id) => {
           console.log("Connected to server with ID: " + my_id);
+          appendUser(usernameInput.value, userList);
       };
     
       server.on_room_info = (info) => {
@@ -35,6 +44,7 @@ document.addEventListener("DOMContentLoaded", () => {
       
       server.on_user_connected = id => {
           console.log(`User connected: ${id}`);
+          
       };
 
       server.on_user_disconnected = id => {
@@ -45,6 +55,7 @@ document.addEventListener("DOMContentLoaded", () => {
         msg = JSON.parse(msg);
         console.log("Received message sent by: " + msg.username + " (ID: " + author_id + "): " + msg.text);
         appendMessage(msg.username, msg.text, chatBox);
+        
       }
 
 
