@@ -18,15 +18,6 @@ body {
     font-weight: 300;
 }
 
-/* Wrapper to hold login and chat screens side by side */
-#app-wrapper {
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    width: 100%;
-    height: 100%;
-}
-
 /* Login Screen */
 #login-screen {
     background: linear-gradient(135deg, #1a1a1a, #333); /* Subtle gradient background */
@@ -56,7 +47,7 @@ body {
 #chat-screen {
     background: linear-gradient(135deg, #2a2a2a, #3c3c3c);
     padding: 30px;
-    width: 400px;
+    width: 25%;
     height: 100%;
     position: fixed;
     top: 0;
@@ -66,6 +57,30 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
+}
+
+/* Left container for the Music Room */
+#left-container {
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 75%; /* Adjust width of Music Room */
+    background: linear-gradient(135deg, #2a2a2a, #3c3c3c);
+    padding: 20px;
+    border-radius: 20px;
+    box-shadow: 5px 0 10px rgba(0, 0, 0, 0.6);
+    overflow-y: auto;
+}
+
+
+/* Chat Interface */
+#chat-interface {
+    /*margin-left: ; /* Leave space for the Music Room */
+    width: 100%; /* Maximum width for chat */
+    height: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
 /* Headings */
@@ -82,6 +97,17 @@ h3 {
     color: #f1f1f1;
     margin-bottom: 15px;
     text-align: left; /* Title aligned to the left */
+}
+
+h4 {
+    font-size: 2.5rem;
+    color: #f1f1f1;
+    margin-bottom: 15px;
+    text-align: center; /* Title aligned to the center */
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%); 
 }
 
 /* Input fields and buttons */
