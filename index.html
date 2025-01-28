@@ -6,13 +6,15 @@
     <title>Chat Application</title>
     <link rel="stylesheet" href="styles.css">
     <script src="sillyclient.js"></script>
-    <script src="testconnection.js"></script>
+    <script src="main.js"></script>
 </head>
 <body>
     <div id="login-screen" class="screen">
         <h2>Welcome to the Chat</h2>
         <label for="room">Room Name:</label>
         <input type="text" id="room" placeholder="Enter the room name">
+        <label for="username">Username (visible to others):</label>
+        <input type="text" id="username" placeholder="Enter username">
         <button id="connect-btn">Connect</button>
 
         <div id="chat-box" style="height: 300px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px;"></div>

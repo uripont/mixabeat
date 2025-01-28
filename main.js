@@ -1,16 +1,13 @@
-function onMessageReceivedCallback (author_id, msg){
-    console.log("Received message sent by: " + author_id + ": " + msg);
-  }
-
 document.addEventListener("DOMContentLoaded", () => {
   const connectBtn = document.getElementById("connect-btn");
   const roomInput = document.getElementById("room");
+  const usernameInput = document.getElementById("username");
+
   const messageInput = document.getElementById("message");
   const sendMessageBtn = document.getElementById("send-message-btn");
 
   connectBtn.addEventListener("click", () => {
       const room = roomInput.value.trim();
-      
 
       if (!room) {
           alert("Room Name is required!");
@@ -36,19 +33,22 @@ document.addEventListener("DOMContentLoaded", () => {
           console.log(`User disconnected: ${id}`);
       };
 
-      server.on_message = onMessageReceivedCallback;
-
+      server.on_message = (author_id, msg) => {
+        msg = JSON.parse(msg);
+        console.log("Received message sent by: " + msg.username + " (ID: " + author_id + "): " + msg.text);
+      }
 
 
       sendMessageBtn.addEventListener("click", () => {
-        const message = messageInput.value.trim();
+        //Construct the message as a JSON using the text on the input field + the username
+        const message = JSON.stringify({
+            username: usernameInput.value,
+            text: messageInput.value
+        });
         
         if (message) {
             server.sendMessage(message);  
-            console.log("Message sent: " + message);
-            //messageInput.value = "";  
-
-        
+            console.log("Message sent by: " + usernameInput.value + ": " + messageInput.value);
         } else {
             console.log("Message cannot be empty!");
         }
