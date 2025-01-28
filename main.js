@@ -1,11 +1,19 @@
+function appendMessage(sender, message, chatBox) {
+  const msg = document.createElement('div');
+  msg.textContent = `${sender}: ${message}`;
+  chatBox.appendChild(msg);
+  chatBox.scrollTop = chatBox.scrollHeight; 
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   const connectBtn = document.getElementById("connect-btn");
   const roomInput = document.getElementById("room");
   const usernameInput = document.getElementById("username");
-
+  const chatBox = document.getElementById('chat-box');
   const messageInput = document.getElementById("message");
   const sendMessageBtn = document.getElementById("send-message-btn");
 
+  
   connectBtn.addEventListener("click", () => {
       const room = roomInput.value.trim();
 
@@ -36,6 +44,7 @@ document.addEventListener("DOMContentLoaded", () => {
       server.on_message = (author_id, msg) => {
         msg = JSON.parse(msg);
         console.log("Received message sent by: " + msg.username + " (ID: " + author_id + "): " + msg.text);
+        appendMessage(msg.username, msg.text, chatBox);
       }
 
 
@@ -49,6 +58,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (message) {
             server.sendMessage(message);  
             console.log("Message sent by: " + usernameInput.value + ": " + messageInput.value);
+            appendMessage(usernameInput.value, messageInput.value, chatBox);
         } else {
             console.log("Message cannot be empty!");
         }
