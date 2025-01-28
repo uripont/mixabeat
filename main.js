@@ -6,6 +6,7 @@ function appendMessage(sender, message, chatBox) {
 }
 
 var chatHistory = [];
+var onlineUsers = [];
 
 function restoreChat(chatBox) {
   for (let i = 0; i < chatHistory.length; i++) {
@@ -13,11 +14,17 @@ function restoreChat(chatBox) {
   }
 }
 
+function restoreUsers(userList) {
+  for (let i = 0; i < onlineUsers.length; i++) {
+    appendUser(onlineUsers[i], userList);
+  }
+}
+
 function appendUser(user, userList) {
   const users = document.createElement('div'); // `user` is being redeclared here, which overwrites the parameter.
   users.textContent = user;
   userList.appendChild(users);
-  userList.scrollTop = chatBox.scrollHeight; // `chatBox` is undefined here.
+  userList.scrollTop = userList.scrollHeight; // `chatBox` is undefined here.
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -49,6 +56,12 @@ document.addEventListener("DOMContentLoaded", () => {
             username: usernameInput.value,
             text: ""
           }));
+
+          // Update local users history on ready
+          
+          onlineUsers.push(usernameInput.value);
+          appendUser(usernameInput.value, userList);
+
       };
     
       server.on_room_info = (info) => {
@@ -64,6 +77,11 @@ document.addEventListener("DOMContentLoaded", () => {
             type: "chat_history",
             text: chatHistory
           }));
+
+          server.sendMessage(JSON.stringify({
+            type: "online_users",
+            text: onlineUsers
+          }));
       };
 
       server.on_user_disconnected = id => {
@@ -77,11 +95,17 @@ document.addEventListener("DOMContentLoaded", () => {
         if (parsed_msg.type === "chat_history") {
           console.log("Received chat history: " + JSON.stringify(parsed_msg.text));
           chatHistory = parsed_msg.text;
-
           restoreChat(chatBox);
         }
         else if (parsed_msg.type === "online"){
           appendUser(parsed_msg.username, userList);
+        }
+        else if (parsed_msg.type === "online_users"){
+          console.log("Received users: " + JSON.stringify(parsed_msg.text));
+          onlineUsers.push(parsed_msg.username);
+
+          //TODO
+          //restoreUsers(userList);
         }
         else { // A regular chat message
           console.log("Received message sent by " + parsed_msg.username + " (ID: " + author_id + "): " + parsed_msg.text);
