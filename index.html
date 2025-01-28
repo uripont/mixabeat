@@ -5,31 +5,64 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat Application</title>
     <script src="sillyclient.js"></script>
+    <link rel="stylesheet" href="styles.css">
     <script src="main.js"></script>
 </head>
 <body>
+
+    <!-- Login Screen -->
     <div id="login-screen" class="screen">
-        <h2>Welcome to the Chat</h2>
+        <h2>Welcome to the Chat group 5</h2>
         <label for="room">Room Name:</label>
         <input type="text" id="room" placeholder="Enter the room name">
         <label for="username">Username (visible to others):</label>
         <input type="text" id="username" placeholder="Enter username">
         <button id="connect-btn">Connect</button>
-
-        <div style="display: flex; gap: 20px;">
-            <!-- Chat Box -->
-            <div id="chat-box" style="flex: 2; height: 300px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px;"></div>
-
-            <!-- User List -->
-            <h3>Connected Users</h3>
-            <div id="user-list" style="flex: 1; height: 300px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px;">
-                <ul id="users" style="list-style-type: none; padding: 0; margin: 0;"></ul>
-            </div>
-        </div>
-        <label for="message">Message:</label>
-        <input type="text" id="message" placeholder="Type your message">
-        <button id="send-message-btn">Send Message</button>
     </div>
+    
+    <!-- Chat Screen (Initially Hidden) -->
+    <div id="chat-screen" class="screen" style="display: none;">
+        <div id="left-container">
+            <!-- Music Room Container -->        
+            <h2>Music Room</h2> 
+            <h4>Under Construction ... </h4> 
+        </div>
 
+        <div id="chat-interface">
+            <h2>Chat Room</h2>
+
+            <!-- Stacked Layout: User List on top, Chat Box below -->
+            <div id="user-list-container" style="margin-bottom: 20px;">
+                <h3>Connected Users</h3>
+                <div id="user-list" style="height: 100px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px;">
+                    <ul id="users" style="list-style-type: none; padding: 0; margin: 0;"></ul>
+                </div>
+            </div>
+
+            <!-- Chat Box below User List -->
+            <div id="chat-box-container">
+                <div id="chat-box" style="height: 400px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px;"></div>
+                <!-- Emoji Button -->
+                <button id="emoji-btn">😊</button>
+
+                <!-- Emoji Picker (hidden by default) -->
+                <div id="emoji-picker" style="display: none;">
+                <span class="emoji" data-emoji="😊">😊</span>
+                <span class="emoji" data-emoji="😂">😂</span>
+                <span class="emoji" data-emoji="❤️">❤️</span>
+                <span class="emoji" data-emoji="😍">😍</span>
+                <span class="emoji" data-emoji="😎">😎</span>
+                <span class="emoji" data-emoji="👍">👍</span>
+                <!-- Add more emojis here -->
+                </div>
+
+            </div>
+
+            <label for="message">Message:</label>
+            <input type="text" id="message" placeholder="Type your message">
+            <button id="send-message-btn">Send Message</button>
+        </div>
+    </div>
+    
 </body>
 </html>

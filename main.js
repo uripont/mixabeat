@@ -41,14 +41,41 @@ document.addEventListener("DOMContentLoaded", () => {
   const userList = document.getElementById('user-list');
   const messageInput = document.getElementById("message");
   const sendMessageBtn = document.getElementById("send-message-btn");
+  const emojiBtn = document.getElementById("emoji-btn");
+  const emojiPicker = document.getElementById("emoji-picker");
+
+  emojiBtn.addEventListener("click", () => {
+    emojiPicker.style.display = emojiPicker.style.display === 'none' ? 'block' : 'none';
+  });
+
+  // Handle emoji click, adding the emoji to the message input
+  emojiPicker.addEventListener("click", (event) => {
+    if (event.target.classList.contains('emoji')) {
+      const emoji = event.target.getAttribute("data-emoji");
+      messageInput.value += emoji;
+      emojiPicker.style.display = 'none'; // Hide the picker after selecting emoji
+    }
+  });
 
 
   connectBtn.addEventListener("click", () => {
       const room = roomInput.value.trim();
 
-      if (!room) {
-          alert("Room Name is required!");
-          return;
+      
+      const roomName = document.getElementById('room').value;
+      const username = document.getElementById('username').value;
+
+      // Check if room and username are provided
+      if (roomName && username) {
+          // Hide the login screen
+          document.getElementById('login-screen').style.display = 'none';
+          
+          document.getElementById('chat-screen').style.display = 'block';
+          
+
+          // You can add more logic here to connect to the chat room and update user list, etc.
+      } else {
+          alert('Please provide both Room Name and Username.');
       }
 
       var server = new SillyClient();
@@ -157,6 +184,12 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
 
+      document.addEventListener("click", (event) => {
+        if (!emojiPicker.contains(event.target) && event.target !== emojiBtn) {
+          emojiPicker.style.display = 'none';
+        }
+      });
+
 
       sendMessageBtn.addEventListener("click", () => {
         // Construct the message as a JSON using the text on the input field + the username
@@ -170,7 +203,7 @@ document.addEventListener("DOMContentLoaded", () => {
             server.sendMessage(message);  
             console.log("Message sent by: " + usernameInput.value + ": " + messageInput.value);
             appendMessage(usernameInput.value, messageInput.value, chatBox);
-
+            
             // Update your own chat history
             const latest = {
               username: usernameInput.value,
