@@ -66,6 +66,9 @@ function switchToPrivateChat(user) {
   document.getElementById('chat-header').textContent = `Private chat with ${user.username}`;
   document.getElementById('general-chat-btn').classList.remove('active');
   
+  // Clear current chat before showing new one
+  chatBox.innerHTML = '';
+  
   // Initialize or restore private chat history
   const chatKey = getChatKey(myself_as_user.id, user.id);
   if (!chatHistories.private[chatKey]) {
@@ -78,6 +81,7 @@ function switchToGeneralChat() {
   activeChat = "general";
   document.getElementById('chat-header').textContent = "General Chat";
   document.getElementById('general-chat-btn').classList.add('active');
+  chatBox.innerHTML = ''; // Clear chat
   restoreChat(chatBox, chatHistories.general);
 }
 
