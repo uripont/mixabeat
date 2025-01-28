@@ -43,7 +43,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
       server.on_ready = (my_id) => {
           console.log("Connected to server with ID: " + my_id);
-          appendUser(usernameInput.value, userList);
+          
+          server.sendMessage(JSON.stringify({
+            type: "online",
+            username: usernameInput.value,
+            text: ""
+          }));
       };
     
       server.on_room_info = (info) => {
@@ -74,6 +79,9 @@ document.addEventListener("DOMContentLoaded", () => {
           chatHistory = parsed_msg.text;
 
           restoreChat(chatBox);
+        }
+        else if (parsed_msg.type === "online"){
+          appendUser(parsed_msg.username, userList);
         }
         else { // A regular chat message
           console.log("Received message sent by " + parsed_msg.username + " (ID: " + author_id + "): " + parsed_msg.text);
