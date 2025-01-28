@@ -5,6 +5,14 @@ function appendMessage(sender, message, chatBox) {
   chatBox.scrollTop = chatBox.scrollHeight; 
 }
 
+var chatHistory = [];
+
+function restoreChat(chatBox) {
+  for (let i = 0; i < chatHistory.length; i++) {
+    appendMessage(chatHistory[i].username, chatHistory[i].text, chatBox);
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   const connectBtn = document.getElementById("connect-btn");
   const roomInput = document.getElementById("room");
@@ -13,7 +21,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const messageInput = document.getElementById("message");
   const sendMessageBtn = document.getElementById("send-message-btn");
 
-  
+
   connectBtn.addEventListener("click", () => {
       const room = roomInput.value.trim();
 
@@ -35,6 +43,13 @@ document.addEventListener("DOMContentLoaded", () => {
       
       server.on_user_connected = id => {
           console.log(`User connected: ${id}`);
+
+          // Make all conected users send to him the room's chat history
+          //TODO: Make only 1 user (oldest/newest) send the chat history (track who should send it)
+          server.sendMessage(JSON.stringify({
+            type: "chat_history",
+            text: chatHistory
+          }));
       };
 
       server.on_user_disconnected = id => {
@@ -42,15 +57,34 @@ document.addEventListener("DOMContentLoaded", () => {
       };
 
       server.on_message = (author_id, msg) => {
-        msg = JSON.parse(msg);
-        console.log("Received message sent by: " + msg.username + " (ID: " + author_id + "): " + msg.text);
-        appendMessage(msg.username, msg.text, chatBox);
+        parsed_msg = JSON.parse(msg);
+
+        // Distinguish between chat history message and regular message
+        if (parsed_msg.type === "chat_history") {
+          console.log("Received chat history: " + JSON.stringify(parsed_msg.text));
+          chatHistory = parsed_msg.text;
+
+          restoreChat(chatBox);
+        }
+        else { // A regular chat message
+          console.log("Received message sent by " + parsed_msg.username + " (ID: " + author_id + "): " + parsed_msg.text);
+          appendMessage(parsed_msg.username, parsed_msg.text, chatBox);
+
+          // Update local chat history on receive
+          const latest = {
+            username: parsed_msg.username,
+            text: parsed_msg.text
+          };
+          chatHistory.push(latest);
+          console.log("Local chat history updated after receive: " + JSON.stringify(chatHistory));
+        }
       }
 
 
       sendMessageBtn.addEventListener("click", () => {
-        //Construct the message as a JSON using the text on the input field + the username
+        // Construct the message as a JSON using the text on the input field + the username
         const message = JSON.stringify({
+            type: "chat_message",
             username: usernameInput.value,
             text: messageInput.value
         });
@@ -59,6 +93,14 @@ document.addEventListener("DOMContentLoaded", () => {
             server.sendMessage(message);  
             console.log("Message sent by: " + usernameInput.value + ": " + messageInput.value);
             appendMessage(usernameInput.value, messageInput.value, chatBox);
+
+            // Update your own chat history
+            const latest = {
+              username: usernameInput.value,
+              text: messageInput.value
+            };
+            chatHistory.push(latest);
+            console.log("Local chat history updated after receive: " + JSON.stringify(chatHistory));
         } else {
             console.log("Message cannot be empty!");
         }
