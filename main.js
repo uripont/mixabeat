@@ -33,15 +33,17 @@ function appendUser(user, userList, index) {
   
   // Special handling for current user's button
   if (user.id === myself_as_user?.id) {
-    userBtn.textContent = `${user.username} (You)`;
+    userBtn.textContent = `[${user.avatar}] ${user.username} (You)`;
     userBtn.disabled = true;
   } else {
-    userBtn.textContent = user.username;
+    userBtn.textContent = `[${user.avatar}] ${user.username}`;
     userBtn.addEventListener('click', () => {
       // User object is directly accessible through onlineUsers[index]
       console.log("Clicked user:", onlineUsers[index]);
       switchToPrivateChat(onlineUsers[index]);
     });
+
+    //TODO: Add a a way to update avatar (selector to be moved into chat view)
   }
   
   userList.appendChild(userBtn);
@@ -124,16 +126,19 @@ document.addEventListener("DOMContentLoaded", () => {
       server.on_ready = (my_id) => {
           console.log("Connected to server with ID: " + my_id);
           
+          const avatarId = document.getElementById("avatar").value;
           server.sendMessage(JSON.stringify({
             type: "online",
             username: usernameInput.value,
-            id: my_id
+            id: my_id,
+            avatar: avatarId
           }));
 
           // Update local users history on ready
           myself_as_user = {
             username: usernameInput.value,
-            id: my_id
+            id: my_id,
+            avatar: avatarId
           };
           onlineUsers.push(myself_as_user);
           appendUser(myself_as_user, userList, onlineUsers.length - 1);
@@ -190,7 +195,8 @@ document.addEventListener("DOMContentLoaded", () => {
           // Update local users history when receiving "online"
           newly_joined_user = {
             username: parsed_msg.username,
-            id: parsed_msg.id
+            id: parsed_msg.id,
+            avatar: parsed_msg.avatar
           }
           onlineUsers.push(newly_joined_user);
           appendUser(newly_joined_user, userList, onlineUsers.length - 1);
@@ -244,6 +250,9 @@ document.addEventListener("DOMContentLoaded", () => {
           console.log("Local chat history updated after receive: " + JSON.stringify(chatHistories.general));
         }
       }
+          
+      //TODO: Add a a way to update avatar (selector to be moved into chat view)
+      //(listener on avatar selector, send message to everyone, everyone updates selection)
 
       sendMessageBtn.addEventListener("click", () => {
         if (!messageInput.value) {
