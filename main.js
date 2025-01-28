@@ -57,11 +57,21 @@ function addGeneralChatButton(userList) {
   userList.appendChild(generalBtn);
 }
 
+function getChatKey(id1, id2) { // In format "id1-id2"
+  return [id1, id2].sort().join('-'); // Sort to ensure same key regardless of order
+}
+
 function switchToPrivateChat(user) {
   activeChat = user.id;
   document.getElementById('chat-header').textContent = `Private chat with ${user.username}`;
   document.getElementById('general-chat-btn').classList.remove('active');
-  chatBox.innerHTML = ''; // Empty current chat
+  
+  // Initialize or restore private chat history
+  const chatKey = getChatKey(myself_as_user.id, user.id);
+  if (!chatHistories.private[chatKey]) {
+    chatHistories.private[chatKey] = [];
+  }
+  restoreChat(chatBox, chatHistories.private[chatKey]);
 }
 
 function switchToGeneralChat() {
