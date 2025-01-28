@@ -5,9 +5,6 @@ function appendMessage(sender, message, chatBox) {
   chatBox.scrollTop = chatBox.scrollHeight; 
 }
 
-var chatHistory = [];
-var onlineUsers = [];
-
 function restoreChat(chatBox) {
   for (let i = 0; i < chatHistory.length; i++) {
     appendMessage(chatHistory[i].username, chatHistory[i].text, chatBox);
@@ -28,10 +25,13 @@ function restoreUsers(userList) {
 
 function appendUser(user, userList) {
   const users = document.createElement('div'); // `user` is being redeclared here, which overwrites the parameter.
-  users.textContent = user;
+  users.textContent = user.username;
   userList.appendChild(users);
   userList.scrollTop = userList.scrollHeight; // `chatBox` is undefined here.
 }
+
+var chatHistory = [];
+var onlineUsers = [];
 
 document.addEventListener("DOMContentLoaded", () => {
   const connectBtn = document.getElementById("connect-btn");
@@ -60,12 +60,16 @@ document.addEventListener("DOMContentLoaded", () => {
           server.sendMessage(JSON.stringify({
             type: "online",
             username: usernameInput.value,
-            text: ""
+            id: my_id
           }));
 
           // Update local users history on ready
-          onlineUsers.push(usernameInput.value);
-          appendUser(usernameInput.value, userList);
+          myself_as_user = {
+            username: usernameInput.value,
+            ID: my_id
+          }
+          onlineUsers.push(myself_as_user);
+          appendUser(myself_as_user, userList);
       };
     
       server.on_room_info = (info) => {
