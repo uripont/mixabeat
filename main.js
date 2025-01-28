@@ -28,25 +28,32 @@ function restoreUsers(userList) {
 }
 
 function appendUser(user, userList, index) {
+  const container = document.createElement('div');
+  container.classList.add('user-container');
+
   const userBtn = document.createElement('button');
   userBtn.classList.add('user-button');
+  userBtn.classList.add(`avatar-${user.avatar}`);
+  
+  const nameLabel = document.createElement('div');
+  nameLabel.classList.add('user-name');
   
   // Special handling for current user's button
   if (user.id === myself_as_user?.id) {
-    userBtn.textContent = `[${user.avatar}] ${user.username} (You)`;
+    nameLabel.textContent = `${user.username} (You)`;
     userBtn.disabled = true;
   } else {
-    userBtn.textContent = `[${user.avatar}] ${user.username}`;
+    nameLabel.textContent = user.username;
     userBtn.addEventListener('click', () => {
       // User object is directly accessible through onlineUsers[index]
       console.log("Clicked user:", onlineUsers[index]);
       switchToPrivateChat(onlineUsers[index]);
     });
-
-    //TODO: Add a a way to update avatar (selector to be moved into chat view)
   }
   
-  userList.appendChild(userBtn);
+  container.appendChild(userBtn);
+  container.appendChild(nameLabel);
+  userList.appendChild(container);
   userList.scrollTop = userList.scrollHeight;
 }
 
@@ -250,7 +257,7 @@ document.addEventListener("DOMContentLoaded", () => {
           console.log("Local chat history updated after receive: " + JSON.stringify(chatHistories.general));
         }
       }
-          
+          ges
       //TODO: Add a a way to update avatar (selector to be moved into chat view)
       //(listener on avatar selector, send message to everyone, everyone updates selection)
 
