@@ -150,7 +150,7 @@ document.addEventListener("DOMContentLoaded", () => {
           //TODO: Make only 1 user (oldest/newest) send the chat history (track who should send it)
           server.sendMessage(JSON.stringify({
             type: "chat_history",
-            text: chatHistories.general
+            text: chatHistories.general // private chat history not sent
           }));
 
           //TODO: Make only 1 user (oldest/newest) send the online users (track who should send it)
@@ -164,7 +164,7 @@ document.addEventListener("DOMContentLoaded", () => {
           console.log(`User disconnected: ${id}`);
           console.log("Before loop: " + JSON.stringify(onlineUsers));
 
-          //TODO: remove the user that has disconnected from connected list
+          // Remove the user that has disconnected from connected list
           for (let i = 0; i < onlineUsers.length; i++){
             if (onlineUsers[i].id == id){
               console.log(id);
@@ -268,7 +268,7 @@ document.addEventListener("DOMContentLoaded", () => {
             text: messageText,
             recipientId: activeChat
           };
-          // Send only to recipient and self
+          // Private chats: send only to recipient and self
           server.sendMessage(JSON.stringify(message), [activeChat, myself_as_user.id]);
         }
         
