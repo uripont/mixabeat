@@ -133,7 +133,7 @@ body {
     box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.6); /* Soft, blurred shadow */
     width: 80%;
     min-height: 200px;
-    max-width: 900px;
+    max-width: 600px;
     text-align: center;
     animation: fadeIn 0.6s ease-out;
     flex: 1; /* Allow login screen to take available space */
