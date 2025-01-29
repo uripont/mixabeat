@@ -137,6 +137,8 @@ body {
     text-align: center;
     animation: fadeIn 0.6s ease-out;
     flex: 1; /* Allow login screen to take available space */
+    position: relative;
+    z-index: 2;
 }
 
 /* Animations */
@@ -165,6 +167,7 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
+    z-index: 3;
 }
 
 /* Left container for the Music Room */
@@ -173,12 +176,12 @@ body {
     left: 0;
     top: 0;
     height: 100%;
-    width: 75%; /* Adjust width of Music Room */
-    background: linear-gradient(135deg, #2a2a2a, #3c3c3c);
+    width: 80%;
+    background: #121212;
     padding: 20px;
     border-radius: 20px;
-    box-shadow: 5px 0 10px rgba(0, 0, 0, 0.6);
     overflow-y: auto;
+    z-index: 0;
 }
 
 
