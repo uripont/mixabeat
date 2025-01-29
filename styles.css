@@ -233,6 +233,7 @@ body {
     overflow-y: scroll;
     border-radius: 15px;
     padding: 15px;
+    margin: 10px 0px;
     background: linear-gradient(135deg, #3c3c3c, #2a2a2a);
     border: 1px solid #444;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
@@ -268,7 +269,6 @@ h4 {
 
 /* Chat header */
 #chat-header {
-    margin-bottom: 10px;
     padding: 5px;
     text-align: center;
 }
@@ -328,20 +328,14 @@ button {
     border-radius: 30px;
     font-size: 1.2rem;
     cursor: pointer;
-    transition: all 0.3s ease-in-out;
+    transition: opacity 0.3s ease;
     letter-spacing: 1px;
     text-transform: uppercase;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); 
 }
 
 button:hover {
-    background-color: #3399ff;
-    transform: translateY(-3px);
-}
-
-button:active {
-    background-color: #1a80cc;
-    transform: translateY(0);
+    opacity: 0.8;
 }
 
 #connect-btn {
@@ -358,34 +352,76 @@ button:active {
     color: white;
     font-size: 1.2rem;
     cursor: pointer;
-    transition: all 0.3s ease-in-out;
+    transition: all 0.3s ease;
     text-transform: uppercase;
+    position: relative;
+    z-index: 1;
 }
 
 #send-message-btn:hover {
-    background-color: #3399ff;
-    transform: translateY(-3px);
+    opacity: 0.8;
+    box-shadow: 0 0 15px rgba(102, 179, 255, 0.5);
 }
 
-#send-message-btn:active {
-    background-color: #1a80cc;
-    transform: translateY(0);
+#send-message-btn:empty::before {
+    content: "Send Message";
 }
 
-/* Emoji picker */
-#emoji-picker {
-    position: absolute;
-    bottom: 100px;
-    right: 20px;
-    background-color: white;
-    border: 1px solid #ccc;
-    padding: 5px;
-    border-radius: 5px;
-    display: none;
+/* Send message container and emoji picker */
+#send-message-container {
+    position: relative;
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+#emoji-btn {
+    width: 100%;
+    padding: 10px 10px 2px 10px;
+    margin: 10px 0;
+    background-color: #66b3ff;
+    border: none;
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    cursor: default;
+    transition: all 0.3s ease;
+    overflow-x: auto;
+    white-space: nowrap;
+}
+
+#emoji-btn::-webkit-scrollbar {
+    height: 8px;
+}
+
+#emoji-btn::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+#emoji-btn::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+}
+
+#emoji-btn::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.4);
+}
+
+#emoji-btn:hover {
+    box-shadow: 0 0 15px rgba(102, 179, 255, 0.5);
 }
 
 .emoji {
     cursor: pointer;
-    font-size: 20px;
-    margin: 5px;
+    font-size: 24px;
+    padding: 5px 8px;
+    transition: transform 0.2s ease;
+    display: inline-block;
+}
+
+.emoji:hover {
+    transform: scale(1.2);
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
 }
