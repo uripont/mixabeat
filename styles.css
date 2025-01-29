@@ -189,7 +189,7 @@ body {
     background: linear-gradient(135deg, #2a2a2a, #3c3c3c);
     padding: 30px;
     width: 25%;
-    height: 100%;
+    height: 100vh;
     position: fixed;
     top: 0;
     right: 0;
@@ -197,8 +197,8 @@ body {
     box-shadow: -5px 0 10px rgba(0, 0, 0, 0.6);
     display: flex;
     flex-direction: column;
-    justify-content: flex-start;
     z-index: 3;
+    overflow: hidden;
 }
 
 /* Left container for the Music Room */
@@ -221,23 +221,27 @@ body {
     height: 100%;
     display: flex;
     flex-direction: column;
+    position: relative;
+    overflow: hidden;
 }
 
 /* Chat containers */
 #user-list-container {
+    flex-shrink: 0;
     margin-bottom: 20px;
 }
 
 #chat-box {
-    height: 250px;
-    overflow-y: scroll;
+    flex: 1 1 auto;
+    overflow-y: auto;
     border-radius: 15px;
     padding: 15px;
-    margin: 10px 0px;
+    margin: 15px 0px;
     background: linear-gradient(135deg, #3c3c3c, #2a2a2a);
     border: 1px solid #444;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
     text-align: left;
+    min-height: 150px;
 }
 
 /* Headings */
@@ -369,9 +373,13 @@ button:hover {
 
 /* Send message container and emoji picker */
 #send-message-container {
-    position: relative;
+    position: sticky;
+    bottom: 0;
     width: 100%;
-    margin-bottom: 10px;
+}
+
+#message {
+    margin-bottom: 5px;
 }
 
 #emoji-btn {
