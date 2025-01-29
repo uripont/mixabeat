@@ -42,14 +42,13 @@
             
 
             <!-- Stacked Layout: User List on top, Chat Box below -->
-            <div id="user-list-container" style="margin-bottom: 20px;">
+            <div id="user-list-container">
                 <h3>Connected Users</h3>
-                <div id="user-list" style="height: 110px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px;">
-                    <ul id="users" style="list-style-type: none; padding: 0; margin: 0;"></ul>
+                <div id="user-list">
+                    <ul id="users"></ul>
                 </div>
                 <!-- Avatar Change Selector -->
-                <div style="margin-top: 10px;">
-                    <!-- <label for="change-avatar">Change Avatar:</label>-->
+                <div>
                     <h3>Change Avatar:</h3>
                     <select id="change-avatar">
                         <option value="1">Red</option>
@@ -63,15 +62,15 @@
 
             <!-- Chat Box below User List -->
             <div id="chat-box-container">
-                <h3 id="chat-header" style="margin-bottom: 10px; padding: 5px; text-align: center;">General Chat</h3>
+                <h3 id="chat-header">General Chat</h3>
 
-                <div id="chat-box" style="height: 250px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px;"></div>
+                <div id="chat-box"></div>
 
                 <!-- Emoji Button -->
                 <button id="emoji-btn">😊</button>
 
                 <!-- Emoji Picker (hidden by default) -->
-                <div id="emoji-picker" style="display: none;">
+                <div id="emoji-picker">
                     <span class="emoji" data-emoji="😊">😊</span>
                     <span class="emoji" data-emoji="😂">😂</span>
                     <span class="emoji" data-emoji="❤️">❤️</span>

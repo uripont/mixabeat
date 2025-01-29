@@ -58,12 +58,21 @@ function appendUser(user, userList, index) {
 }
 
 function addGeneralChatButton(userList) {
+  const container = document.createElement('div');
+  container.classList.add('user-container');
+
   const generalBtn = document.createElement('button');
-  generalBtn.textContent = "General Chat";
   generalBtn.classList.add('user-button', 'general-chat');
   generalBtn.id = 'general-chat-btn';
   generalBtn.addEventListener('click', switchToGeneralChat);
-  userList.appendChild(generalBtn);
+  
+  const nameLabel = document.createElement('div');
+  nameLabel.classList.add('user-name');
+  nameLabel.textContent = "All";
+  
+  container.appendChild(generalBtn);
+  container.appendChild(nameLabel);
+  userList.appendChild(container);
 }
 
 function getChatKey(id1, id2) { // In format "id1-id2"
