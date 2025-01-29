@@ -4,12 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat Application</title>
+    <link rel="stylesheet" href="styles.css">
     <script src="sillyclient.js"></script>
     <link rel="stylesheet" href="styles.css">
     <script src="main.js"></script>
 </head>
 <body>
-
     <!-- Login Screen -->
     <div id="login-screen" class="screen">
         <h2>Welcome to the Chat group 5</h2>
@@ -17,6 +17,14 @@
         <input type="text" id="room" placeholder="Enter the room name">
         <label for="username">Username (visible to others):</label>
         <input type="text" id="username" placeholder="Enter username">
+        <label for="avatar">Avatar ID:</label>
+        <select id="avatar">
+            <option value="1">Avatar 1 (red)</option>
+            <option value="2">Avatar 2 (turquoise)</option>
+            <option value="3">Avatar 3 (blue)</option>
+            <option value="4">Avatar 4 (green)</option>
+            <option value="5">Avatar 5 (yellow)</option>
+        </select>
         <button id="connect-btn">Connect</button>
     </div>
     
@@ -30,6 +38,9 @@
 
         <div id="chat-interface">
             <h2>Chat Room</h2>
+            
+            <!-- Chat Header -->
+            <div id="chat-header" style="margin-bottom: 10px; padding: 5px; background: #2a2a2a;">General Chat</div>
 
             <!-- Stacked Layout: User List on top, Chat Box below -->
             <div id="user-list-container" style="margin-bottom: 20px;">
@@ -37,11 +48,34 @@
                 <div id="user-list" style="height: 100px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px;">
                     <ul id="users" style="list-style-type: none; padding: 0; margin: 0;"></ul>
                 </div>
+                <!-- Avatar Change Selector -->
+                <div style="margin-top: 10px;">
+                    <label for="change-avatar">Change Avatar:</label>
+                    <select id="change-avatar">
+                        <option value="1">Avatar 1 (Red)</option>
+                        <option value="2">Avatar 2 (Turquoise)</option>
+                        <option value="3">Avatar 3 (Blue)</option>
+                        <option value="4">Avatar 4 (Green)</option>
+                        <option value="5">Avatar 5 (Yellow)</option>
+                    </select>
+                </div>
             </div>
 
             <!-- Chat Box below User List -->
             <div id="chat-box-container">
-                <div id="chat-box" style="height: 400px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px;"></div>
+                <div id="chat-box" style="height: 250px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px;"></div>
+                <!-- Emoji Button -->
+                <button id="emoji-btn">😊</button>
+
+                <!-- Emoji Picker (hidden by default) -->
+                <div id="emoji-picker" style="display: none;">
+                    <span class="emoji" data-emoji="😊">😊</span>
+                    <span class="emoji" data-emoji="😂">😂</span>
+                    <span class="emoji" data-emoji="❤️">❤️</span>
+                    <span class="emoji" data-emoji="😍">😍</span>
+                    <span class="emoji" data-emoji="😎">😎</span>
+                    <span class="emoji" data-emoji="👍">👍</span>
+                </div>
             </div>
 
             <label for="message">Message:</label>
@@ -49,6 +83,5 @@
             <button id="send-message-btn">Send Message</button>
         </div>
     </div>
-
 </body>
 </html>
