@@ -129,9 +129,10 @@ body {
     background: linear-gradient(135deg, #1a1a1a, #333); /* Subtle gradient background */
     padding: 40px;
     border-radius: 20px;
+    margin: 0px 20px;
     box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.6); /* Soft, blurred shadow */
     width: 80%;
-    height: 60%;
+    min-height: 200px;
     max-width: 900px;
     text-align: center;
     animation: fadeIn 0.6s ease-out;
@@ -361,4 +362,3 @@ button:active {
     font-size: 20px;
     margin: 5px;
   }
-  
