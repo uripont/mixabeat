@@ -1,41 +1,109 @@
+
+#change-avatar {
+    width: 100%;
+    padding: 12px;
+    border-radius: 25px;
+    border: 2px solid #444;
+    background: linear-gradient(135deg, #3c3c3c, #2a2a2a); 
+    color: #fff;
+    font-size: 1rem;
+    text-align: center;
+    transition: all 0.3s ease-in-out;
+    appearance: none; 
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+    cursor: pointer;
+}
+
+#change-avatar:hover, 
+#change-avatar:focus {
+    border-color: #66b3ff;
+    outline: none;
+    box-shadow: 0 0 10px rgba(102, 179, 255, 0.8);
+}
+
+
+#change-avatar::-ms-expand {
+    display: none; 
+}
+
+#change-avatar option {
+    background: linear-gradient(135deg, #3c3c3c, #2a2a2a);
+    color: #fff;
+    font-size: 1rem;
+}
+
+
+#avatar {
+    width: 100%;
+    padding: 12px;
+    border-radius: 25px;
+    border: 2px solid #444;
+    background: linear-gradient(135deg, #3c3c3c, #2a2a2a); 
+    color: #fff;
+    font-size: 1rem;
+    text-align: center;
+    transition: all 0.3s ease-in-out;
+    appearance: none; 
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+    cursor: pointer;
+}
+
+#avatar:hover, 
+#avatar:focus {
+    border-color: #66b3ff;
+    outline: none;
+    box-shadow: 0 0 10px rgba(102, 179, 255, 0.8);
+}
+
+
+#avatar::-ms-expand {
+    display: none; 
+}
+
+#avatar option {
+    background: linear-gradient(135deg, #3c3c3c, #2a2a2a);
+    color: #fff;
+    font-size: 1rem;
+}
+
 .user-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin: 10px 0;
-}
-
-.user-name {
-  margin-top: 5px;
-  font-size: 12px;
-  text-align: center;
-}
-
-.user-button {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  padding: 0;
-  background-size: cover;
-  background-position: center;
-  border: 2px solid #ccc;
-  cursor: pointer;
-}
-
-.user-button.general-chat {
-  width: 100%;
-  height: auto;
-  border-radius: 4px;
-  padding: 8px;
-  margin: 10px 0;
-}
-
-.avatar-1 { background-color: #FF6B6B; }
-.avatar-2 { background-color: #4ECDC4; }
-.avatar-3 { background-color: #45B7D1; }
-.avatar-4 { background-color: #96CEB4; }
-.avatar-5 { background-color: #FFEEAD; }
-/* Basic resets */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 10px 0;
+  }
+  
+  .user-name {
+    margin-top: 5px;
+    font-size: 12px;
+    text-align: center;
+  }
+  
+  .user-button {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    padding: 0;
+    background-size: cover;
+    background-position: center;
+    border: 2px solid #ccc;
+    cursor: pointer;
+  }
+  
+  .user-button.general-chat {
+    width: 100%;
+    height: auto;
+    border-radius: 25px;
+    padding: 8px;
+    margin: 10px 0;
+  }
+  
+  .avatar-1 { background-color: #FF6B6B; }
+  .avatar-2 { background-color: #4ECDC4; }
+  .avatar-3 { background-color: #45B7D1; }
+  .avatar-4 { background-color: #96CEB4; }
+  .avatar-5 { background-color: #FFEEAD; }
+  
 * {
     margin: 0;
     padding: 0;
@@ -62,6 +130,7 @@ body {
     border-radius: 20px;
     box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.6); /* Soft, blurred shadow */
     width: 80%;
+    height: 60%;
     max-width: 900px;
     text-align: center;
     animation: fadeIn 0.6s ease-out;
@@ -189,7 +258,8 @@ button {
     transition: all 0.3s ease-in-out;
     letter-spacing: 1px;
     text-transform: uppercase;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); /* Light shadow under button */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); 
+    margin-top: 25px;
 }
 
 button:hover {
