@@ -259,7 +259,6 @@ button {
     letter-spacing: 1px;
     text-transform: uppercase;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); 
-    margin-top: 25px;
 }
 
 button:hover {
@@ -270,6 +269,10 @@ button:hover {
 button:active {
     background-color: #1a80cc;
     transform: translateY(0);
+}
+
+#connect-btn {
+    margin-top: 25px; /* Adds spacing above the Connect button */
 }
 
 /* Chat Box and User List Containers */
