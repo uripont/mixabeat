@@ -4,14 +4,14 @@ const app = express();
 
 app.use(express.json());
 
-app.use(session({
+/* app.use(session({
     secret: 'mySecret',
     resave: false,
     saveUninitialized: true
-}));
+})); */
 
 // Login route
-app.post('/login', (req, res) => {
+app.get('/login', (req, res) => {
     res.send('Has hitted the endpoint on VM');
 
     /* // You should verify credentials with your database here
