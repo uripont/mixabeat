@@ -12,7 +12,7 @@ app.use(express.json());
 
 // Login route
 app.get('/login', (req, res) => {
-    res.send('Has hitted the endpoint on VM');
+    res.send('Has hit the endpoint on VM');
 
     /* // You should verify credentials with your database here
     if (req.body.username === 'admin' && req.body.password === '1234') {
