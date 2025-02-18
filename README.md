@@ -48,7 +48,8 @@ For messages and real-time chat:
 - [ ] Endpoint to get chat history for specific room
 
 For user authentication:
-- [ ] DB schema for users (password is hashed+salted, also has its session token stored)
+- [ ] DB schema for users (password is hashed+salted)
+- [ ] Use express-session for user session management (cookies, session stored in DB)
 - [ ] Endpoint to register a new user
 - [ ] Endpoint to login a user (returns a session token)
 - [ ] Endpoint to logout a user (deletes session token)
