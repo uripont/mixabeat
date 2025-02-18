@@ -1,6 +1,6 @@
 const express = require('express');
 //const session = require('express-session');
-const sql = require('mssql');
+const mysql = require('mysql');
 const app = express();
 
 app.use(express.json());
@@ -8,23 +8,24 @@ app.use(express.json());
 // Database configuration
 require('dotenv').config();
 const config = {
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
-    server: process.env.DB_SERVER,
     database: process.env.DB_DATABASE,
 };
 
-// Connect to the database
-sql.connect(config, (err) => {
-    if (err) console.log(err);
-    else console.log('Connected to database');
-});
+// Create connection
+const connection = mysql.createConnection(config);
 
-/* app.use(session({
-    secret: 'mySecret',
-    resave: false,
-    saveUninitialized: true
-})); */
+// Connect to the database
+connection.connect((err) => {
+    if (err) {
+        console.error('Error connecting to database:', err);
+        return;
+    }
+    console.log('Connected to database');
+});
 
 // Login route
 app.get('/login', (req, res) => {
