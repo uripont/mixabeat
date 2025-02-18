@@ -40,6 +40,20 @@ app.get('/login', (req, res) => {
     } */
 });
 
+app.get('/getUsers', (req, res) => {
+    console.log('Getting users');
+    connection.query('SELECT * FROM testtable', (err, rows) => {
+        if (err) {
+            console.error('Error executing test query', err);
+            return;
+        }
+        console.log('Got users:', rows);
+        res.send(rows);
+    });
+});
+
+
+
 /* // Protected route
 app.get('/profile', (req, res) => {
     if (req.session.user) {
