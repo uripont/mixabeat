@@ -1,8 +1,24 @@
 const express = require('express');
 //const session = require('express-session');
+const sql = require('mssql');
 const app = express();
 
 app.use(express.json());
+
+// Database configuration
+require('dotenv').config();
+const config = {
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    server: process.env.DB_SERVER,
+    database: process.env.DB_DATABASE,
+};
+
+// Connect to the database
+sql.connect(config, (err) => {
+    if (err) console.log(err);
+    else console.log('Connected to database');
+});
 
 /* app.use(session({
     secret: 'mySecret',
