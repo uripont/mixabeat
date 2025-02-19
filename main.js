@@ -41,7 +41,8 @@ function appendUser(user, userList, index) {
   // Special handling for current user's button
   if (user.id === myself_as_user?.id) {
     nameLabel.textContent = `${user.username} (You)`;
-    userBtn.disabled = true;
+    
+    //userBtn.disabled = true;
   } else {
     nameLabel.textContent = user.username;
     userBtn.addEventListener('click', () => {
@@ -50,12 +51,14 @@ function appendUser(user, userList, index) {
       switchToPrivateChat(onlineUsers[index]);
     });
   }
-  
+
+
   container.appendChild(userBtn);
   container.appendChild(nameLabel);
   userList.appendChild(container);
   userList.scrollTop = userList.scrollHeight;
 }
+
 
 function addGeneralChatButton(userList) {
   const container = document.createElement('div');
@@ -102,6 +105,7 @@ function switchToGeneralChat() {
   chatBox.innerHTML = ''; // Clear chat
   restoreChat(chatBox, chatHistories.general);
 }
+
 
 var chatHistories = {
   general: [],
@@ -155,6 +159,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
+
   // Add initial general chat button
   addGeneralChatButton(userList);
 
@@ -168,6 +173,7 @@ document.addEventListener("DOMContentLoaded", () => {
           // Hide the login screen
           document.getElementById('login-screen').style.display = 'none';
           document.getElementById('chat-screen').style.display = 'block';
+          document.getElementById('left-container').style.display = 'block';
       } else {
           alert('Please provide both Room Name and Username.');
           return;
@@ -233,7 +239,9 @@ document.addEventListener("DOMContentLoaded", () => {
             }));
             // Refresh display
             restoreUsers(userList);
-          });
+          }); 
+          
+
       };
     
       server.on_room_info = (info) => {

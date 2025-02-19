@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="styles.css">
     <script src="sillyclient.js"></script>
     <script src="main.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
 </head>
 <body>
     <!-- Login Screen -->
@@ -28,9 +30,53 @@
     </div>
     
     <!-- Chat Screen (Initially Hidden) -->
-    <div id="left-container">
+    <div id="left-container" class="screen" style="display: none;">
         <!-- Music Room Container -->        
         <h2>Music Room</h2> 
+        <div id="music-room-container">
+            
+            <div id="vertical-rectangle">
+                <div class="button-row">
+                    <button id="track-sound-select"><i class="fas fa-music"></i></button>
+                    <button id="upload"><i class="fas fa-upload"></i></button>
+                    <button id="record"><i class="fas fa-microphone"></i></button>
+                </div>
+                <div class="vertical-rectangle-fill">3D UNDER CONSTRUCTION ...</div>
+            </div>
+            <div id="horizontal-rectangle">
+                <div class="button-container">
+                    <div class="button-row" >
+                        <button id="effect-1" class="effect-1"></button>
+                        <button id="effect-2" class="effect-2"></button>
+                        <button id="effect-3" class="effect-3"></button>
+                        
+                    </div>
+                    <div class="button-row">
+                        <button id="effect-4" class="effect-4"></button>
+                        <button id="effect-5" class="effect-5"></button>
+                        <button id="effect-6" class="effect-6"></button>
+                    </div>
+                </div>
+                <div class="horizontal-rectangle-fill">SOUND EFFECTS UNDER CONSTRUCTION ...</div>
+            </div>
+            <div id="main-rectangle">
+                <canvas id="timeline-canvas"></canvas>
+
+            </div>
+            <div id="top-rectangle">
+                <div class="button-group-left">
+                    <button class="control-btn" id="prev-btn"><i class="fas fa-backward"></i></button>
+                    <button class="control-btn" id="play-btn"><i class="fas fa-play"></i></button>
+                    <button class="control-btn" id="pause-btn"><i class="fas fa-stop"></i></button>
+                    <button class="control-btn" id="next-btn"><i class="fas fa-forward"></i></button>
+                    <button class="control-btn" id="restart-btn"><i class="fas fa-redo"></i></button>
+                </div>
+                <div id="timer">00:00</div>
+                <div class="button-group-right">
+                    <button class="action-btn" id="send-btn"><i class="fas fa-paper-plane"></i></button>
+                </div>
+            </div>
+
         <!-- <h4>Under Construction ... </h4>  -->
     </div>
     
@@ -43,8 +89,9 @@
 
             <!-- Stacked Layout: User List on top, Chat Box below -->
             <div id="user-list-container">
-<!--            <h3>Connected Users</h3> -->                <div id="user-list">
-                <ul id="users"></ul>
+<!--            <h3>Connected Users</h3> -->                
+                <div id="user-list">
+                    <ul id="users"></ul>
                 </div>
                 <!-- Avatar Change Selector -->
                 <div>
