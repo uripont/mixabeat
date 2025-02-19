@@ -150,6 +150,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const sendMessageBtn = document.getElementById("send-message-btn");
   const emojiBtn = document.getElementById("emoji-btn");
 
+  
+
   // Handle emoji click, adding the emoji to the message input
   emojiBtn.addEventListener("click", (event) => {
     if (event.target.classList.contains('emoji')) {
@@ -240,7 +242,7 @@ document.addEventListener("DOMContentLoaded", () => {
             // Refresh display
             restoreUsers(userList);
           }); 
-          
+
 
       };
     
@@ -430,3 +432,4 @@ document.addEventListener("DOMContentLoaded", () => {
       });
   });
 });
+

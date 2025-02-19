@@ -565,16 +565,25 @@ button:hover {
 }
   
   #main-rectangle {
-    width: 80%;
+    width: 100%;
     height: 80%;
     float: right;
     position: absolute;
-    top: 0;
+    top: 10%;
+    left: 22%;
     right: 0;
   }
 
-  #timeline-canvas {
+  #timeline-container {
     width: 100%;
+    height: 85%;
+    overflow-x: scroll; /* Enable horizontal scrolling */
+    overflow-y: hidden; /* Disable vertical scrolling */
+}
+
+  #timeline-canvas {
+    background: pink;
+    width: 50000px;
     height: 100%;
   }
 
