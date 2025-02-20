@@ -118,6 +118,7 @@ var chatBox = null; // chatBox accessible globally
 var generalChatResponsible = null; // Tracks which user is responsible for general chat
 var waitingForResponsible = false; // Flag to track if we're waiting for responsible user
 var RESPONSIBILITY_TIMEOUT = 3000; // Time to wait for responsible before assuming empty room
+const assignedTracks = {};
 
 function findNextResponsible() {
   if (onlineUsers.length === 0) return null;
@@ -151,6 +152,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const emojiBtn = document.getElementById("emoji-btn");
 
   
+
 
   // Handle emoji click, adding the emoji to the message input
   emojiBtn.addEventListener("click", (event) => {
@@ -242,7 +244,71 @@ document.addEventListener("DOMContentLoaded", () => {
             // Refresh display
             restoreUsers(userList);
           }); 
+          
+          const canvas = document.getElementById('timeline-canvas');
+          const ctx = canvas.getContext('2d');
 
+          // Set the canvas dimensions
+          canvas.width = 50000; // Adjust as needed
+          canvas.height = 1000; // Adjust as needed
+          const trackHeight = 200;
+
+          // Define the colors for each track
+          const trackColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEEAD', '#F42F2F', '#00D0C2', '#F17000', '#00C066', '#EEBF00', '#00A7CD', '#888888'];
+          
+          // Draw each track with a different color
+          trackColors.forEach((color, index) => {
+            ctx.fillStyle = color;
+            ctx.fillRect(0, index * trackHeight, canvas.width, trackHeight);
+        
+            if (index < trackColors.length - 1) {
+              ctx.strokeStyle = '#000000'; // Line color
+              ctx.lineWidth = 2; // Line width
+              ctx.beginPath();
+              ctx.moveTo(0, (index + 1) * trackHeight);
+              ctx.lineTo(canvas.width, (index + 1) * trackHeight);
+              ctx.stroke();
+            }
+          });
+
+          canvas.addEventListener('click', (event) => {
+            const rect = canvas.getBoundingClientRect();
+            const scaleY = canvas.height / rect.height; // Calculate the scale factor
+            const y = (event.clientY - rect.top) * scaleY;
+            const trackIndex = Math.floor(y / trackHeight);
+
+    
+            // Replace 'userId' with the actual user ID
+            if (assignedTracks[trackIndex]) {
+              alert('This track is already assigned to another user.');
+              return;
+            }
+    
+            // Assign the track to the user
+            assignedTracks[trackIndex] = myself_as_user.id;
+    
+            // Paint all tracks grey
+            for (let i = 0; i < trackColors.length; i++) {
+              ctx.fillStyle = '#808080'; // Grey color
+              ctx.fillRect(0, i * trackHeight, canvas.width, trackHeight);
+            }
+    
+            // Highlight the selected track in pink
+            ctx.fillStyle = '#FFC0CB'; // Pink color
+            ctx.fillRect(0, trackIndex * trackHeight, canvas.width, trackHeight);
+    
+            // Redraw the lines between tracks
+            for (let i = 0; i < trackColors.length - 1; i++) {
+              ctx.strokeStyle = '#000000'; // Line color
+              ctx.lineWidth = 2; // Line width
+              ctx.beginPath();
+              ctx.moveTo(0, (i + 1) * trackHeight);
+              ctx.lineTo(canvas.width, (i + 1) * trackHeight);
+              ctx.stroke();
+            }
+          });
+
+          
 
       };
     

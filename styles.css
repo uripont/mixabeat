@@ -135,6 +135,9 @@
 .avatar-4 { background-color: #96CEB4; }
 .avatar-5 { background-color: #FFEEAD; }
 
+
+
+
 /* Global styles */
 * {
     margin: 0;
@@ -585,7 +588,14 @@ button:hover {
     background: pink;
     width: 50000px;
     height: 100%;
+    flex-direction: column;
   }
+
+.track-1 { background: #FF6B6B; }
+.track-2 { background: #4ECDC4; }
+.track-3 { background: #45B7D1; }
+.track-4 { background: #96CEB4; }
+
 
   #top-rectangle {
     width: 80%;
