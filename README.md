@@ -37,7 +37,7 @@ Note: Currently only the root endpoint ("/") is available.
 ## Current backend TODOs
 
 For messages and real-time chat:
-- [ ] DB schema for rooms and messages
+- [x] DB schema for rooms and messages
 - [ ] Create a new room (new entries on DB)
 - [ ] Set up websocket connections
     - [ ] Join a room
@@ -48,9 +48,9 @@ For messages and real-time chat:
 - [ ] Endpoint to get chat history for specific room
 
 For user authentication:
-- [ ] DB schema for users (password is hashed+salted)
+- [x] DB schema for users
 - [ ] Use express-session for user session management (cookies, session stored in DB)
-- [ ] Endpoint to register a new user
+- [x] Endpoint to register a new user (password is hashed+salted)
 - [ ] Endpoint to login a user (returns a session token)
 - [ ] Endpoint to logout a user (deletes session token)
 - [ ] Implement user session management on all endpoints (middleware to reuse logic)

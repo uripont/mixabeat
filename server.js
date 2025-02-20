@@ -1,6 +1,7 @@
 const express = require('express');
 //const session = require('express-session');
 const mysql = require('mysql');
+const bcrypt = require('bcrypt');
 const app = express();
 
 app.use(express.json());
@@ -52,7 +53,37 @@ app.get('/getUsers', (req, res) => {
     });
 });
 
+const saltRounds = 10;
 
+app.post('/signUp', (req, res) => {
+    const { username, email, password } = req.body;
+    
+    if (!username || !email || !password) {
+        return res.status(400).send('All fields are required');
+    }
+
+    bcrypt.hash(password, saltRounds, (err, hashedPassword) => {
+        if (err) {
+            console.error('Error hashing password:', err);
+            res.status(500).send('Error creating user');
+            return;
+        }
+
+        connection.query(
+            'INSERT INTO testtable (name, email, password) VALUES (?, ?, ?)',
+            [username, email, hashedPassword],
+            (err, rows) => {
+                if (err) {
+                    console.error('Error executing query:', err);
+                    res.status(500).send('Error creating user');
+                    return;
+                }
+                console.log('Added user:', rows);
+                res.status(201).send({ message: 'User created successfully', userId: rows.insertId });
+            }
+        );
+    });
+});
 
 /* // Protected route
 app.get('/profile', (req, res) => {
