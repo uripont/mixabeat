@@ -315,6 +315,19 @@ document.addEventListener("DOMContentLoaded", () => {
             }
           });
 
+          const trackSoundSelectBtn = document.getElementById('track-sound-select');
+          const instrumentSelect = document.getElementById('instrument-select');
+
+          trackSoundSelectBtn.addEventListener('click', () => {
+            instrumentSelect.style.display = instrumentSelect.style.display === 'none' ? 'block' : 'none';
+          });
+
+          instrumentSelect.addEventListener('change', (event) => {
+            const selectedInstrument = event.target.value;
+            console.log(`Selected instrument: ${selectedInstrument}`);
+            instrumentSelect.style.display = 'none';
+          });
+
           
 
       };
