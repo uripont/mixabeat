@@ -255,7 +255,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
           // Define the colors for each track
           const trackColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEEAD', '#F42F2F', '#00D0C2', '#F17000', '#00C066', '#EEBF00', '#00A7CD', '#888888'];
-          
+          let userTrackAssigned = false; 
+
           // Draw each track with a different color
           trackColors.forEach((color, index) => {
             ctx.fillStyle = color;
@@ -283,9 +284,15 @@ document.addEventListener("DOMContentLoaded", () => {
               alert('This track is already assigned to another user.');
               return;
             }
+
+            if (userTrackAssigned) {
+              alert('You have already selected a track.');
+              return;
+            }
     
             // Assign the track to the user
             assignedTracks[trackIndex] = myself_as_user.id;
+            userTrackAssigned = true;
     
             // Paint all tracks grey
             for (let i = 0; i < trackColors.length; i++) {
