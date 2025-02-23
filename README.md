@@ -68,9 +68,9 @@ For messages and real-time chat:
 
 For user authentication:
 - [x] DB schema for users
-- [ ] Use express-session for user session management (cookies, session stored in DB)
+- [x] Manual session management (cookies, session stored in DB)
 - [x] Endpoint to register a new user (password is hashed+salted)
-- [ ] Endpoint to login a user (returns a session token)
+- [x] Endpoint to login a user (returns a session token)
 - [ ] Endpoint to logout a user (deletes session token)
 - [ ] Implement user session management on all endpoints (middleware to reuse logic)
 
