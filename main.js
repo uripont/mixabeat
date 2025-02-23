@@ -42,7 +42,7 @@ function appendUser(user, userList, index) {
   if (user.id === myself_as_user?.id) {
     nameLabel.textContent = `${user.username} (You)`;
     
-    //userBtn.disabled = true;
+    userBtn.disabled = true;
   } else {
     nameLabel.textContent = user.username;
     userBtn.addEventListener('click', () => {
@@ -106,20 +106,6 @@ function switchToGeneralChat() {
   restoreChat(chatBox, chatHistories.general);
 }
 
-
-var chatHistories = {
-  general: [],
-  private: {}
-};
-var onlineUsers = [];
-var activeChat = "general";
-var myself_as_user = null;
-var chatBox = null; // chatBox accessible globally
-var generalChatResponsible = null; // Tracks which user is responsible for general chat
-var waitingForResponsible = false; // Flag to track if we're waiting for responsible user
-var RESPONSIBILITY_TIMEOUT = 3000; // Time to wait for responsible before assuming empty room
-const assignedTracks = {};
-
 function findNextResponsible() {
   if (onlineUsers.length === 0) return null;
   // Sort by join time and get earliest joined user
@@ -141,6 +127,26 @@ function setGeneralChatResponsible(userId, server) {
   }));
 }
 
+
+
+
+var chatHistories = {
+  general: [],
+  private: {}
+};
+var onlineUsers = [];
+var activeChat = "general";
+var myself_as_user = null;
+var chatBox = null; // chatBox accessible globally
+var generalChatResponsible = null; // Tracks which user is responsible for general chat
+var waitingForResponsible = false; // Flag to track if we're waiting for responsible user
+var RESPONSIBILITY_TIMEOUT = 3000; // Time to wait for responsible before assuming empty room
+const assignedTracks = {};
+
+
+
+
+
 document.addEventListener("DOMContentLoaded", () => {
   const connectBtn = document.getElementById("connect-btn");
   const roomInput = document.getElementById("room");
@@ -151,7 +157,28 @@ document.addEventListener("DOMContentLoaded", () => {
   const sendMessageBtn = document.getElementById("send-message-btn");
   const emojiBtn = document.getElementById("emoji-btn");
 
+  const sendBtn = document.getElementById("send-btn");
+  const leftContainer = document.getElementById("timeline-container");
   
+  sendBtn.addEventListener("click", function () {
+      // Create message container
+      const messageDiv = document.createElement("div");
+      messageDiv.textContent = "Song sent. Waiting for future mates' responses...";
+      messageDiv.style.padding = "20px";
+      messageDiv.style.textAlign = "center";
+      messageDiv.style.fontSize = "18px";
+      messageDiv.style.color = "#333";
+      messageDiv.style.backgroundColor = "#ccc";
+      messageDiv.style.width = "100%";
+      messageDiv.style.height = "100%";
+      messageDiv.style.display = "flex";
+      messageDiv.style.alignItems = "center";
+      messageDiv.style.justifyContent = "center";
+      
+      // Clear the left container and append the message
+      leftContainer.innerHTML = "";
+      leftContainer.appendChild(messageDiv);
+  });
 
 
   // Handle emoji click, adding the emoji to the message input
@@ -233,6 +260,7 @@ document.addEventListener("DOMContentLoaded", () => {
           changeAvatarSelect.value = avatarId; // Set initial value
           changeAvatarSelect.addEventListener("change", () => {
             const newAvatarId = changeAvatarSelect.value;
+            
             myself_as_user.avatar = newAvatarId;
             
             // Send to everyone in the room (yet new message type)
@@ -270,7 +298,7 @@ document.addEventListener("DOMContentLoaded", () => {
               ctx.lineTo(canvas.width, (index + 1) * trackHeight);
               ctx.stroke();
             }
-          });
+          }); 
 
           canvas.addEventListener('click', (event) => {
             const rect = canvas.getBoundingClientRect();
