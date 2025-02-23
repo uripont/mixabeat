@@ -64,4 +64,4 @@ CREATE TABLE messages (
 
 -- Verify setup
 SELECT 'Database setup completed successfully' as 'Status';
-SELECT user, host, plugin FROM mysql.user WHERE user IN ('root', 'serverUser');
+SELECT user, host FROM mysql.user;

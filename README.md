@@ -10,6 +10,25 @@
 - Apache server (pre-installed and running on VM)
 - SSH access credentials
 - VM public IP: http://20.26.232.219
+- MySQL database configured (see Database Setup)
+
+### Database Setup
+The application uses MySQL with two users:
+- **root**: Admin access (local & remote) for database configuration
+- **serverUser**: Limited privileges for Node.js application (localhost only)
+
+1. Run database setup (note: passwords are templates, replace with secure values):
+```bash
+mysql -u root -p < creating_database.sql
+```
+
+2. Configure application:
+```bash
+cp env-template.txt .env
+# Update .env with proper credentials
+```
+
+For direct database access from IDE, temporarily open VM port 3306 via Azure portal.
 
 ### Connecting to VM
 Connect via SSH using your development machine:
