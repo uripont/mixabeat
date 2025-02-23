@@ -1,12 +1,13 @@
 const express = require('express');
-//const session = require('express-session');
 const mysql = require('mysql');
-const bcrypt = require('bcrypt');
+const crypto = require('crypto');
+
+// Express app configuration ------------------
 const app = express();
-
 app.use(express.json());
+//---------------------------------------------
 
-// Database configuration
+// Database configuration----------------------
 require('dotenv').config();
 const config = {
     host: process.env.DB_HOST,
@@ -27,13 +28,26 @@ connection.connect((err) => {
     }
     console.log('Connected to database');
 });
+//--------------------------------------------
 
-// Session helper functions
-const crypto = require('crypto');
-
+// Crypto helper functions---------------------
 const generateSessionToken = () => {
     return crypto.randomBytes(32).toString('hex');
 };
+
+const hashPassword = (password) => {
+    const salt = crypto.randomBytes(16).toString('hex');
+    const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
+    return `${salt}:${hash}`;
+};
+
+const verifyPassword = (password, storedHash) => {
+    const [salt, hash] = storedHash.split(':');
+    const verifyHash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
+    return hash === verifyHash;
+};
+//---------------------------------------------
+
 
 const createSession = (userId, connection) => {
     const token = generateSessionToken();
@@ -77,7 +91,7 @@ app.post('/login', async (req, res) => {
             }
 
             const user = results[0];
-            const match = await bcrypt.compare(password, user.password_hash);
+            const match = verifyPassword(password, user.password_hash);
 
             if (!match) {
                 return res.status(401).send('Invalid username or password');
@@ -111,8 +125,6 @@ app.get('/getUsers', (req, res) => {
     });
 });
 
-const saltRounds = 10;
-
 app.post('/signUp', (req, res) => {
     const { username, email, password } = req.body;
     
@@ -120,16 +132,11 @@ app.post('/signUp', (req, res) => {
         return res.status(400).send('All fields are required');
     }
 
-    bcrypt.hash(password, saltRounds, (err, hashedPassword) => {
-        if (err) {
-            console.error('Error hashing password:', err);
-            res.status(500).send('Error creating user');
-            return;
-        }
+    const hashedPassword = hashPassword(password);
 
-        connection.query(
-            'INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)',
-            [username, email, hashedPassword],
+    connection.query(
+        'INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)',
+        [username, email, hashedPassword],
             (err, rows) => {
                 if (err) {
                     console.error('Error executing query:', err);
@@ -141,7 +148,6 @@ app.post('/signUp', (req, res) => {
             }
         );
     });
-});
 
 /* // Protected route
 app.get('/profile', (req, res) => {
@@ -149,7 +155,7 @@ app.get('/profile', (req, res) => {
         res.send(`Welcome, ${req.session.user}`);
     } else {
         res.status(401).send('Not authenticated');
-    }
+            }
 }); */
 
 app.listen(3000, () => {
