@@ -35,6 +35,16 @@ CREATE TABLE users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) COMMENT 'Stores user account information';
 
+-- Create simple sessions table (manual management instead of librart)
+CREATE TABLE sessions (
+    token VARCHAR(64) PRIMARY KEY,
+    user_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+        ON DELETE CASCADE
+) COMMENT 'Stores active user sessions';
+
 -- Create rooms table with JSON column
 CREATE TABLE rooms (
     room_id INT AUTO_INCREMENT PRIMARY KEY,
