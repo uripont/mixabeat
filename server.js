@@ -28,17 +28,75 @@ connection.connect((err) => {
     console.log('Connected to database');
 });
 
-// Login route
-app.get('/login', (req, res) => {
-    res.send('Has hit the endpoint on VM');
+// Session helper functions
+const crypto = require('crypto');
 
-    /* // You should verify credentials with your database here
-    if (req.body.username === 'admin' && req.body.password === '1234') {
-        req.session.user = 'admin'; // Store the username in the session
-        res.send('Authenticated');
-    } else {
-        res.send('Incorrect credentials');
-    } */
+const generateSessionToken = () => {
+    return crypto.randomBytes(32).toString('hex');
+};
+
+const createSession = (userId, connection) => {
+    const token = generateSessionToken();
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 1); // Session expires in 1 day
+
+    return new Promise((resolve, reject) => {
+        connection.query(
+            'INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)',
+            [token, userId, expiresAt],
+            (err) => {
+                if (err) {
+                    reject(err);
+                    return;
+                }
+                resolve(token);
+            }
+        );
+    });
+};
+
+// Login route
+app.post('/login', async (req, res) => {
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+        return res.status(400).send('Username and password are required');
+    }
+
+    connection.query(
+        'SELECT user_id, username, password_hash FROM users WHERE username = ?',
+        [username],
+        async (err, results) => {
+            if (err) {
+                console.error('Error executing query:', err);
+                return res.status(500).send('Error during login');
+            }
+
+            if (results.length === 0) {
+                return res.status(401).send('Invalid username or password');
+            }
+
+            const user = results[0];
+            const match = await bcrypt.compare(password, user.password_hash);
+
+            if (!match) {
+                return res.status(401).send('Invalid username or password');
+            }
+
+            try {
+                const token = await createSession(user.user_id, connection);
+                res.json({
+                    message: 'Login successful',
+                    token: token,
+                    userId: user.user_id,
+                    username: user.username
+                });
+            } catch (error) {
+                console.error('Error creating session:', error);
+                res.status(500).send('Error creating session');
+            }
+        }
+    );
 });
 
 app.get('/getUsers', (req, res) => {
