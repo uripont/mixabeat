@@ -13,7 +13,7 @@ const config = {
     port: process.env.DB_PORT,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
-    database: process.env.DB_DATABASE,
+    database: process.env.DB_DATABASE
 };
 
 // Create connection
@@ -43,13 +43,13 @@ app.get('/login', (req, res) => {
 
 app.get('/getUsers', (req, res) => {
     console.log('Getting users');
-    connection.query('SELECT * FROM testtable', (err, rows) => {
+    connection.query('SELECT user_id, username, email, created_at FROM users', (err, rows) => {
         if (err) {
-            console.error('Error executing test query', err);
-            return;
+            console.error('Error executing query:', err);
+            return res.status(500).send('Error fetching users');
         }
         console.log('Got users:', rows);
-        res.send(rows);
+        res.json(rows);
     });
 });
 
@@ -70,7 +70,7 @@ app.post('/signUp', (req, res) => {
         }
 
         connection.query(
-            'INSERT INTO testtable (name, email, password) VALUES (?, ?, ?)',
+            'INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)',
             [username, email, hashedPassword],
             (err, rows) => {
                 if (err) {
