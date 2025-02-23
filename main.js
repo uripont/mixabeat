@@ -51,8 +51,6 @@ function appendUser(user, userList, index) {
       switchToPrivateChat(onlineUsers[index]);
     });
   }
-
-
   container.appendChild(userBtn);
   container.appendChild(nameLabel);
   userList.appendChild(container);
@@ -156,24 +154,37 @@ document.addEventListener("DOMContentLoaded", () => {
   const messageInput = document.getElementById("message");
   const sendMessageBtn = document.getElementById("send-message-btn");
   const emojiBtn = document.getElementById("emoji-btn");
-
   const sendBtn = document.getElementById("send-btn");
   const leftContainer = document.getElementById("timeline-container");
-  
+  const playBtn = document.getElementById("play-btn");
+  const stopBtn = document.getElementById("pause-btn");
+
+  playBtn.addEventListener("click", () => {
+    console.log("Play button clicked");
+  });
+
+  // Handle stop button click
+  stopBtn.addEventListener("click", () => {
+    console.log("Stop button clicked");
+  });
+
   sendBtn.addEventListener("click", function () {
+
+      console.log("Send button clicked");
       // Create message container
       const messageDiv = document.createElement("div");
       messageDiv.textContent = "Song sent. Waiting for future mates' responses...";
       messageDiv.style.padding = "20px";
       messageDiv.style.textAlign = "center";
-      messageDiv.style.fontSize = "18px";
-      messageDiv.style.color = "#333";
-      messageDiv.style.backgroundColor = "#ccc";
+      messageDiv.style.fontSize = "25px";
+      messageDiv.style.color = "#fff";
+      messageDiv.style.background = "linear-gradient(135deg, #1a1a1a, #333)";
       messageDiv.style.width = "100%";
       messageDiv.style.height = "100%";
       messageDiv.style.display = "flex";
       messageDiv.style.alignItems = "center";
       messageDiv.style.justifyContent = "center";
+      messageDiv.style.fontFamily = "Montserrat, sans-serif";
       
       // Clear the left container and append the message
       leftContainer.innerHTML = "";
@@ -260,7 +271,6 @@ document.addEventListener("DOMContentLoaded", () => {
           changeAvatarSelect.value = avatarId; // Set initial value
           changeAvatarSelect.addEventListener("change", () => {
             const newAvatarId = changeAvatarSelect.value;
-            
             myself_as_user.avatar = newAvatarId;
             
             // Send to everyone in the room (yet new message type)
@@ -271,21 +281,22 @@ document.addEventListener("DOMContentLoaded", () => {
             }));
             // Refresh display
             restoreUsers(userList);
+            console.log("Avatar changed");
           }); 
           
+          // volia crear funcio pero al fer-ho no tira,ns xk
           const canvas = document.getElementById('timeline-canvas');
           const ctx = canvas.getContext('2d');
 
-          // Set the canvas dimensions
-          canvas.width = 50000; // Adjust as needed
-          canvas.height = 1000; // Adjust as needed
+          // canvas dimensions
+          canvas.width = 50000; 
+          canvas.height = 1000; 
           const trackHeight = 200;
 
-          // Define the colors for each track
           const trackColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEEAD', '#F42F2F', '#00D0C2', '#F17000', '#00C066', '#EEBF00', '#00A7CD', '#888888'];
           let userTrackAssigned = false; 
 
-          // Draw each track with a different color
+          // each track with a different color
           trackColors.forEach((color, index) => {
             ctx.fillStyle = color;
             ctx.fillRect(0, index * trackHeight, canvas.width, trackHeight);
@@ -300,14 +311,14 @@ document.addEventListener("DOMContentLoaded", () => {
             }
           }); 
 
+          console.log("Timeline tracks created");
+
           canvas.addEventListener('click', (event) => {
             const rect = canvas.getBoundingClientRect();
-            const scaleY = canvas.height / rect.height; // Calculate the scale factor
+            const scaleY = canvas.height / rect.height; 
             const y = (event.clientY - rect.top) * scaleY;
             const trackIndex = Math.floor(y / trackHeight);
 
-    
-            // Replace 'userId' with the actual user ID
             if (assignedTracks[trackIndex]) {
               alert('This track is already assigned to another user.');
               return;
@@ -341,6 +352,8 @@ document.addEventListener("DOMContentLoaded", () => {
               ctx.lineTo(canvas.width, (i + 1) * trackHeight);
               ctx.stroke();
             }
+
+            console.log("Track line selected");
           });
 
           const trackSoundSelectBtn = document.getElementById('track-sound-select');
@@ -354,9 +367,8 @@ document.addEventListener("DOMContentLoaded", () => {
             const selectedInstrument = event.target.value;
             console.log(`Selected instrument: ${selectedInstrument}`);
             instrumentSelect.style.display = 'none';
+            console.log("Instrument selected");
           });
-
-          
 
       };
     
