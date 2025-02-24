@@ -36,7 +36,7 @@ For Music Room interface:
 - [ ] Add sounds to tracks
 
 ## Final Delivery TODOs
-Here are some TODOs that we have already been setted for the final delivery
+Here are some TODOs that we have already identified and that we want to work on for the final delivery. They are not yet definitive and many more need to be added but they already serve as a guide to know where we are.
 
 - [ ] Create last screen of Review and download music
 
