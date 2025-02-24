@@ -113,21 +113,35 @@ const authenticateWSConnection = async (socket, request) => {
 
 // Message handlers
 const broadcastToRoom = (roomId, message, excludeSocket = null) => {
+    logger.log(`Broadcasting to room ${roomId}: ${JSON.stringify(message)}`);
     clients.forEach((client, ws) => {
-        if (ws !== excludeSocket && client.roomId === roomId) {
-            ws.send(JSON.stringify(message));
+        if (ws.readyState === WebSocket.OPEN && client.roomId === roomId) {
+            // Log each eligible client for debugging
+            logger.log(`Found client in room ${roomId}: ${client.userId}`);
+            if (ws === excludeSocket) {
+                logger.log('Skipping sender');
+                return;
+            }
+            try {
+                ws.send(JSON.stringify(message));
+                logger.log('Message sent successfully');
+            } catch (err) {
+                logger.error(`Error sending message to client: ${err}`);
+            }
         }
     });
 };
 
 const handleChatMessage = async (socket, message) => {
     if (!socket.roomId) {
+        logger.error('Attempt to send message without room context');
         socket.send(JSON.stringify({
             type: 'error',
             message: 'You must join a room before sending messages'
         }));
         return;
     }
+    logger.log(`Handling chat message in room ${socket.roomId}`);
     const userId = socket.userId;
     
     try {
