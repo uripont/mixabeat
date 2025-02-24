@@ -43,4 +43,42 @@ async function signup(username, email, password) {
     return await response.json();
 }
 
-export { login, signup };
+async function createRoom(songName, token) {
+    console.log('Creating room with name:', songName);
+    const response = await fetch(`${API_URL}/rooms`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': token
+        },
+        body: JSON.stringify({ songName })
+    });
+
+    if (!response.ok) {
+        const error = await response.text();
+        console.error('Room creation failed:', error);
+        throw new Error(error || 'Failed to create room');
+    }
+
+    return await response.json();
+}
+
+async function joinRoom(roomId, token) {
+    console.log('Joining room:', roomId);
+    const response = await fetch(`${API_URL}/rooms/${roomId}/join`, {
+        method: 'PUT',
+        headers: {
+            'Authorization': token
+        }
+    });
+
+    if (!response.ok) {
+        const error = await response.text();
+        console.error('Failed to join room:', error);
+        throw new Error(error || 'Failed to join room');
+    }
+
+    return await response.json();
+}
+
+export { login, signup, createRoom, joinRoom };
