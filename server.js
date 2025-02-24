@@ -38,6 +38,20 @@ const logger = {
 
 // Express and Websocket configuration ------------------
 const app = express();
+
+// Basic CORS middleware
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    
+    // Handle preflight requests
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(200);
+    }
+    next();
+});
+
 app.use(express.json());
 
 const wss = new WebSocket.Server({ server: app.listen(3000, () => {
@@ -108,9 +122,12 @@ const broadcastToRoom = (roomId, message, excludeSocket = null) => {
 
 const handleChatMessage = async (socket, message) => {
     if (!socket.roomId) {
+        socket.send(JSON.stringify({
+            type: 'error',
+            message: 'You must join a room before sending messages'
+        }));
         return;
     }
-
     const userId = socket.userId;
     
     try {
@@ -157,13 +174,31 @@ wss.on('connection', async (socket, request) => {
         try {
             // Convert Buffer to string before parsing
             const message = JSON.parse(data.toString());
-            logger.log('Received message:', data);
+            logger.log('Received message: ' + data.toString());
             
             switch (message.type) {
                 case 'message':
                     await handleChatMessage(socket, message);
                     break;
-                    //TODO: joining/leaving rooms messages
+                case 'join_room':
+                    // Update socket and client's room context
+                    socket.roomId = message.roomId;
+                    if (clients.has(socket)) {
+                        clients.get(socket).roomId = message.roomId;
+                    }
+                    // Get user info for broadcasting
+                    const [userResult] = await pool.promise().query(
+                        'SELECT username FROM users WHERE user_id = ?',
+                        [socket.userId]
+                    );
+                    // Broadcast to room that user joined
+                    broadcastToRoom(message.roomId, {
+                        type: 'user_joined',
+                        userId: socket.userId,
+                        username: userResult[0].username,
+                        timestamp: new Date().toISOString()
+                    });
+                    break;
             }
         } catch (err) {
             logger.error('WebSocket message error:', err);
