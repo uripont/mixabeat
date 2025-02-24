@@ -1,5 +1,5 @@
 const express = require('express');
-const mysql = require('mysql');
+const mysql = require('mysql2');
 const crypto = require('crypto');
 
 // Express app configuration ------------------
@@ -17,16 +17,17 @@ const config = {
     database: process.env.DB_DATABASE
 };
 
-// Create connection
-const connection = mysql.createConnection(config);
+// Create connection pool
+const pool = mysql.createPool(config);
 
-// Connect to the database
-connection.connect((err) => {
+// Test database connection
+pool.getConnection((err, connection) => {
     if (err) {
         console.error('Error connecting to database:', err);
         return;
     }
     console.log('Connected to database');
+    connection.release();
 });
 //--------------------------------------------
 
@@ -48,14 +49,13 @@ const verifyPassword = (password, storedHash) => {
 };
 //---------------------------------------------
 
-
-const createSession = (userId, connection) => {
+const createSession = (userId) => {
     const token = generateSessionToken();
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 1); // Session expires in 1 day
 
     return new Promise((resolve, reject) => {
-        connection.query(
+        pool.query(
             'INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)',
             [token, userId, expiresAt],
             (err) => {
@@ -77,7 +77,7 @@ app.post('/login', async (req, res) => {
         return res.status(400).send('Username and password are required');
     }
 
-    connection.query(
+    pool.query(
         'SELECT user_id, username, password_hash FROM users WHERE username = ?',
         [username],
         async (err, results) => {
@@ -98,7 +98,7 @@ app.post('/login', async (req, res) => {
             }
 
             try {
-                const token = await createSession(user.user_id, connection);
+                const token = await createSession(user.user_id);
                 res.json({
                     message: 'Login successful',
                     token: token,
@@ -115,7 +115,7 @@ app.post('/login', async (req, res) => {
 
 app.get('/getUsers', (req, res) => {
     console.log('Getting users');
-    connection.query('SELECT user_id, username, email, created_at FROM users', (err, rows) => {
+    pool.query('SELECT user_id, username, email, created_at FROM users', (err, rows) => {
         if (err) {
             console.error('Error executing query:', err);
             return res.status(500).send('Error fetching users');
@@ -134,20 +134,20 @@ app.post('/signUp', (req, res) => {
 
     const hashedPassword = hashPassword(password);
 
-    connection.query(
+    pool.query(
         'INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)',
         [username, email, hashedPassword],
-            (err, rows) => {
-                if (err) {
-                    console.error('Error executing query:', err);
-                    res.status(500).send('Error creating user');
-                    return;
-                }
-                console.log('Added user:', rows);
-                res.status(201).send({ message: 'User created successfully', userId: rows.insertId });
+        (err, rows) => {
+            if (err) {
+                console.error('Error executing query:', err);
+                res.status(500).send('Error creating user');
+                return;
             }
-        );
-    });
+            console.log('Added user:', rows);
+            res.status(201).send({ message: 'User created successfully', userId: rows.insertId });
+        }
+    );
+});
 
 /* // Protected route
 app.get('/profile', (req, res) => {
