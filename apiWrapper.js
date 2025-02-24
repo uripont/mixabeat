@@ -81,4 +81,21 @@ async function joinRoom(roomId, token) {
     return await response.json();
 }
 
-export { login, signup, createRoom, joinRoom };
+async function getRoomMessages(roomId, token) {
+    console.log('Fetching messages for room:', roomId);
+    const response = await fetch(`${API_URL}/rooms/${roomId}/messages`, {
+        headers: {
+            'Authorization': token
+        }
+    });
+
+    if (!response.ok) {
+        const error = await response.text();
+        console.error('Failed to fetch messages:', error);
+        throw new Error(error || 'Failed to fetch messages');
+    }
+
+    return await response.json();
+}
+
+export { login, signup, createRoom, joinRoom, getRoomMessages };

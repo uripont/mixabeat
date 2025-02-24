@@ -36,26 +36,69 @@ function connectWebSocket(token) {
                 console.log('Authentication successful');
             } 
             else if (message.type === 'message') {
-                // The server now sends messages with additional fields like messageId, userId, and timestamp.
+                // Display received messages with bubble styling
                 const chatBox = document.getElementById('chat-box');
-                appendMessage(
-                    message.username, 
-                    message.message, 
-                    message.timestamp, 
-                    chatBox
-                );
+                if (chatBox && message.username !== currentUsername) { // Only display messages from others
+                    const msgContainer = document.createElement('div');
+                    msgContainer.className = 'message-container';
+                    
+                    const senderLabel = document.createElement('div');
+                    senderLabel.className = 'message-sender';
+                    senderLabel.textContent = message.username;
+                    
+                    const msgBubble = document.createElement('div');
+                    msgBubble.className = `message-bubble message-received`;
+                    msgBubble.textContent = message.message;
+                    
+                    msgContainer.appendChild(senderLabel);
+                    msgContainer.appendChild(msgBubble);
+                    chatBox.appendChild(msgContainer);
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                }
             } 
             else if (message.type === 'user_joined') {
                 const chatBox = document.getElementById('chat-box');
                 connectedUsers.add(message.username);
                 updateUsersList();
-                appendMessage('System', `${message.username} joined the chat`, new Date().toISOString(), chatBox);
+                if (chatBox) {
+                    const msgContainer = document.createElement('div');
+                    msgContainer.className = 'message-container';
+                    
+                    const senderLabel = document.createElement('div');
+                    senderLabel.className = 'message-sender';
+                    senderLabel.textContent = 'System';
+                    
+                    const msgBubble = document.createElement('div');
+                    msgBubble.className = 'message-bubble message-received';
+                    msgBubble.textContent = `${message.username} joined the chat`;
+                    
+                    msgContainer.appendChild(senderLabel);
+                    msgContainer.appendChild(msgBubble);
+                    chatBox.appendChild(msgContainer);
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                }
             } 
             else if (message.type === 'user_left') {
                 const chatBox = document.getElementById('chat-box');
                 connectedUsers.delete(message.username);
                 updateUsersList();
-                appendMessage('System', `${message.username} left the chat`, new Date().toISOString(), chatBox);
+                if (chatBox) {
+                    const msgContainer = document.createElement('div');
+                    msgContainer.className = 'message-container';
+                    
+                    const senderLabel = document.createElement('div');
+                    senderLabel.className = 'message-sender';
+                    senderLabel.textContent = 'System';
+                    
+                    const msgBubble = document.createElement('div');
+                    msgBubble.className = 'message-bubble message-received';
+                    msgBubble.textContent = `${message.username} left the chat`;
+                    
+                    msgContainer.appendChild(senderLabel);
+                    msgContainer.appendChild(msgBubble);
+                    chatBox.appendChild(msgContainer);
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                }
             }
             else if (message.type === 'error') {
                 console.error('WebSocket error:', message.error);
@@ -124,9 +167,24 @@ function updateUsersList() {
     });
 }
 
+// Function to join a room via WebSocket
+function joinRoom(roomId) {
+    if (!activeWs || activeWs.readyState !== WebSocket.OPEN) {
+        console.error('WebSocket not connected');
+        return false;
+    }
+
+    activeWs.send(JSON.stringify({
+        type: 'join_room',
+        roomId: roomId
+    }));
+    return true;
+}
+
 export { 
     initializeWebSocket, 
     sendChatMessage,
+    joinRoom,
     connectedUsers,
     currentUsername 
 };
