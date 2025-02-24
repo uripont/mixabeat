@@ -1,561 +1,358 @@
+import { initializeWebSocket, sendChatMessage, joinRoom as wsJoinRoom, currentUsername } from './websocket.js';
+import { login, signup, createRoom, joinRoom, getRoomMessages } from './apiWrapper.js';
+
+// Message UI helper function
 function appendMessage(sender, message, chatBox) {
-  const msg = document.createElement('div');
-  msg.textContent = `${sender}: ${message}`;
-  chatBox.appendChild(msg);
-  chatBox.scrollTop = chatBox.scrollHeight; 
-}
-
-function restoreChat(chatBox, history) {
-  if (!history) return;
-  for (let i = 0; i < history.length; i++) {
-    appendMessage(history[i].username, history[i].text, chatBox);
-  }
-}
-
-function restoreUsers(userList) {
-  // Reset UI list of online users
-  while (userList.firstChild){
-    userList.removeChild(userList.firstChild)
-  }
-
-  // Add back the general chat button first
-  addGeneralChatButton(userList);
-
-  // Rebuild UI list of online users
-  for (let i = 0; i < onlineUsers.length; i++) {
-    appendUser(onlineUsers[i], userList, i);
-  }
-}
-
-function appendUser(user, userList, index) {
-  const container = document.createElement('div');
-  container.classList.add('user-container');
-
-  const userBtn = document.createElement('button');
-  userBtn.classList.add('user-button');
-  userBtn.classList.add(`avatar-${user.avatar}`);
-  
-  const nameLabel = document.createElement('div');
-  nameLabel.classList.add('user-name');
-  
-  // Special handling for current user's button
-  if (user.id === myself_as_user?.id) {
-    nameLabel.textContent = `${user.username} (You)`;
+    const msgContainer = document.createElement('div');
+    msgContainer.className = 'message-container';
     
-    userBtn.disabled = true;
-  } else {
-    nameLabel.textContent = user.username;
-    userBtn.addEventListener('click', () => {
-      // User object is directly accessible through onlineUsers[index]
-      console.log("Clicked user:", onlineUsers[index]);
-      switchToPrivateChat(onlineUsers[index]);
-    });
-  }
-  container.appendChild(userBtn);
-  container.appendChild(nameLabel);
-  userList.appendChild(container);
-  userList.scrollTop = userList.scrollHeight;
+    const msgBubble = document.createElement('div');
+    msgBubble.className = `message-bubble ${sender === 'You' ? 'message-sent' : 'message-received'}`;
+    msgBubble.textContent = message;
+    
+    const senderLabel = document.createElement('div');
+    senderLabel.className = 'message-sender';
+    senderLabel.textContent = sender;
+    
+    msgContainer.appendChild(senderLabel);
+    msgContainer.appendChild(msgBubble);
+    chatBox.appendChild(msgContainer);
+    chatBox.scrollTop = chatBox.scrollHeight;
 }
-
-
-function addGeneralChatButton(userList) {
-  const container = document.createElement('div');
-  container.classList.add('user-container');
-
-  const generalBtn = document.createElement('button');
-  generalBtn.classList.add('user-button', 'general-chat');
-  generalBtn.id = 'general-chat-btn';
-  generalBtn.addEventListener('click', switchToGeneralChat);
-  
-  const nameLabel = document.createElement('div');
-  nameLabel.classList.add('user-name');
-  nameLabel.textContent = "All";
-  
-  container.appendChild(generalBtn);
-  container.appendChild(nameLabel);
-  userList.appendChild(container);
-}
-
-function getChatKey(id1, id2) { // In format "id1-id2"
-  return [id1, id2].sort().join('-'); // Sort to ensure same key regardless of order
-}
-
-function switchToPrivateChat(user) {
-  activeChat = user.id;
-  document.getElementById('chat-header').textContent = `Private chat with ${user.username}`;
-  document.getElementById('general-chat-btn').classList.remove('active');
-  
-  // Clear current chat before showing new one
-  chatBox.innerHTML = '';
-  
-  // Initialize or restore private chat history
-  const chatKey = getChatKey(myself_as_user.id, user.id);
-  if (!chatHistories.private[chatKey]) {
-    chatHistories.private[chatKey] = [];
-  }
-  restoreChat(chatBox, chatHistories.private[chatKey]);
-}
-
-function switchToGeneralChat() {
-  activeChat = "general";
-  document.getElementById('chat-header').textContent = "General Chat";
-  document.getElementById('general-chat-btn').classList.add('active');
-  chatBox.innerHTML = ''; // Clear chat
-  restoreChat(chatBox, chatHistories.general);
-}
-
-function findNextResponsible() {
-  if (onlineUsers.length === 0) return null;
-  // Sort by join time and get earliest joined user
-  return onlineUsers.sort((a, b) => a.joinTime - b.joinTime)[0];
-}
-
-function setGeneralChatResponsible(userId, server) {
-  generalChatResponsible = userId;
-  
-  if (myself_as_user?.id === userId) {
-    console.log('[GENERAL] Now responsible for chat history');
-  }
-  
-  console.log('[GENERAL] Broadcasting new responsible:', userId);
-  server.sendMessage(JSON.stringify({
-    type: "responsible_status",
-    responsibleId: userId,
-    timestamp: Date.now() // Include timestamp for synchronization
-  }));
-}
-
-
-
-
-var chatHistories = {
-  general: [],
-  private: {}
-};
-var onlineUsers = [];
-var activeChat = "general";
-var myself_as_user = null;
-var chatBox = null; // chatBox accessible globally
-var generalChatResponsible = null; // Tracks which user is responsible for general chat
-var waitingForResponsible = false; // Flag to track if we're waiting for responsible user
-var RESPONSIBILITY_TIMEOUT = 3000; // Time to wait for responsible before assuming empty room
-const assignedTracks = {};
-
-
-
-
 
 document.addEventListener("DOMContentLoaded", () => {
-  const connectBtn = document.getElementById("connect-btn");
-  const roomInput = document.getElementById("room");
-  const usernameInput = document.getElementById("username");
-  chatBox = document.getElementById('chat-box'); // Assign to global variable
-  const userList = document.getElementById('user-list');
-  const messageInput = document.getElementById("message");
-  const sendMessageBtn = document.getElementById("send-message-btn");
-  const emojiBtn = document.getElementById("emoji-btn");
-  const sendBtn = document.getElementById("send-btn");
-  const leftContainer = document.getElementById("timeline-container");
-  const playBtn = document.getElementById("play-btn");
-  const stopBtn = document.getElementById("pause-btn");
+    console.log('DOM Content Loaded - Starting initialization');
 
-  playBtn.addEventListener("click", () => {
-    console.log("Play button clicked");
-  });
+    // UI Elements with error checking
+    const getElementSafely = (id) => {
+        const element = document.getElementById(id);
+        if (!element) {
+            console.error(`Element with id "${id}" not found in DOM`);
+            console.trace();
+        }
+        return element;
+    };
 
-  // Handle stop button click
-  stopBtn.addEventListener("click", () => {
-    console.log("Stop button clicked");
-  });
-
-  sendBtn.addEventListener("click", function () {
-
-      console.log("Send button clicked");
-      // Create message container
-      const messageDiv = document.createElement("div");
-      messageDiv.textContent = "Song sent. Waiting for future mates' responses...";
-      messageDiv.style.padding = "20px";
-      messageDiv.style.textAlign = "center";
-      messageDiv.style.fontSize = "25px";
-      messageDiv.style.color = "#fff";
-      messageDiv.style.background = "linear-gradient(135deg, #1a1a1a, #333)";
-      messageDiv.style.width = "100%";
-      messageDiv.style.height = "100%";
-      messageDiv.style.display = "flex";
-      messageDiv.style.alignItems = "center";
-      messageDiv.style.justifyContent = "center";
-      messageDiv.style.fontFamily = "Montserrat, sans-serif";
-      
-      // Clear the left container and append the message
-      leftContainer.innerHTML = "";
-      leftContainer.appendChild(messageDiv);
-  });
-
-
-  // Handle emoji click, adding the emoji to the message input
-  emojiBtn.addEventListener("click", (event) => {
-    if (event.target.classList.contains('emoji')) {
-      const emoji = event.target.getAttribute("data-emoji");
-      messageInput.value += emoji;
-      event.stopPropagation();
-    }
-  });
-
-
-  // Add initial general chat button
-  addGeneralChatButton(userList);
-
-  connectBtn.addEventListener("click", () => {
-      const room = roomInput.value.trim();
-      const roomName = document.getElementById('room').value;
-      const username = document.getElementById('username').value;
-
-      // Check if room and username are provided
-      if (roomName && username) {
-          // Hide the login screen
-          document.getElementById('login-screen').style.display = 'none';
-          document.getElementById('chat-screen').style.display = 'block';
-          document.getElementById('left-container').style.display = 'block';
-      } else {
-          alert('Please provide both Room Name and Username.');
-          return;
-      }
-
-      var server = new SillyClient();
-      // For public-facing server
-      server.connect( "ws://172.201.217.153:80", `CHAT5_${room}`);
-
-      // For server using VPN
-      //server.connect( "ecv-2025.doc.upf.edu/port/55000/ws", `CHAT5_${room}`);
-
-      server.on_ready = (my_id) => {
-          console.log("Connected to server with ID: " + my_id);
-          waitingForResponsible = true;
-          
-          const avatarId = document.getElementById("avatar").value;
-          const joinTime = Date.now();
-          
-          server.sendMessage(JSON.stringify({
-            type: "online",
-            username: usernameInput.value,
-            id: my_id,
-            avatar: avatarId,
-            joinTime: joinTime
-          }));
-
-          // Update local users history on ready
-          myself_as_user = {
-            username: usernameInput.value,
-            id: my_id,
-            avatar: avatarId,
-            joinTime: joinTime
-          };
-          onlineUsers.push(myself_as_user);
-          appendUser(myself_as_user, userList, onlineUsers.length - 1);
-
-          // Wait for responsible user to contact us
-          setTimeout(() => {
-            if (waitingForResponsible) {
-              // Only become responsible if we're the first user
-              const nextResponsible = findNextResponsible();
-              if (nextResponsible && nextResponsible.id === my_id) {
-                console.log('[GENERAL] No response from responsible, taking responsibility as earliest user');
-                setGeneralChatResponsible(my_id, server);
-              }
-              waitingForResponsible = false;
-            }
-          }, RESPONSIBILITY_TIMEOUT);
-
-          // Setup avatar change handler
-          const changeAvatarSelect = document.getElementById("change-avatar");
-          changeAvatarSelect.value = avatarId; // Set initial value
-          changeAvatarSelect.addEventListener("change", () => {
-            const newAvatarId = changeAvatarSelect.value;
-            myself_as_user.avatar = newAvatarId;
-            
-            // Send to everyone in the room (yet new message type)
-            server.sendMessage(JSON.stringify({
-              type: "avatar_update",
-              userId: myself_as_user.id,
-              newAvatar: newAvatarId
-            }));
-            // Refresh display
-            restoreUsers(userList);
-            console.log("Avatar changed");
-          }); 
-          
-          // volia crear funcio pero al fer-ho no tira,ns xk
-          const canvas = document.getElementById('timeline-canvas');
-          const ctx = canvas.getContext('2d');
-
-          // canvas dimensions
-          canvas.width = 50000; 
-          canvas.height = 1000; 
-          const trackHeight = 200;
-
-          const trackColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEEAD', '#F42F2F', '#00D0C2', '#F17000', '#00C066', '#EEBF00', '#00A7CD', '#888888'];
-          let userTrackAssigned = false; 
-
-          // each track with a different color
-          trackColors.forEach((color, index) => {
-            ctx.fillStyle = color;
-            ctx.fillRect(0, index * trackHeight, canvas.width, trackHeight);
+    // Get all UI elements
+    const elements = {
+        // Auth elements
+        loginForm: getElementSafely("login-form"),
+        signupForm: getElementSafely("signup-form"),
+        showSignupLink: getElementSafely("show-signup"),
+        showLoginLink: getElementSafely("show-login"),
+        loginBtn: getElementSafely("login-button"),
+        signupBtn: getElementSafely("signup-button"),
+        loginScreen: getElementSafely("login-screen"),
         
-            if (index < trackColors.length - 1) {
-              ctx.strokeStyle = '#000000'; // Line color
-              ctx.lineWidth = 2; // Line width
-              ctx.beginPath();
-              ctx.moveTo(0, (index + 1) * trackHeight);
-              ctx.lineTo(canvas.width, (index + 1) * trackHeight);
-              ctx.stroke();
-            }
-          }); 
+        // Room Selection elements
+        roomSelectionScreen: getElementSafely("room-selection-screen"),
+        roomNameInput: getElementSafely("room-name"),
+        joinRoomBtn: getElementSafely("join-room-button"),
+        
+        // Chat elements
+        chatScreen: getElementSafely("chat-screen"),
+        messageInput: getElementSafely("message"),
+        sendMessageBtn: getElementSafely("send-message-btn"),
+        emojiBtn: getElementSafely("emoji-btn"),
+        
+        // Music room elements
+        leftContainer: getElementSafely("left-container"),
+        sendBtn: getElementSafely("send-btn"),
+        playBtn: getElementSafely("play-btn"),
+        stopBtn: getElementSafely("pause-btn"),
 
-          console.log("Timeline tracks created");
+        // Input fields
+        usernameInput: getElementSafely("username"),
+        passwordInput: getElementSafely("password"),
+        signupUsername: getElementSafely("signup-username"),
+        signupEmail: getElementSafely("signup-email"),
+        signupPassword: getElementSafely("signup-password")
+    };
 
-          canvas.addEventListener('click', (event) => {
-            const rect = canvas.getBoundingClientRect();
-            const scaleY = canvas.height / rect.height; 
-            const y = (event.clientY - rect.top) * scaleY;
-            const trackIndex = Math.floor(y / trackHeight);
+    // Log initialization status
+    console.log('Elements initialization complete');
 
-            if (assignedTracks[trackIndex]) {
-              alert('This track is already assigned to another user.');
-              return;
-            }
+    // Form toggle handlers
+    elements.showSignupLink?.addEventListener('click', (e) => {
+        e.preventDefault();
+        console.log('Showing signup form');
+        elements.loginForm.style.display = 'none';
+        elements.signupForm.style.display = 'block';
+    });
 
-            if (userTrackAssigned) {
-              alert('You have already selected a track.');
-              return;
-            }
-    
-            // Assign the track to the user
-            assignedTracks[trackIndex] = myself_as_user.id;
-            userTrackAssigned = true;
-    
-            // Paint all tracks grey
-            for (let i = 0; i < trackColors.length; i++) {
-              ctx.fillStyle = '#808080'; // Grey color
-              ctx.fillRect(0, i * trackHeight, canvas.width, trackHeight);
-            }
-    
-            // Highlight the selected track in pink
-            ctx.fillStyle = '#FFC0CB'; // Pink color
-            ctx.fillRect(0, trackIndex * trackHeight, canvas.width, trackHeight);
-    
-            // Redraw the lines between tracks
-            for (let i = 0; i < trackColors.length - 1; i++) {
-              ctx.strokeStyle = '#000000'; // Line color
-              ctx.lineWidth = 2; // Line width
-              ctx.beginPath();
-              ctx.moveTo(0, (i + 1) * trackHeight);
-              ctx.lineTo(canvas.width, (i + 1) * trackHeight);
-              ctx.stroke();
-            }
+    elements.showLoginLink?.addEventListener('click', (e) => {
+        e.preventDefault();
+        console.log('Showing login form');
+        elements.signupForm.style.display = 'none';
+        elements.loginForm.style.display = 'block';
+    });
 
-            console.log("Track line selected");
-          });
+    // Signup handler
+    elements.signupBtn?.addEventListener("click", async () => {
+        console.log('Signup button clicked');
+        const username = elements.signupUsername.value;
+        const email = elements.signupEmail.value;
+        const password = elements.signupPassword.value;
 
-          const trackSoundSelectBtn = document.getElementById('track-sound-select');
-          const instrumentSelect = document.getElementById('instrument-select');
-
-          trackSoundSelectBtn.addEventListener('click', () => {
-            instrumentSelect.style.display = instrumentSelect.style.display === 'none' ? 'block' : 'none';
-          });
-
-          instrumentSelect.addEventListener('change', (event) => {
-            const selectedInstrument = event.target.value;
-            console.log(`Selected instrument: ${selectedInstrument}`);
-            instrumentSelect.style.display = 'none';
-            console.log("Instrument selected");
-          });
-
-      };
-    
-      server.on_room_info = (info) => {
-        console.log(info);
-      }
-      
-      server.on_user_connected = id => {
-          console.log(`[GENERAL] User connected:`, id);
-
-          // Only the responsible user sends data to new users
-          if (myself_as_user?.id === generalChatResponsible) {
-            console.log('[GENERAL] Sending data to new user:', id);
-            // Send messages only to the new user
-            server.sendMessage(JSON.stringify({
-              type: "chat_history",
-              text: chatHistories.general,
-              timestamp: Date.now()
-            }), [id]);
-
-            server.sendMessage(JSON.stringify({
-              type: "online_users",
-              text: onlineUsers,
-              timestamp: Date.now()
-            }), [id]);
-
-            server.sendMessage(JSON.stringify({
-              type: "responsible_status",
-              responsibleId: generalChatResponsible,
-              timestamp: Date.now()
-            }), [id]);
-          }
-      };
-
-      server.on_user_disconnected = id => {
-          console.log(`[GENERAL] User disconnected:`, id);
-
-          // Remove the user that has disconnected from connected list
-          let wasResponsible = id === generalChatResponsible;
-          for (let i = 0; i < onlineUsers.length; i++){
-            if (onlineUsers[i].id == id){
-              onlineUsers.splice(i,1); // removes 1 element at position i
-              break;
-            }
-          }
-
-          restoreUsers(userList);
-
-          // After removing user, if they were responsible, assign new responsible
-          if (wasResponsible && onlineUsers.length > 0) {
-            console.log('[GENERAL] Responsible user disconnected');
-            const nextResponsible = findNextResponsible();
-            if (nextResponsible) {
-              console.log('[GENERAL] Assigning new responsible based on join time:', nextResponsible.id);
-              setGeneralChatResponsible(nextResponsible.id, server);
-            }
-          }
-      };
-
-      server.on_message = (author_id, msg) => {
-        const parsed_msg = JSON.parse(msg);
-
-        if (parsed_msg.type === "chat_history") {
-          console.log('[GENERAL] Received chat history');
-          chatHistories.general = parsed_msg.text;
-          restoreChat(chatBox, chatHistories.general);
-        }
-        else if (parsed_msg.type === "online"){
-          // Update local users history when receiving "online"
-          newly_joined_user = {
-            username: parsed_msg.username,
-            id: parsed_msg.id,
-            avatar: parsed_msg.avatar,
-            joinTime: parsed_msg.joinTime
-          }
-          onlineUsers.push(newly_joined_user);
-          appendUser(newly_joined_user, userList, onlineUsers.length - 1);
-        }
-        else if (parsed_msg.type === "online_users"){
-          console.log('[GENERAL] Received online users list');
-          
-          // Push each online user into array
-          for (let i = 0; i < parsed_msg.text.length; i++) {
-            onlineUsers.push(parsed_msg.text[i]);
-          }
-
-          restoreUsers(userList);
-        }
-        else if (parsed_msg.type === "responsible_status") {
-          console.log('[GENERAL] New responsible user:', parsed_msg.responsibleId);
-          generalChatResponsible = parsed_msg.responsibleId;
-          waitingForResponsible = false; // We got our answer about who's responsible
-        }
-        else if (parsed_msg.type === "avatar_update") {
-          // Find and update user's avatar
-          const userToUpdate = onlineUsers.find(u => u.id === parsed_msg.userId);
-          if (userToUpdate) {
-            userToUpdate.avatar = parsed_msg.newAvatar;
-            restoreUsers(userList);
-          }
-        }
-        else if (parsed_msg.type === "private_message") {
-          console.log("Private message from", parsed_msg.username);
-          
-          // Store in private chat history
-          const chatKey = getChatKey(myself_as_user.id, author_id);
-          if (!chatHistories.private[chatKey]) {
-            chatHistories.private[chatKey] = [];
-          }
-          
-          // Update private chat history
-          const latest = {
-            username: parsed_msg.username,
-            text: parsed_msg.text
-          };
-          chatHistories.private[chatKey].push(latest);
-
-          // Only display if in private chat with sender
-          if (activeChat === author_id) {
-            appendMessage(parsed_msg.username, parsed_msg.text, chatBox);
-          }
-        }
-        else { // A regular chat message
-          console.log("Message from", parsed_msg.username);
-          
-          // Update general chat history
-          const latest = {
-            username: parsed_msg.username,
-            text: parsed_msg.text
-          };
-          chatHistories.general.push(latest);
-          
-          // Only display if in general chat
-          if (activeChat === "general") {
-            appendMessage(parsed_msg.username, parsed_msg.text, chatBox);
-          }
-        }
-      }
-
-      sendMessageBtn.addEventListener("click", () => {
-        if (!messageInput.value) {
-            console.log("Message cannot be empty!");
+        if (!username || !email || !password) {
+            alert('Please fill in all fields');
             return;
         }
 
-        let message;
-        const messageText = messageInput.value;
-        
-        if (activeChat === "general") {
-          message = {
-            type: "chat_message",
-            username: usernameInput.value,
-            text: messageText
-          };
-          server.sendMessage(JSON.stringify(message));
-        } else {
-          message = {
-            type: "private_message",
-            username: usernameInput.value,
-            text: messageText,
-            recipientId: activeChat
-          };
-          // Private chats: send only to recipient and self
-          server.sendMessage(JSON.stringify(message), [activeChat, myself_as_user.id]);
+        try {
+            await signup(username, email, password);
+            alert('Signup successful! Please log in.');
+            elements.signupForm.style.display = 'none';
+            elements.loginForm.style.display = 'block';
+        } catch (error) {
+            console.error('Signup error:', error);
+            alert('Signup failed: ' + error.message);
         }
-        
-        console.log("Message sent by", usernameInput.value);
-        appendMessage(usernameInput.value, messageText, chatBox);
+    });
 
-        // Store in appropriate history
-        const latest = {
-          username: usernameInput.value,
-          text: messageText
-        };
-        
-        if (activeChat === "general") {
-          chatHistories.general.push(latest);
-        } else {
-          const chatKey = getChatKey(myself_as_user.id, activeChat);
-          if (!chatHistories.private[chatKey]) {
-            chatHistories.private[chatKey] = [];
-          }
-          chatHistories.private[chatKey].push(latest);
+    // Login handler
+    elements.loginBtn?.addEventListener("click", async () => {
+        console.log('Login button clicked');
+        const username = elements.usernameInput.value;
+        const password = elements.passwordInput.value;
+
+        if (!username || !password) {
+            alert('Please enter both username and password');
+            return;
         }
 
-        messageInput.value = ''; // Clear input after sending
-      });
-  });
+        try {
+            console.log('Attempting login...');
+            const data = await login(username, password);
+            console.log('Login successful, received data:', data);
+            
+            localStorage.setItem('authToken', data.token);
+            
+            if (elements.loginScreen && elements.roomSelectionScreen) {
+                elements.loginScreen.style.display = 'none';
+                elements.roomSelectionScreen.style.display = 'block';
+            } else {
+                console.error('Required screen elements not found');
+            }
+
+            // Initialize WebSocket connection
+            initializeWebSocket(data.token);
+        } catch (error) {
+            console.error('Login error:', error);
+            alert('Login failed: ' + error.message);
+        }
+    });
+
+    // In your send-message button click handler, add the following code:
+    elements.sendMessageBtn?.addEventListener("click", () => {
+        const messageText = elements.messageInput?.value;
+        if (!messageText) return;
+
+        // Send the message via WebSocket
+        const success = sendChatMessage(messageText);
+        if (success) {
+            // Display sent message with bubble styling
+            const chatBox = elements.chatBox || document.getElementById('chat-box');
+            if (chatBox) {
+                const msgContainer = document.createElement('div');
+                msgContainer.className = 'message-container';
+                
+                const senderLabel = document.createElement('div');
+                senderLabel.className = 'message-sender';
+                senderLabel.textContent = 'You';
+                
+                const msgBubble = document.createElement('div');
+                msgBubble.className = 'message-bubble message-sent';
+                msgBubble.textContent = messageText;
+                
+                msgContainer.appendChild(senderLabel);
+                msgContainer.appendChild(msgBubble);
+                chatBox.appendChild(msgContainer);
+                chatBox.scrollTop = chatBox.scrollHeight;
+                elements.messageInput.value = '';
+            }
+        } else {
+            alert('Failed to send message. Please check your connection.');
+        }
+    });
+
+
+    // Music room controls
+    elements.playBtn?.addEventListener("click", () => {
+        console.log("Play button clicked");
+    });
+
+    elements.stopBtn?.addEventListener("click", () => {
+        console.log("Stop button clicked");
+    });
+
+    // Song sending
+    elements.sendBtn?.addEventListener("click", () => {
+        console.log("Send button clicked");
+        const messageDiv = document.createElement("div");
+        messageDiv.textContent = "Song sent. Waiting for future mates' responses...";
+        messageDiv.style.cssText = `
+            padding: 20px;
+            text-align: center;
+            font-size: 25px;
+            color: #fff;
+            background: linear-gradient(135deg, #1a1a1a, #333);
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: Montserrat, sans-serif;
+        `;
+        
+        if (elements.leftContainer) {
+            elements.leftContainer.innerHTML = "";
+            elements.leftContainer.appendChild(messageDiv);
+        }
+    });
+
+    // Emoji handling
+    elements.emojiBtn?.addEventListener("click", (event) => {
+        if (event.target.classList.contains('emoji') && elements.messageInput) {
+            const emoji = event.target.getAttribute("data-emoji");
+            elements.messageInput.value += emoji;
+            event.stopPropagation();
+        }
+    });
+
+    // Create room handler
+    elements.createRoomBtn = getElementSafely("create-room-button");
+    elements.roomIdInput = getElementSafely("room-id");
+
+    elements.createRoomBtn?.addEventListener("click", async () => {
+        const songName = elements.roomNameInput.value;
+        if (!songName) {
+            alert('Please enter a song name');
+            return;
+        }
+
+        try {
+            const token = localStorage.getItem('authToken');
+            if (!token) {
+                alert('Authentication token not found. Please log in again.');
+                return;
+            }
+
+            const roomData = await createRoom(songName, token);
+            console.log('Room created successfully:', roomData);
+
+            // Join the room via WebSocket and fetch chat history
+            if (wsJoinRoom(roomData.roomId)) {
+                console.log('Joined room via WebSocket');
+                alert(`Room created successfully! Room ID: ${roomData.roomId}`);
+
+                try {
+                    // Fetch and display chat history
+                    const chatHistory = await getRoomMessages(roomData.roomId, token);
+                    const chatBox = document.getElementById('chat-box');
+                    if (chatBox && chatHistory.messages) {
+                        chatBox.innerHTML = ''; // Clear existing messages
+                        chatHistory.messages.reverse().forEach(msg => {
+                            const msgContainer = document.createElement('div');
+                            msgContainer.className = 'message-container';
+                            
+                            const senderLabel = document.createElement('div');
+                            senderLabel.className = 'message-sender';
+                            senderLabel.textContent = msg.username;
+                            
+                            const msgBubble = document.createElement('div');
+                            msgBubble.className = `message-bubble ${msg.username === currentUsername ? 'message-sent' : 'message-received'}`;
+                            msgBubble.textContent = msg.message_text;
+                            
+                            msgContainer.appendChild(senderLabel);
+                            msgContainer.appendChild(msgBubble);
+                            chatBox.appendChild(msgContainer);
+                        });
+                        chatBox.scrollTop = chatBox.scrollHeight;
+                    }
+                } catch (error) {
+                    console.error('Error fetching chat history:', error);
+                }
+
+                // Show chat and music room screens
+                if (elements.roomSelectionScreen && elements.chatScreen && elements.leftContainer) {
+                    elements.roomSelectionScreen.style.display = 'none';
+                    elements.chatScreen.style.display = 'block';
+                    elements.leftContainer.style.display = 'block';
+                }
+            } else {
+                console.error('Required screen elements not found');
+            }
+        } catch (error) {
+            console.error('Error creating room:', error);
+            alert('Failed to create room: ' + error.message);
+        }
+    });
+
+    // Join room handler
+    elements.joinRoomBtn?.addEventListener("click", async () => {
+        const roomId = elements.roomIdInput.value;
+        if (!roomId) {
+            alert('Please enter a room ID');
+            return;
+        }
+
+        try {
+            const token = localStorage.getItem('authToken');
+            if (!token) {
+                alert('Authentication token not found. Please log in again.');
+                return;
+            }
+
+            const joinData = await joinRoom(roomId, token);
+            console.log('Joined room successfully:', joinData);
+
+            // Join the room via WebSocket and fetch chat history
+            if (wsJoinRoom(roomId)) {
+                console.log('Joined room via WebSocket');
+
+                try {
+                    // Fetch and display chat history
+                    const chatHistory = await getRoomMessages(roomId, token);
+                    const chatBox = document.getElementById('chat-box');
+                    if (chatBox && chatHistory.messages) {
+                        chatBox.innerHTML = ''; // Clear existing messages
+                        chatHistory.messages.reverse().forEach(msg => {
+                            const msgContainer = document.createElement('div');
+                            msgContainer.className = 'message-container';
+                            
+                            const senderLabel = document.createElement('div');
+                            senderLabel.className = 'message-sender';
+                            senderLabel.textContent = msg.username;
+                            
+                            const msgBubble = document.createElement('div');
+                            msgBubble.className = `message-bubble ${msg.username === currentUsername ? 'message-sent' : 'message-received'}`;
+                            msgBubble.textContent = msg.message_text;
+                            
+                            msgContainer.appendChild(senderLabel);
+                            msgContainer.appendChild(msgBubble);
+                            chatBox.appendChild(msgContainer);
+                        });
+                        chatBox.scrollTop = chatBox.scrollHeight;
+                    }
+                } catch (error) {
+                    console.error('Error fetching chat history:', error);
+                }
+
+                // Show chat and music room screens
+                if (elements.roomSelectionScreen && elements.chatScreen && elements.leftContainer) {
+                    elements.roomSelectionScreen.style.display = 'none';
+                    elements.chatScreen.style.display = 'block';
+                    elements.leftContainer.style.display = 'block';
+                }
+            } else {
+                console.error('Required screen elements not found');
+            }
+        } catch (error) {
+            console.error('Error joining room:', error);
+            alert('Failed to join room: ' + error.message);
+        }
+    });
+
+    console.log('All event listeners attached');
 });
-
