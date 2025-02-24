@@ -203,6 +203,35 @@ app.post('/logout', authenticateSession, (req, res) => {
     );
 });
 
+// Create a new room (with empty contents)
+app.post('/rooms', authenticateSession, (req, res) => {
+    const { songName } = req.body;
+    
+    if (!songName) {
+        return res.status(400).send('Song name is required');
+    }
+
+    // Initialize with empty contents
+    const emptyContents = { tracks: [] };
+
+    pool.query(
+        'INSERT INTO rooms (song_name, created_by, contents) VALUES (?, ?, ?)',
+        [songName, req.userId, JSON.stringify(emptyContents)],
+        (err, result) => {
+            if (err) {
+                console.error('Error creating room:', err);
+                return res.status(500).send('Error creating room');
+            }
+            res.status(201).json({
+                message: 'Room created successfully',
+                roomId: result.insertId,
+                songName,
+                createdBy: req.userId
+            });
+        }
+    );
+});
+
 app.post('/signUp', (req, res) => {
     const { username, email, password } = req.body;
     
