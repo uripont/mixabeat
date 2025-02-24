@@ -7,6 +7,33 @@ const WebSocket = require('ws');
 // Built-in modules
 const crypto = require('crypto');
 const url = require('url');
+const fs = require('fs');
+
+
+// Logging setup-----------------------------------------
+const logDirectory = 'log';
+
+// Check if the directory exists, create it if not
+if (!fs.existsSync(logDirectory)) {
+    fs.mkdirSync(logDirectory);
+}
+
+const logStream = fs.createWriteStream(`${logDirectory}/server.log`, { flags: 'a' });
+
+const logger = {
+    persistLog: function(level, message) {
+        const timestamp = new Date().toISOString();
+        console.log(message); // Keep console output
+        logStream.write(`${timestamp} - ${level.toUpperCase()}: ${message}\n`); // Write to log file
+    },
+    log: function(message) {
+        this.persistLog('info', message);
+    },
+    error: function(message) {
+        this.persistLog('error', message);
+    }
+};
+//-------------------------------------------------------
 
 
 // Express and Websocket configuration ------------------
@@ -14,7 +41,7 @@ const app = express();
 app.use(express.json());
 
 const wss = new WebSocket.Server({ server: app.listen(3000, () => {
-    console.log('Server running on port 3000');
+    logger.log('Server running on port 3000');
 }) });
 
 // WebSocket client tracking
@@ -64,7 +91,7 @@ const authenticateWSConnection = async (socket, request) => {
 
         return true;
     } catch (err) {
-        console.error('WebSocket auth error:', err);
+        logger.error('WebSocket auth error:', err);
         socket.close(4001, 'Authentication error');
         return false;
     }
@@ -112,7 +139,7 @@ const handleChatMessage = async (socket, message) => {
         // Broadcast to room
         broadcastToRoom(socket.roomId, broadcastMessage, socket);
     } catch (err) {
-        console.error('Error handling chat message:', err);
+        logger.error('Error handling chat message:', err);
         socket.send(JSON.stringify({
             type: 'error',
             message: 'Error sending message'
@@ -130,7 +157,7 @@ wss.on('connection', async (socket, request) => {
         try {
             // Convert Buffer to string before parsing
             const message = JSON.parse(data.toString());
-            console.log('Received message:', data);
+            logger.log('Received message:', data);
             
             switch (message.type) {
                 case 'message':
@@ -139,7 +166,7 @@ wss.on('connection', async (socket, request) => {
                     //TODO: joining/leaving rooms messages
             }
         } catch (err) {
-            console.error('WebSocket message error:', err);
+            logger.error('WebSocket message error:', err);
         }
     });
 
@@ -162,7 +189,7 @@ const authenticateSession = (req, res, next) => {
         [token],
         (err, results) => {
             if (err) {
-                console.error('Error verifying session:', err);
+                logger.error('Error verifying session:', err);
                 return res.status(500).send('Error verifying session');
             }
 
@@ -200,10 +227,10 @@ const pool = mysql.createPool(config);
 // Test database connection
 pool.getConnection((err, connection) => {
     if (err) {
-        console.error('Error connecting to database:', err);
+        logger.error('Error connecting to database:', err);
         return;
     }
-    console.log('Connected to database');
+    logger.log('Connected to database');
     connection.release();
 });
 //--------------------------------------------
@@ -278,7 +305,7 @@ app.post('/login', async (req, res) => {
         [username],
         async (err, results) => {
             if (err) {
-                console.error('Error executing query:', err);
+                logger.error('Error executing query:', err);
                 return res.status(500).send('Error during login');
             }
 
@@ -302,7 +329,7 @@ app.post('/login', async (req, res) => {
                     username: user.username
                 });
             } catch (error) {
-                console.error('Error creating session:', error);
+                logger.error('Error creating session:', error);
                 res.status(500).send('Error creating session');
             }
         }
@@ -310,13 +337,13 @@ app.post('/login', async (req, res) => {
 });
 
 app.get('/getUsers', authenticateSession, (req, res) => {
-    console.log('Getting users');
+    logger.log('Getting users');
     pool.query('SELECT user_id, username, email, created_at FROM users', (err, rows) => {
         if (err) {
-            console.error('Error executing query:', err);
+            logger.error('Error executing query:', err);
             return res.status(500).send('Error fetching users');
         }
-        console.log('Got users:', rows);
+        logger.log('Got users:', rows);
         res.json(rows);
     });
 });
@@ -334,7 +361,7 @@ app.post('/logout', authenticateSession, (req, res) => {
         [token],
         (err, result) => {
             if (err) {
-                console.error('Error during logout:', err);
+                logger.error('Error during logout:', err);
                 return res.status(500).send('Error during logout');
             }
             if (result.affectedRows === 0) {
@@ -355,7 +382,7 @@ app.put('/rooms/:roomId/join', authenticateSession, (req, res) => {
         [roomId],
         (err, results) => {
             if (err) {
-                console.error('Error checking room:', err);
+                logger.error('Error checking room:', err);
                 return res.status(500).send('Error joining room');
             }
 
@@ -370,7 +397,7 @@ app.put('/rooms/:roomId/join', authenticateSession, (req, res) => {
                 (err, result) => {
                     updateClientsRoomId(req.headers.authorization, roomId);
                     if (err) {
-                        console.error('Error updating session:', err);
+                        logger.error('Error updating session:', err);
                         return res.status(500).send('Error joining room');
                     }
                     res.json({ message: 'Joined room successfully', roomId });
@@ -390,7 +417,7 @@ app.put('/rooms/:roomId/leave', authenticateSession, (req, res) => {
         [req.headers.authorization, roomId],
         (err, results) => {
             if (err) {
-                console.error('Error checking session:', err);
+                logger.error('Error checking session:', err);
                 return res.status(500).send('Error leaving room');
             }
 
@@ -405,7 +432,7 @@ app.put('/rooms/:roomId/leave', authenticateSession, (req, res) => {
                 (err, result) => {
                     updateClientsRoomId(req.headers.authorization, null);
                     if (err) {
-                        console.error('Error updating session:', err);
+                        logger.error('Error updating session:', err);
                         return res.status(500).send('Error leaving room');
                     }
                     res.json({ message: 'Left room successfully' });
@@ -432,7 +459,7 @@ app.get('/rooms/:roomId/messages', authenticateSession, (req, res) => {
         [roomId, before, limit],
         (err, results) => {
             if (err) {
-                console.error('Error fetching messages:', err);
+                logger.error('Error fetching messages:', err);
                 return res.status(500).send('Error fetching messages');
             }
             res.json({
@@ -458,7 +485,7 @@ app.post('/rooms', authenticateSession, (req, res) => {
         [songName, req.userId, JSON.stringify(emptyContents)],
         (err, result) => {
             if (err) {
-                console.error('Error creating room:', err);
+                logger.error('Error creating room:', err);
                 return res.status(500).send('Error creating room');
             }
             res.status(201).json({
@@ -485,11 +512,11 @@ app.post('/signUp', (req, res) => {
         [username, email, hashedPassword],
         (err, rows) => {
             if (err) {
-                console.error('Error executing query:', err);
+                logger.error('Error executing query:', err);
                 res.status(500).send('Error creating user');
                 return;
             }
-            console.log('Added user:', rows);
+            logger.log('Added user:', rows);
             res.status(201).send({ message: 'User created successfully', userId: rows.insertId });
         }
     );

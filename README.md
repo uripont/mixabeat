@@ -80,4 +80,4 @@ For music stuff:
 - [ ] Endpoint to get the room's current song (for clients to sync)
 
 And on any of these:
-- [ ] Integrate server logs into a file.
+- [x] Integrate server logs into a file.
