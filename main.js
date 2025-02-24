@@ -41,6 +41,7 @@ function appendUser(user, userList, index) {
   // Special handling for current user's button
   if (user.id === myself_as_user?.id) {
     nameLabel.textContent = `${user.username} (You)`;
+    
     userBtn.disabled = true;
   } else {
     nameLabel.textContent = user.username;
@@ -50,12 +51,12 @@ function appendUser(user, userList, index) {
       switchToPrivateChat(onlineUsers[index]);
     });
   }
-  
   container.appendChild(userBtn);
   container.appendChild(nameLabel);
   userList.appendChild(container);
   userList.scrollTop = userList.scrollHeight;
 }
+
 
 function addGeneralChatButton(userList) {
   const container = document.createElement('div');
@@ -103,18 +104,6 @@ function switchToGeneralChat() {
   restoreChat(chatBox, chatHistories.general);
 }
 
-var chatHistories = {
-  general: [],
-  private: {}
-};
-var onlineUsers = [];
-var activeChat = "general";
-var myself_as_user = null;
-var chatBox = null; // chatBox accessible globally
-var generalChatResponsible = null; // Tracks which user is responsible for general chat
-var waitingForResponsible = false; // Flag to track if we're waiting for responsible user
-var RESPONSIBILITY_TIMEOUT = 3000; // Time to wait for responsible before assuming empty room
-
 function findNextResponsible() {
   if (onlineUsers.length === 0) return null;
   // Sort by join time and get earliest joined user
@@ -136,6 +125,26 @@ function setGeneralChatResponsible(userId, server) {
   }));
 }
 
+
+
+
+var chatHistories = {
+  general: [],
+  private: {}
+};
+var onlineUsers = [];
+var activeChat = "general";
+var myself_as_user = null;
+var chatBox = null; // chatBox accessible globally
+var generalChatResponsible = null; // Tracks which user is responsible for general chat
+var waitingForResponsible = false; // Flag to track if we're waiting for responsible user
+var RESPONSIBILITY_TIMEOUT = 3000; // Time to wait for responsible before assuming empty room
+const assignedTracks = {};
+
+
+
+
+
 document.addEventListener("DOMContentLoaded", () => {
   const connectBtn = document.getElementById("connect-btn");
   const roomInput = document.getElementById("room");
@@ -145,6 +154,43 @@ document.addEventListener("DOMContentLoaded", () => {
   const messageInput = document.getElementById("message");
   const sendMessageBtn = document.getElementById("send-message-btn");
   const emojiBtn = document.getElementById("emoji-btn");
+  const sendBtn = document.getElementById("send-btn");
+  const leftContainer = document.getElementById("timeline-container");
+  const playBtn = document.getElementById("play-btn");
+  const stopBtn = document.getElementById("pause-btn");
+
+  playBtn.addEventListener("click", () => {
+    console.log("Play button clicked");
+  });
+
+  // Handle stop button click
+  stopBtn.addEventListener("click", () => {
+    console.log("Stop button clicked");
+  });
+
+  sendBtn.addEventListener("click", function () {
+
+      console.log("Send button clicked");
+      // Create message container
+      const messageDiv = document.createElement("div");
+      messageDiv.textContent = "Song sent. Waiting for future mates' responses...";
+      messageDiv.style.padding = "20px";
+      messageDiv.style.textAlign = "center";
+      messageDiv.style.fontSize = "25px";
+      messageDiv.style.color = "#fff";
+      messageDiv.style.background = "linear-gradient(135deg, #1a1a1a, #333)";
+      messageDiv.style.width = "100%";
+      messageDiv.style.height = "100%";
+      messageDiv.style.display = "flex";
+      messageDiv.style.alignItems = "center";
+      messageDiv.style.justifyContent = "center";
+      messageDiv.style.fontFamily = "Montserrat, sans-serif";
+      
+      // Clear the left container and append the message
+      leftContainer.innerHTML = "";
+      leftContainer.appendChild(messageDiv);
+  });
+
 
   // Handle emoji click, adding the emoji to the message input
   emojiBtn.addEventListener("click", (event) => {
@@ -154,6 +200,7 @@ document.addEventListener("DOMContentLoaded", () => {
       event.stopPropagation();
     }
   });
+
 
   // Add initial general chat button
   addGeneralChatButton(userList);
@@ -168,6 +215,7 @@ document.addEventListener("DOMContentLoaded", () => {
           // Hide the login screen
           document.getElementById('login-screen').style.display = 'none';
           document.getElementById('chat-screen').style.display = 'block';
+          document.getElementById('left-container').style.display = 'block';
       } else {
           alert('Please provide both Room Name and Username.');
           return;
@@ -233,7 +281,95 @@ document.addEventListener("DOMContentLoaded", () => {
             }));
             // Refresh display
             restoreUsers(userList);
+            console.log("Avatar changed");
+          }); 
+          
+          // volia crear funcio pero al fer-ho no tira,ns xk
+          const canvas = document.getElementById('timeline-canvas');
+          const ctx = canvas.getContext('2d');
+
+          // canvas dimensions
+          canvas.width = 50000; 
+          canvas.height = 1000; 
+          const trackHeight = 200;
+
+          const trackColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEEAD', '#F42F2F', '#00D0C2', '#F17000', '#00C066', '#EEBF00', '#00A7CD', '#888888'];
+          let userTrackAssigned = false; 
+
+          // each track with a different color
+          trackColors.forEach((color, index) => {
+            ctx.fillStyle = color;
+            ctx.fillRect(0, index * trackHeight, canvas.width, trackHeight);
+        
+            if (index < trackColors.length - 1) {
+              ctx.strokeStyle = '#000000'; // Line color
+              ctx.lineWidth = 2; // Line width
+              ctx.beginPath();
+              ctx.moveTo(0, (index + 1) * trackHeight);
+              ctx.lineTo(canvas.width, (index + 1) * trackHeight);
+              ctx.stroke();
+            }
+          }); 
+
+          console.log("Timeline tracks created");
+
+          canvas.addEventListener('click', (event) => {
+            const rect = canvas.getBoundingClientRect();
+            const scaleY = canvas.height / rect.height; 
+            const y = (event.clientY - rect.top) * scaleY;
+            const trackIndex = Math.floor(y / trackHeight);
+
+            if (assignedTracks[trackIndex]) {
+              alert('This track is already assigned to another user.');
+              return;
+            }
+
+            if (userTrackAssigned) {
+              alert('You have already selected a track.');
+              return;
+            }
+    
+            // Assign the track to the user
+            assignedTracks[trackIndex] = myself_as_user.id;
+            userTrackAssigned = true;
+    
+            // Paint all tracks grey
+            for (let i = 0; i < trackColors.length; i++) {
+              ctx.fillStyle = '#808080'; // Grey color
+              ctx.fillRect(0, i * trackHeight, canvas.width, trackHeight);
+            }
+    
+            // Highlight the selected track in pink
+            ctx.fillStyle = '#FFC0CB'; // Pink color
+            ctx.fillRect(0, trackIndex * trackHeight, canvas.width, trackHeight);
+    
+            // Redraw the lines between tracks
+            for (let i = 0; i < trackColors.length - 1; i++) {
+              ctx.strokeStyle = '#000000'; // Line color
+              ctx.lineWidth = 2; // Line width
+              ctx.beginPath();
+              ctx.moveTo(0, (i + 1) * trackHeight);
+              ctx.lineTo(canvas.width, (i + 1) * trackHeight);
+              ctx.stroke();
+            }
+
+            console.log("Track line selected");
           });
+
+          const trackSoundSelectBtn = document.getElementById('track-sound-select');
+          const instrumentSelect = document.getElementById('instrument-select');
+
+          trackSoundSelectBtn.addEventListener('click', () => {
+            instrumentSelect.style.display = instrumentSelect.style.display === 'none' ? 'block' : 'none';
+          });
+
+          instrumentSelect.addEventListener('change', (event) => {
+            const selectedInstrument = event.target.value;
+            console.log(`Selected instrument: ${selectedInstrument}`);
+            instrumentSelect.style.display = 'none';
+            console.log("Instrument selected");
+          });
+
       };
     
       server.on_room_info = (info) => {
@@ -422,3 +558,4 @@ document.addEventListener("DOMContentLoaded", () => {
       });
   });
 });
+
