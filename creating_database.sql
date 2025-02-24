@@ -39,11 +39,15 @@ CREATE TABLE users (
 CREATE TABLE sessions (
     token VARCHAR(64) PRIMARY KEY,
     user_id INT NOT NULL,
+    room_id INT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     expires_at TIMESTAMP NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(user_id)
-        ON DELETE CASCADE
-) COMMENT 'Stores active user sessions';
+        ON DELETE CASCADE,
+    FOREIGN KEY (room_id) REFERENCES rooms(room_id)
+        ON DELETE SET NULL
+        ON UPDATE CASCADE
+) COMMENT 'Stores active user sessions and their current room';
 
 -- Create rooms table with JSON column
 CREATE TABLE rooms (
