@@ -138,6 +138,41 @@
 
 
 
+/* Message Styles */
+.message-container {
+    margin: 10px 0;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.message-sender {
+    font-size: 0.8rem;
+    margin-bottom: 2px;
+    color: #999;
+}
+
+.message-bubble {
+    padding: 10px 15px;
+    border-radius: 15px;
+    max-width: 80%;
+    word-wrap: break-word;
+}
+
+.message-sent {
+    align-self: flex-end;
+    background-color: #66b3ff;
+    color: white;
+    margin-left: auto;
+}
+
+.message-received {
+    align-self: flex-start;
+    background-color: #3c3c3c;
+    color: white;
+    margin-right: auto;
+}
+
 /* Global styles */
 * {
     margin: 0;
@@ -820,6 +855,3 @@ button:hover {
     font-size: 60px;
     color: white;
 }
-
-
-
