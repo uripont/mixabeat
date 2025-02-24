@@ -1,10 +1,134 @@
+// Node modules
 const express = require('express');
 const mysql = require('mysql2');
-const crypto = require('crypto');
+require('dotenv').config();
+const WebSocket = require('ws');
 
-// Express app configuration ------------------
+// Built-in modules
+const crypto = require('crypto');
+const url = require('url');
+
+
+// Express and Websocket configuration ------------------
 const app = express();
 app.use(express.json());
+
+const wss = new WebSocket.Server({ server: app.listen(3000, () => {
+    console.log('Server running on port 3000');
+}) });
+
+// WebSocket client tracking
+const clients = new Map();
+
+// WebSocket authentication middleware
+const authenticateWSConnection = async (socket, request) => {
+    const { query } = url.parse(request.url, true);
+    const token = query.token;
+
+    if (!token) {
+        socket.close(4001, 'No token provided');
+        return false;
+    }
+
+    try {
+        const [results] = await pool.promise().query(
+            'SELECT user_id, room_id FROM sessions WHERE token = ? AND expires_at > NOW()',
+            [token]
+        );
+
+        if (results.length === 0) {
+            socket.close(4001, 'Invalid token');
+            return false;
+        }
+
+        const session = results[0];
+        socket.userId = session.user_id;
+        socket.roomId = session.room_id;
+        
+        // Store client info
+        clients.set(socket, {
+            userId: session.user_id,
+            roomId: session.room_id
+        });
+
+        return true;
+    } catch (err) {
+        console.error('WebSocket auth error:', err);
+        socket.close(4001, 'Authentication error');
+        return false;
+    }
+};
+
+// Message handlers
+/* const handleChatMessage = async (socket, message) => {
+    const userId = socket.userId;
+    
+    // Save to database
+    const [result] = await pool.promise().query(
+        'INSERT INTO messages (room_id, user_id, message_text) VALUES (?, ?, ?)',
+        [socket.roomId, userId, message.message]
+    );
+
+    // Get user info
+    const [userResult] = await pool.promise().query(
+        'SELECT username FROM users WHERE user_id = ?',
+        [userId]
+    );
+
+    // Prepare broadcast message
+    const broadcastMessage = {
+        type: 'message',
+        messageId: result.insertId,
+        userId: userId,
+        username: userResult[0].username,
+        message: message.message,
+        timestamp: new Date().toISOString()
+    };
+
+    // Broadcast to room
+    broadcastToRoom(socket, broadcastMessage);
+};
+
+const broadcastToRoom = (socket, message) => {
+    clients.forEach((client, ws) => {
+        if (ws !== socket && client.roomId === socket.roomId) {
+            ws.send(JSON.stringify(message));
+        }
+    });
+}; */
+
+// WebSocket connection handling
+wss.on('connection', async (socket, request) => {
+    const authenticated = await authenticateWSConnection(socket, request);
+    if (!authenticated) return;
+
+    // Handle incoming messages
+    socket.on('message', async (data) => {
+        try {
+            // Convert Buffer to string before parsing
+            const message = JSON.parse(data.toString());
+            console.log('Received message:', data);
+            
+            switch (message.type) {
+                case 'message':
+                    console.log('This is a message', message);
+                    // Pending to test:
+                    /* if (socket.roomId) {
+                        await handleChatMessage(socket, message);
+                    } */
+                    break;
+                    //TODO: joining/leaving rooms messages
+            }
+        } catch (err) {
+            console.error('WebSocket message error:', err);
+        }
+    });
+
+    // Handle client disconnect
+    socket.on('close', () => {
+        clients.delete(socket);
+    });
+});
 
 // Authentication middleware, used on all endpoints that require authentication
 const authenticateSession = (req, res, next) => {
@@ -43,7 +167,6 @@ const authenticateSession = (req, res, next) => {
 //---------------------------------------------
 
 // Database configuration----------------------
-require('dotenv').config();
 const config = {
     host: process.env.DB_HOST,
     port: process.env.DB_PORT,
@@ -264,7 +387,3 @@ app.get('/profile', (req, res) => {
         res.status(401).send('Not authenticated');
             }
 }); */
-
-app.listen(3000, () => {
-    console.log('Server running on port 3000');
-});
