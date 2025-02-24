@@ -59,8 +59,8 @@ For messages and real-time chat:
 - [x] DB schema for rooms and messages
 - [x] Create a new room (new entries on DB)
 - [x] Set up websocket connections
-    - [ ] Join a room
-    - [ ] Leave a room
+    - [x] Join a room
+    - [x] Leave a room
 - [x] Implement callback on websocket message sent/received
     - [ ] Replace sillyserver message sending to listeners of this room with new websocket message sending
     - [ ] Persist messages into database (when received)
