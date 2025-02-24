@@ -5,31 +5,67 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat Application</title>
     <link rel="stylesheet" href="styles.css">
-    <script src="sillyclient.js"></script>
-    <script src="main.js"></script>
+    <script type="module" src="websocket.js"></script>
+    <script type="module" src="main.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
 </head>
 <body>
-    <!-- Login Screen -->
+    <!-- Login/Signup Screen -->
     <div id="login-screen" class="screen">
         <h2>Welcome to </h2>
         <h2>MUSIC ROOM</h2>
-        <label for="room">Room Name:</label>
-        <input type="text" id="room" placeholder="Enter the room name">
-        <label for="username">Username (visible to others):</label>
-        <input type="text" id="username" placeholder="Enter username">
-        <label for="avatar">Avatar color:</label>
-        <select id="avatar">
-            <option value="1">red</option>
-            <option value="2">turquoise</option>
-            <option value="3">blue</option>
-            <option value="4">green</option>
-            <option value="5">yellow</option>
-        </select>
-        <button id="connect-btn">Connect</button>
+        
+        <!-- Login Form -->
+        <div id="login-form">
+            <h3>Login</h3>
+            <div class="form-group">
+                <label for="username">Username:</label>
+                <input type="text" id="username" placeholder="Enter username">
+            </div>
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" placeholder="Enter password">
+            </div>
+            <button id="login-button">Log in</button>
+            <p>Don't have an account? <a href="#" id="show-signup">Sign up</a></p>
+        </div>
+
+        <!-- Signup Form (initially hidden) -->
+        <div id="signup-form" style="display: none;">
+            <h3>Sign Up</h3>
+            <div class="form-group">
+                <label for="signup-username">Username:</label>
+                <input type="text" id="signup-username" placeholder="Choose username">
+            </div>
+            <div class="form-group">
+                <label for="signup-email">Email:</label>
+                <input type="email" id="signup-email" placeholder="Enter email">
+            </div>
+            <div class="form-group">
+                <label for="signup-password">Password:</label>
+                <input type="password" id="signup-password" placeholder="Choose password">
+            </div>
+            <button id="signup-button">Sign up</button>
+            <p>Already have an account? <a href="#" id="show-login">Log in</a></p>
+        </div>
     </div>
     
+    <!-- Room Selection Screen (Initially Hidden) -->
+    <div id="room-selection-screen" class="screen" style="display: none;">
+        <h2>Select Room</h2>
+        <div class="form-group">
+            <h3>Create New Room</h3>
+            <input type="text" id="room-name" placeholder="Enter song name for new room">
+            <button id="create-room-button">Create Room</button>
+        </div>
+        <div class="form-group">
+            <h3>Join Existing Room</h3>
+            <input type="text" id="room-id" placeholder="Enter room ID">
+            <button id="join-room-button">Join Room</button>
+        </div>
+    </div>
+
     <!-- Chat Screen (Initially Hidden) -->
     <div id="left-container" class="screen" style="display: none;">
         <!-- Music Room Container -->        
@@ -105,18 +141,8 @@
             <div id="user-list-container">
 <!--            <h3>Connected Users</h3> -->                
                 <div id="user-list">
+                    <h3>Online Users</h3>
                     <ul id="users"></ul>
-                </div>
-                <!-- Avatar Change Selector -->
-                <div>
-                    <h3>Change Avatar:</h3>
-                    <select id="change-avatar">
-                        <option value="1">Red</option>
-                        <option value="2">Turquoise</option>
-                        <option value="3">Blue</option>
-                        <option value="4">Green</option>
-                        <option value="5">Yellow</option>
-                    </select>
                 </div>
             </div>
 
