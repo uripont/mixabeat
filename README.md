@@ -63,8 +63,8 @@ For messages and real-time chat:
     - [x] Leave a room
 - [x] Implement callback on websocket message sent/received
     - [ ] Replace sillyserver message sending to listeners of this room with new websocket message sending
-    - [ ] Persist messages into database (when received)
-- [ ] Endpoint to get chat history for specific room
+    - [x] Persist messages into database (when received)
+- [x] Endpoint to get chat history for specific room
 
 For user authentication:
 - [x] DB schema for users

@@ -415,6 +415,33 @@ app.put('/rooms/:roomId/leave', authenticateSession, (req, res) => {
     );
 });
 
+// Get room chat history
+app.get('/rooms/:roomId/messages', authenticateSession, (req, res) => {
+    const roomId = parseInt(req.params.roomId);
+    const limit = parseInt(req.query.limit) || 100;
+    const before = req.query.before ? new Date(req.query.before) : new Date();
+    
+    pool.query(
+        `SELECT m.message_id, m.message_text, m.sent_at, 
+                m.user_id, u.username
+         FROM messages m
+         JOIN users u ON m.user_id = u.user_id
+         WHERE m.room_id = ? AND m.sent_at < ?
+         ORDER BY m.sent_at DESC
+         LIMIT ?`,
+        [roomId, before, limit],
+        (err, results) => {
+            if (err) {
+                console.error('Error fetching messages:', err);
+                return res.status(500).send('Error fetching messages');
+            }
+            res.json({
+                messages: results
+            });
+        }
+    );
+});
+
 // Create a new room (with empty contents)
 app.post('/rooms', authenticateSession, (req, res) => {
     const { songName } = req.body;
