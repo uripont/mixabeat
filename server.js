@@ -5,6 +5,41 @@ const crypto = require('crypto');
 // Express app configuration ------------------
 const app = express();
 app.use(express.json());
+
+// Authentication middleware, used on all endpoints that require authentication
+const authenticateSession = (req, res, next) => {
+    const token = req.headers.authorization;
+
+    if (!token) {
+        return res.status(401).send('No token provided');
+    }
+
+    pool.query(
+        'SELECT user_id, expires_at FROM sessions WHERE token = ?',
+        [token],
+        (err, results) => {
+            if (err) {
+                console.error('Error verifying session:', err);
+                return res.status(500).send('Error verifying session');
+            }
+
+            if (results.length === 0) {
+                return res.status(401).send('Invalid token');
+            }
+
+            const session = results[0];
+            if (new Date(session.expires_at) < new Date()) {
+                // Session has expired, delete it and return error
+                pool.query('DELETE FROM sessions WHERE token = ?', [token]);
+                return res.status(401).send('Session expired');
+            }
+
+            // Add user info to request object
+            req.userId = session.user_id;
+            next();
+        }
+    );
+};
 //---------------------------------------------
 
 // Database configuration----------------------
@@ -132,7 +167,7 @@ app.post('/login', async (req, res) => {
     );
 });
 
-app.get('/getUsers', (req, res) => {
+app.get('/getUsers', authenticateSession, (req, res) => {
     console.log('Getting users');
     pool.query('SELECT user_id, username, email, created_at FROM users', (err, rows) => {
         if (err) {
@@ -144,7 +179,7 @@ app.get('/getUsers', (req, res) => {
     });
 });
 
-app.post('/logout', (req, res) => {
+app.post('/logout', authenticateSession, (req, res) => {
     const token = req.headers.authorization;
 
     if (!token) {

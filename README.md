@@ -72,7 +72,7 @@ For user authentication:
 - [x] Endpoint to register a new user (password is hashed+salted)
 - [x] Endpoint to login a user (returns a session token)
 - [x] Endpoint to logout a user (deletes session token)
-- [ ] Implement user session management on all endpoints (middleware to reuse logic)
+- [x] Implement user session management on all endpoints (middleware to reuse logic)
 
 For music stuff:
 - [ ] Make session schema also store the room's current song (json object with song info)
