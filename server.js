@@ -326,6 +326,40 @@ app.post('/logout', authenticateSession, (req, res) => {
     );
 });
 
+// Join a room
+app.put('/rooms/:roomId/join', authenticateSession, (req, res) => {
+    const roomId = parseInt(req.params.roomId);
+    
+    // First check if room exists
+    pool.query(
+        'SELECT room_id FROM rooms WHERE room_id = ?',
+        [roomId],
+        (err, results) => {
+            if (err) {
+                console.error('Error checking room:', err);
+                return res.status(500).send('Error joining room');
+            }
+
+            if (results.length === 0) {
+                return res.status(404).send('Room not found');
+            }
+
+            // Update session record with room_id
+            pool.query(
+                'UPDATE sessions SET room_id = ? WHERE token = ?',
+                [roomId, req.headers.authorization],
+                (err, result) => {
+                    if (err) {
+                        console.error('Error updating session:', err);
+                        return res.status(500).send('Error joining room');
+                    }
+                    res.json({ message: 'Joined room successfully', roomId });
+                }
+            );
+        }
+    );
+});
+
 // Create a new room (with empty contents)
 app.post('/rooms', authenticateSession, (req, res) => {
     const { songName } = req.body;

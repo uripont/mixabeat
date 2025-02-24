@@ -57,11 +57,11 @@ Note: Currently only the root endpoint ("/") is available.
 
 For messages and real-time chat:
 - [x] DB schema for rooms and messages
-- [ ] Create a new room (new entries on DB)
-- [ ] Set up websocket connections
+- [x] Create a new room (new entries on DB)
+- [x] Set up websocket connections
     - [ ] Join a room
     - [ ] Leave a room
-- [ ] Implement callback on websocket message sent/received
+- [x] Implement callback on websocket message sent/received
     - [ ] Replace sillyserver message sending to listeners of this room with new websocket message sending
     - [ ] Persist messages into database (when received)
 - [ ] Endpoint to get chat history for specific room
@@ -75,7 +75,7 @@ For user authentication:
 - [x] Implement user session management on all endpoints (middleware to reuse logic)
 
 For music stuff:
-- [ ] Make session schema also store the room's current song (json object with song info)
+- [x] Make session schema also store the room's current song as "contents" (json object with song info)
 - [ ] Endpoint to set the room's current song from client (update done after finishing track)
 - [ ] Endpoint to get the room's current song (for clients to sync)
 
