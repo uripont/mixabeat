@@ -20,10 +20,21 @@ const wss = new WebSocket.Server({ server: app.listen(3000, () => {
 // WebSocket client tracking
 const clients = new Map();
 
+const updateClientsRoomId = (token, newRoomId) => {
+    // Find socket for this token and update room
+    clients.forEach((client, socket) => {
+        if (socket._token === token) {
+            client.roomId = newRoomId;
+            socket.roomId = newRoomId;
+        }
+    });
+};
+
 // WebSocket authentication middleware
 const authenticateWSConnection = async (socket, request) => {
     const { query } = url.parse(request.url, true);
     const token = query.token;
+    socket._token = token; // Store token for later use
 
     if (!token) {
         socket.close(4001, 'No token provided');
@@ -60,42 +71,54 @@ const authenticateWSConnection = async (socket, request) => {
 };
 
 // Message handlers
-/* const handleChatMessage = async (socket, message) => {
-    const userId = socket.userId;
-    
-    // Save to database
-    const [result] = await pool.promise().query(
-        'INSERT INTO messages (room_id, user_id, message_text) VALUES (?, ?, ?)',
-        [socket.roomId, userId, message.message]
-    );
-
-    // Get user info
-    const [userResult] = await pool.promise().query(
-        'SELECT username FROM users WHERE user_id = ?',
-        [userId]
-    );
-
-    // Prepare broadcast message
-    const broadcastMessage = {
-        type: 'message',
-        messageId: result.insertId,
-        userId: userId,
-        username: userResult[0].username,
-        message: message.message,
-        timestamp: new Date().toISOString()
-    };
-
-    // Broadcast to room
-    broadcastToRoom(socket, broadcastMessage);
-};
-
-const broadcastToRoom = (socket, message) => {
+const broadcastToRoom = (roomId, message, excludeSocket = null) => {
     clients.forEach((client, ws) => {
-        if (ws !== socket && client.roomId === socket.roomId) {
+        if (ws !== excludeSocket && client.roomId === roomId) {
             ws.send(JSON.stringify(message));
         }
     });
-}; */
+};
+
+const handleChatMessage = async (socket, message) => {
+    if (!socket.roomId) {
+        return;
+    }
+
+    const userId = socket.userId;
+    
+    try {
+        // Save to database
+        const [result] = await pool.promise().query(
+            'INSERT INTO messages (room_id, user_id, message_text) VALUES (?, ?, ?)',
+            [socket.roomId, userId, message.message]
+        );
+
+        // Get user info
+        const [userResult] = await pool.promise().query(
+            'SELECT username FROM users WHERE user_id = ?',
+            [userId]
+        );
+
+        // Prepare broadcast message
+        const broadcastMessage = {
+            type: 'message',
+            messageId: result.insertId,
+            userId: userId,
+            username: userResult[0].username,
+            message: message.message,
+            timestamp: new Date().toISOString()
+        };
+
+        // Broadcast to room
+        broadcastToRoom(socket.roomId, broadcastMessage, socket);
+    } catch (err) {
+        console.error('Error handling chat message:', err);
+        socket.send(JSON.stringify({
+            type: 'error',
+            message: 'Error sending message'
+        }));
+    }
+};
 
 // WebSocket connection handling
 wss.on('connection', async (socket, request) => {
@@ -111,11 +134,7 @@ wss.on('connection', async (socket, request) => {
             
             switch (message.type) {
                 case 'message':
-                    console.log('This is a message', message);
-                    // Pending to test:
-                    /* if (socket.roomId) {
-                        await handleChatMessage(socket, message);
-                    } */
+                    await handleChatMessage(socket, message);
                     break;
                     //TODO: joining/leaving rooms messages
             }
@@ -344,11 +363,12 @@ app.put('/rooms/:roomId/join', authenticateSession, (req, res) => {
                 return res.status(404).send('Room not found');
             }
 
-            // Update session record with room_id
+            // Update session record and WebSocket client's room
             pool.query(
                 'UPDATE sessions SET room_id = ? WHERE token = ?',
                 [roomId, req.headers.authorization],
                 (err, result) => {
+                    updateClientsRoomId(req.headers.authorization, roomId);
                     if (err) {
                         console.error('Error updating session:', err);
                         return res.status(500).send('Error joining room');
@@ -378,11 +398,12 @@ app.put('/rooms/:roomId/leave', authenticateSession, (req, res) => {
                 return res.status(400).send('You are not in this room');
             }
 
-            // Remove room_id from session
+            // Remove room_id from session and WebSocket client
             pool.query(
                 'UPDATE sessions SET room_id = NULL WHERE token = ?',
                 [req.headers.authorization],
                 (err, result) => {
+                    updateClientsRoomId(req.headers.authorization, null);
                     if (err) {
                         console.error('Error updating session:', err);
                         return res.status(500).send('Error leaving room');
