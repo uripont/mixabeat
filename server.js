@@ -125,6 +125,30 @@ app.get('/getUsers', (req, res) => {
     });
 });
 
+app.post('/logout', (req, res) => {
+    const token = req.headers.authorization;
+
+    if (!token) {
+        return res.status(401).send('No token provided');
+    }
+        
+    // Delete the session for the token you provided (as in session management, we assume you only know your token)
+    pool.query(
+        'DELETE FROM sessions WHERE token = ?',
+        [token],
+        (err, result) => {
+            if (err) {
+                console.error('Error during logout:', err);
+                return res.status(500).send('Error during logout');
+            }
+            if (result.affectedRows === 0) {
+                return res.status(401).send('Invalid token');
+            }
+            res.status(200).send({ message: 'Logged out successfully' });
+        }
+    );
+});
+
 app.post('/signUp', (req, res) => {
     const { username, email, password } = req.body;
     

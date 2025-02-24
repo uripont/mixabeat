@@ -71,10 +71,13 @@ For user authentication:
 - [x] Manual session management (cookies, session stored in DB)
 - [x] Endpoint to register a new user (password is hashed+salted)
 - [x] Endpoint to login a user (returns a session token)
-- [ ] Endpoint to logout a user (deletes session token)
+- [x] Endpoint to logout a user (deletes session token)
 - [ ] Implement user session management on all endpoints (middleware to reuse logic)
 
 For music stuff:
 - [ ] Make session schema also store the room's current song (json object with song info)
 - [ ] Endpoint to set the room's current song from client (update done after finishing track)
 - [ ] Endpoint to get the room's current song (for clients to sync)
+
+And on any of these:
+- [ ] Integrate server logs into a file.
