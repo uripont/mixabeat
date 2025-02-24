@@ -49,21 +49,40 @@ const verifyPassword = (password, storedHash) => {
 };
 //---------------------------------------------
 
-const createSession = (userId) => {
-    const token = generateSessionToken();
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 1); // Session expires in 1 day
-
+const getSession = async (userId) => {
     return new Promise((resolve, reject) => {
+        // First try to get an existing valid session
         pool.query(
-            'INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)',
-            [token, userId, expiresAt],
-            (err) => {
+            'SELECT token FROM sessions WHERE user_id = ? AND expires_at > NOW()',
+            [userId],
+            async (err, results) => {
                 if (err) {
                     reject(err);
                     return;
                 }
-                resolve(token);
+
+                if (results.length > 0) {
+                    // Return existing valid session token
+                    resolve(results[0].token);
+                    return;
+                }
+
+                // No valid session exists, create a new one
+                const token = generateSessionToken();
+                const expiresAt = new Date();
+                expiresAt.setDate(expiresAt.getDate() + 1); // Session expires in 1 day
+
+                pool.query(
+                    'INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)',
+                    [token, userId, expiresAt],
+                    (err) => {
+                        if (err) {
+                            reject(err);
+                            return;
+                        }
+                        resolve(token);
+                    }
+                );
             }
         );
     });
@@ -98,7 +117,7 @@ app.post('/login', async (req, res) => {
             }
 
             try {
-                const token = await createSession(user.user_id);
+                const token = await getSession(user.user_id);
                 res.json({
                     message: 'Login successful',
                     token: token,
