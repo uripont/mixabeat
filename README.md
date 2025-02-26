@@ -1,3 +1,5 @@
+Test on: http://20.26.232.219
+
 # Configuring VM for Static File Hosting
 
 To serve static files via Apache on the VM:
