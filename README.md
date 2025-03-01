@@ -24,35 +24,55 @@ sudo chmod -R 775 /var/www/html/
 
 Note: Apache serves files from `/var/www/html/` by default.
 
-
 ## Current frontend TODOs
-  
-For Music Room interface:
-- [x] Create distribuion of containers keeping space for future improvements
-- [x] Creae all required buttons and selectors
-- [x] Create callbacks with logs to enable functionalities
-- [x] Create Canvas for timeline
-- [x] Divide the canvas into tracks
-- [x] Assign one track to the actual user
-- [x] Block tracks that are not available for the user to work on
-- [ ] Add sounds to tracks
 
-## Final Delivery TODOs
-Here are some TODOs that we have already identified and that we want to work on for the final delivery. They are not yet definitive and many more need to be added but they already serve as a guide to know where we are.
+Landing page and login:
+- [ ] Make index page be a landing page showcasing the interface / features, with a button to redirect to sign up or log in (instead of a full screen login form)
+- [ ] UI-based feedback on form filling errors:
+    - [ ] Username already exists (after endpoint response)
+    - [ ] Invalid email (client side verified OR after endpoint response)
+    - [ ] Password too short (client side verified OR after endpoint response)
+    - [ ] Wrong password (after endpoint response)
+    - [ ] Username not found (after endpoint response)
 
-- [ ] Create last screen of Review and download music
+For room management:
+- [ ] Screen to show all available rooms (after endpoint response), as well as small moving song creation form to small widget on this screen
+- [ ] Join room by room name option (small widget)
+- [ ] UI Errors on both room creation and room joining
+- [ ] Section on this page that allows changing username / password / logout / delete account, using backend endnpoints
 
-For Music Room screen:
-- [ ] add sound to instrument selector
-- [ ] add sounds to tracks
-- [ ] set timer
-      
-For Review Room interface:
-- [ ] Create room
-- [ ] Set list of created songs
-- [ ] Able review and download option for each song
 
-For Chat Room (to be done for the final delivery)
-- [ ] change avatar icons and selector
-- [ ] improve some esthetic aspects
-- [ ] send message when clicking`enter`
+For song room interface:
+- [ ] Left side, list all available sounds in your track based on its instrument/role
+- [ ] Left side, list as well uploaded sounds during this session
+- [ ] Click on sound to instantiate it on the timeline ON the current time position
+- [ ] Drag to move selected sound on the track
+- [ ] Click on sound inside track to open a small widget with options to delete / edit parameters: change volume / pitch / ...?
+- [ ] Click space to play / pause the song
+- [ ] Click keys on keyboard to instantiate sounds on the track
+    - [ ] Lower part "pad": associate different available sounds to different keys
+    - [ ] "Pad": click on a box to edit the sound associated to that key
+- [ ] Click square buttom to move audio time to the beginning
+- [ ] Use mouse scroll to horizontally scroll the timeline (your track is always centered / at the top, other tracks are shown smaller because you can't edit them)
+- [ ] Button to confirm your track is finished (= send message to others as finished editing track)
+- [ ] Button to leave the room, back to room selection screen
+- [ ] Button to download the song inside room (encodes client-side the current song to a file, and gets downloaded automatically). 
+
+For song update management (yours):
+- [ ] Send websocket message to notify when you have connected to a track
+- [ ] Send websocket message to notify when you have made changes to a track you have not confirmed yet
+- [ ] Send websocket message to notify when you have finished editing that change
+- [ ] Send websocket message to notify when you have stopped editing the track (disconnected)
+
+- [ ] Send websocket messages continuously with the mouse position on the canvas (when it changes)
+
+
+For song update management (others):
+- [ ] When receiving that someone has connected to its track, show the track background highlighted (to know that track is being edited)
+- [ ] When someone is editing the track, show the track background highlighted differently (to know that track is being edited as of now)
+- [ ] When someone has finished editing the track, show the track background highlighted differently (to know that track has been edited, and that the edit will aply as soon as possible when you are not reproducing the song's audio).
+    - [ ] Apply song changes from the queue of pending updates to apply, re-rendering canvas for other's tracks.
+- [ ] When someone has disconnected from the track, show the track background as normal (to know that track is not being edited anymore, owner has disconnected).
+
+- [ ] Use received positions to show the mouse position of other users on the canvas, color matching their color on the connected users widget on the chat
+    - [ ] Smoothly interpolate mouse position from the last received position to the current one, to make it look like a smooth movement over time.
