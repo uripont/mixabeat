@@ -650,6 +650,23 @@ app.post('/signUp', (req, res) => {
     );
 });
 
+// List all available rooms
+app.get('/rooms', authenticateSession, (req, res) => {
+    pool.query(
+        'SELECT room_id, song_name, created_by, created_at FROM rooms',
+        (err, results) => {
+            if (err) {
+                logger.error('Error fetching rooms:', err);
+                return res.status(500).send('Error fetching rooms');
+            }
+            res.json({
+                rooms: results
+            });
+        }
+    );
+});
+
+
 /* // Protected route
 app.get('/profile', (req, res) => {
     if (req.session.user) {
