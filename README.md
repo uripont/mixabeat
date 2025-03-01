@@ -55,29 +55,32 @@ Note: Currently only the root endpoint ("/") is available.
 
 ## Current backend TODOs
 
-For messages and real-time chat:
-- [x] DB schema for rooms and messages
-- [x] Create a new room (new entries on DB)
-- [x] Set up websocket connections
-    - [x] Join a room
-    - [x] Leave a room
-- [x] Implement callback on websocket message sent/received
-    - [ ] Replace sillyserver message sending to listeners of this room with new websocket message sending
-    - [x] Persist messages into database (when received)
-- [x] Endpoint to get chat history for specific room
+For messages & chat:
+- [ ] Fix room joining websockets (sometimes it doesn't properly connect to joined room)
+- [ ] Endpoint to get connected users on your room, to be called when joining
 
-For user authentication:
-- [x] DB schema for users
-- [x] Manual session management (cookies, session stored in DB)
-- [x] Endpoint to register a new user (password is hashed+salted)
-- [x] Endpoint to login a user (returns a session token)
-- [x] Endpoint to logout a user (deletes session token)
-- [x] Implement user session management on all endpoints (middleware to reuse logic)
+For room management:
+- [ ] Endpoint to list all available rooms to join
+- [ ] Endpoint to join room by its current name (note that name can change over time, it's not an ID)
 
-For music stuff:
-- [x] Make session schema also store the room's current song as "contents" (json object with song info)
-- [ ] Endpoint to set the room's current song from client (update done after finishing track)
-- [ ] Endpoint to get the room's current song (for clients to sync)
+For song management:
+- [ ] Websocket message to update your current track
+    - [ ] Also makes server update the db with the updated track
+- [ ] Endpoint to get current song on this room (read from db, "checkpointed")
 
-And on any of these:
-- [x] Integrate server logs into a file.
+
+For audio files:
+- [ ] Endpoint to upload a new audio file (mp3, max size, rate limited)
+- [ ] Way to serve to the client only the source audios relevant to this song, based on the tracks it has and the sounds they use   
+    - [ ] Endpoint / way to request a specific subset of sound files from all the available ones
+    - [ ] Serving any of the custom-uploaded audios, stored on the VM filesystem, if they are present in a song
+
+For real-time editing experience:
+- [ ] Websocket message to send mouse position on the canvas over time
+- [ ] Websocket messages to send track status changes (connected but not editing, editing, marked as finished)
+
+For auth:
+- [ ] Better auth validation on endpoint (no repeated usernames, valid emails, minimum password length)
+- [ ] Endpoint to change username
+- [ ] Endpoint to change password
+- [ ] Endpoint to delete account
