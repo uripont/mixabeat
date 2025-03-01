@@ -223,9 +223,12 @@ wss.on('connection', async (socket, request) => {
                         );
 
                         // Get all connected users in this room
+                        // Get all connected users in this room (excluding the joining user)
                         const connectedUsers = [];
                         for (const [clientSocket, clientInfo] of clients.entries()) {
-                            if (clientInfo.roomId === message.roomId && clientSocket.readyState === WebSocket.OPEN) {
+                            if (clientInfo.roomId === message.roomId && 
+                                clientSocket.readyState === WebSocket.OPEN && 
+                                clientInfo.userId !== socket.userId) {  // Exclude the joining user
                                 const [userInfo] = await pool.promise().query(
                                     'SELECT username FROM users WHERE user_id = ?',
                                     [clientInfo.userId]
@@ -270,6 +273,27 @@ wss.on('connection', async (socket, request) => {
 
     // Handle client disconnect
     socket.on('close', () => {
+        // Get user info before removing from clients
+        const clientInfo = clients.get(socket);
+        if (clientInfo && clientInfo.roomId) {
+            // Get username for the leaving user
+            pool.promise().query(
+                'SELECT username FROM users WHERE user_id = ?',
+                [clientInfo.userId]
+            ).then(([results]) => {
+                if (results.length > 0) {
+                    broadcastToRoom(clientInfo.roomId, {
+                        type: 'user_left',
+                        userId: clientInfo.userId,
+                        username: results[0].username,
+                        timestamp: new Date().toISOString()
+                    });
+                }
+            }).catch(err => {
+                logger.error('Error handling client disconnect:', err);
+            });
+        }
+        
         clients.delete(socket);
     });
 });
