@@ -1,6 +1,7 @@
 const express = require('express');
 require('dotenv').config();
 const logger = require('./utils/logger');
+const pool = require('./config/database');
 const authRoutes = require('./routes/auth.routes');
 const { authenticateSessionOnHTTPEndpoint } = require('./middleware/auth.middleware');
 const { updateClientsRoomId } = require('./websocket/handlers');
@@ -189,4 +190,3 @@ app.get('/rooms', authenticateSessionOnHTTPEndpoint, (req, res) => {
         }
     );
 });
-
