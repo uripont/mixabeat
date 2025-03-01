@@ -24,7 +24,7 @@ app.use((req, res, next) => {
 app.use(express.json());
 
 // Routes
-app.use('/auth', authRoutes);
+app.use('/', authRoutes);
 
 // Create HTTP server
 const httpServer = app.listen(3000, () => {
