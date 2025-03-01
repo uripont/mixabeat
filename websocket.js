@@ -86,8 +86,11 @@ function connectWebSocket(token) {
             }
             else if (message.type === 'user_joined') {
                 const chatBox = document.getElementById('chat-box');
-                connectedUsers.add(message.username);
-                updateUsersList();
+                // Only add to connected users if it's not ourselves
+                if (message.username !== currentUsername) {
+                    connectedUsers.add(message.username);
+                    updateUsersList();
+                }
                 if (chatBox) {
                     const msgContainer = document.createElement('div');
                     msgContainer.className = 'message-container';
@@ -189,9 +192,12 @@ function updateUsersList() {
 
     userList.innerHTML = '';
     connectedUsers.forEach(username => {
-        const li = document.createElement('li');
-        li.textContent = username === currentUsername ? `${username} (You)` : username;
-        userList.appendChild(li);
+        // Only add users that aren't the current user
+        if (username !== currentUsername) {
+            const li = document.createElement('li');
+            li.textContent = username;
+            userList.appendChild(li);
+        }
     });
 }
 
