@@ -195,23 +195,72 @@ wss.on('connection', async (socket, request) => {
                     await handleChatMessage(socket, message);
                     break;
                 case 'join_room':
-                    // Update socket and client's room context
-                    socket.roomId = message.roomId;
-                    if (clients.has(socket)) {
-                        clients.get(socket).roomId = message.roomId;
+                    try {
+                        // First verify that user has joined this room via HTTP endpoint
+                        const [sessionResult] = await pool.promise().query(
+                            'SELECT room_id FROM sessions WHERE token = ? AND room_id = ?',
+                            [socket._token, message.roomId]
+                        );
+
+                        if (sessionResult.length === 0) {
+                            socket.send(JSON.stringify({
+                                type: 'error',
+                                message: 'First join the room using the /rooms/:roomId/join endpoint'
+                            }));
+                            return;
+                        }
+
+                        // Update socket and client's room context
+                        socket.roomId = message.roomId;
+                        if (clients.has(socket)) {
+                            clients.get(socket).roomId = message.roomId;
+                        }
+
+                        // Get user info for broadcasting
+                        const [userResult] = await pool.promise().query(
+                            'SELECT username FROM users WHERE user_id = ?',
+                            [socket.userId]
+                        );
+
+                        // Get all connected users in this room
+                        const connectedUsers = [];
+                        for (const [clientSocket, clientInfo] of clients.entries()) {
+                            if (clientInfo.roomId === message.roomId && clientSocket.readyState === WebSocket.OPEN) {
+                                const [userInfo] = await pool.promise().query(
+                                    'SELECT username FROM users WHERE user_id = ?',
+                                    [clientInfo.userId]
+                                );
+                                if (userInfo.length > 0) {
+                                    connectedUsers.push({
+                                        userId: clientInfo.userId,
+                                        username: userInfo[0].username
+                                    });
+                                }
+                            }
+                        }
+
+                        // Send connected users list to the joining user
+                        socket.send(JSON.stringify({
+                            type: 'room_joined',
+                            roomId: message.roomId,
+                            connectedUsers
+                        }));
+
+                        // Broadcast to room that user joined
+                        broadcastToRoom(message.roomId, {
+                            type: 'user_joined',
+                            userId: socket.userId,
+                            username: userResult[0].username,
+                            timestamp: new Date().toISOString()
+                        });
+
+                    } catch (err) {
+                        logger.error('Error in join_room:', err);
+                        socket.send(JSON.stringify({
+                            type: 'error',
+                            message: 'Failed to join room'
+                        }));
                     }
-                    // Get user info for broadcasting
-                    const [userResult] = await pool.promise().query(
-                        'SELECT username FROM users WHERE user_id = ?',
-                        [socket.userId]
-                    );
-                    // Broadcast to room that user joined
-                    broadcastToRoom(message.roomId, {
-                        type: 'user_joined',
-                        userId: socket.userId,
-                        username: userResult[0].username,
-                        timestamp: new Date().toISOString()
-                    });
                     break;
             }
         } catch (err) {
