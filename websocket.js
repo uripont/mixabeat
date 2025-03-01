@@ -6,6 +6,10 @@ let reconnectAttempts = 0;
 const MAX_RECONNECT_ATTEMPTS = 5;
 const RECONNECT_DELAY = 2000; // 2 seconds
 
+// Promises for room joining
+let roomJoinResolve = null;
+let roomJoinReject = null;
+
 function initializeWebSocket(token) {
     if (activeWs) {
         console.log('Closing existing connection');
@@ -59,10 +63,17 @@ function connectWebSocket(token) {
             else if (message.type === 'room_joined') {
                 // Clear and update connected users list with the full list from server
                 connectedUsers.clear();
-                message.connectedUsers.forEach(user => {
+                    message.connectedUsers.forEach(user => {
                     connectedUsers.add(user.username);
-                });
+                    });
                 updateUsersList();
+                
+                // Resolve the join room promise with the user list
+                if (roomJoinResolve) {
+                    roomJoinResolve(message.connectedUsers);
+                    roomJoinResolve = null;
+                    roomJoinReject = null;
+                }
                 
                 // Announce in chat that connection was successful
                 const chatBox = document.getElementById('chat-box');
@@ -85,11 +96,14 @@ function connectWebSocket(token) {
                 }
             }
             else if (message.type === 'user_joined') {
+                console.log('User joined, currentUsername:', currentUsername, 'joining username:', message.username);
                 const chatBox = document.getElementById('chat-box');
-                // Only add to connected users if it's not ourselves
                 if (message.username !== currentUsername) {
+                    console.log('Adding newly joined user:', message.username);
                     connectedUsers.add(message.username);
                     updateUsersList();
+                } else {
+                    console.log('Skipping own username from user_joined:', message.username);
                 }
                 if (chatBox) {
                     const msgContainer = document.createElement('div');
@@ -133,16 +147,31 @@ function connectWebSocket(token) {
             }
             else if (message.type === 'error') {
                 console.error('WebSocket error:', message.error);
+                if (roomJoinReject) {
+                    roomJoinReject(new Error(message.error));
+                    roomJoinResolve = null;
+                    roomJoinReject = null;
+                }
                 alert('Error: ' + message.error);
             }
         };
 
         activeWs.onerror = (error) => {
             console.error('WebSocket error:', error);
+            if (roomJoinReject) {
+                roomJoinReject(error);
+                roomJoinResolve = null;
+                roomJoinReject = null;
+            }
         };
 
         activeWs.onclose = (event) => {
             console.log(`WebSocket closed with code ${event.code}:`, event.reason);
+            if (roomJoinReject) {
+                roomJoinReject(new Error('WebSocket closed'));
+                roomJoinResolve = null;
+                roomJoinReject = null;
+            }
             
             if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
                 console.log(`Attempting to reconnect (${reconnectAttempts + 1}/${MAX_RECONNECT_ATTEMPTS})...`);
@@ -155,6 +184,11 @@ function connectWebSocket(token) {
         };
     } catch (error) {
         console.error('Error creating WebSocket:', error);
+        if (roomJoinReject) {
+            roomJoinReject(error);
+            roomJoinResolve = null;
+            roomJoinReject = null;
+        }
     }
 
     return activeWs;
@@ -175,8 +209,6 @@ function sendChatMessage(message) {
     return true;
 }
 
-// Helper function to append messages to the chat box.
-// Now it includes the timestamp as part of the displayed message.
 function appendMessage(sender, message, timestamp, chatBox) {
     const msg = document.createElement('div');
     // Format: "username (time): message"
@@ -188,31 +220,53 @@ function appendMessage(sender, message, timestamp, chatBox) {
 
 function updateUsersList() {
     const userList = document.getElementById('users');
-    if (!userList) return;
+    if (!userList) {
+        console.warn('Users list element not found');
+        return;
+    }
+
+    console.log('Updating users list. Current users:', Array.from(connectedUsers));
+    console.log('Current username:', currentUsername);
 
     userList.innerHTML = '';
     connectedUsers.forEach(username => {
-        // Only add users that aren't the current user
-        if (username !== currentUsername) {
-            const li = document.createElement('li');
-            li.textContent = username;
-            userList.appendChild(li);
+        const li = document.createElement('li');
+        li.textContent = username;
+        if (username === currentUsername) {
+            li.textContent += ' (You)';
+            li.classList.add('current-user');
         }
+        userList.appendChild(li);
     });
 }
 
 // Function to join a room via WebSocket
 function joinRoom(roomId) {
-    if (!activeWs || activeWs.readyState !== WebSocket.OPEN) {
-        console.error('WebSocket not connected');
-        return false;
-    }
+    return new Promise((resolve, reject) => {
+        if (!activeWs || activeWs.readyState !== WebSocket.OPEN) {
+            reject(new Error('WebSocket not connected'));
+            return;
+        }
 
-    activeWs.send(JSON.stringify({
-        type: 'join_room',
-        roomId: roomId
-    }));
-    return true;
+        // Store the Promise resolution functions
+        roomJoinResolve = resolve;
+        roomJoinReject = reject;
+
+        // Send the join room request
+        activeWs.send(JSON.stringify({
+            type: 'join_room',
+            roomId: roomId
+        }));
+
+        // Set a timeout to reject if we don't get room_joined in time
+        setTimeout(() => {
+            if (roomJoinResolve) {
+                roomJoinReject(new Error('Room join timeout'));
+                roomJoinResolve = null;
+                roomJoinReject = null;
+            }
+        }, 5000);
+    });
 }
 
 export { 

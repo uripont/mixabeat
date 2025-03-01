@@ -143,7 +143,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // In your send-message button click handler, add the following code:
+    // Send message handler
     elements.sendMessageBtn?.addEventListener("click", () => {
         const messageText = elements.messageInput?.value;
         if (!messageText) return;
@@ -241,37 +241,36 @@ document.addEventListener("DOMContentLoaded", () => {
             const roomData = await createRoom(songName, token);
             console.log('Room created successfully:', roomData);
 
-            // Join the room via WebSocket and fetch chat history
-            if (wsJoinRoom(roomData.roomId)) {
-                console.log('Joined room via WebSocket');
-                alert(`Room created successfully! Room ID: ${roomData.roomId}`);
+            try {
+                // Wait for room_join WebSocket to complete
+                console.log('Joining room via WebSocket...');
 
-                try {
-                    // Fetch and display chat history
-                    const chatHistory = await getRoomMessages(roomData.roomId, token);
-                    const chatBox = document.getElementById('chat-box');
-                    if (chatBox && chatHistory.messages) {
-                        chatBox.innerHTML = ''; // Clear existing messages
-                        chatHistory.messages.reverse().forEach(msg => {
-                            const msgContainer = document.createElement('div');
-                            msgContainer.className = 'message-container';
+                // Since we want to get the list of users, this needs to be async
+                const users = await wsJoinRoom(roomData.roomId);
+                console.log('Room joined successfully with users:', users);
+
+                // Fetch and display chat history
+                const chatHistory = await getRoomMessages(roomData.roomId, token);
+                const chatBox = document.getElementById('chat-box');
+                if (chatBox && chatHistory.messages) {
+                    chatBox.innerHTML = ''; // Clear existing messages
+                    chatHistory.messages.reverse().forEach(msg => {
+                        const msgContainer = document.createElement('div');
+                        msgContainer.className = 'message-container';
                             
-                            const senderLabel = document.createElement('div');
-                            senderLabel.className = 'message-sender';
-                            senderLabel.textContent = msg.username;
+                        const senderLabel = document.createElement('div');
+                        senderLabel.className = 'message-sender';
+                        senderLabel.textContent = msg.username;
                             
-                            const msgBubble = document.createElement('div');
-                            msgBubble.className = `message-bubble ${msg.username === currentUsername ? 'message-sent' : 'message-received'}`;
-                            msgBubble.textContent = msg.message_text;
+                        const msgBubble = document.createElement('div');
+                        msgBubble.className = `message-bubble ${msg.username === currentUsername ? 'message-sent' : 'message-received'}`;
+                        msgBubble.textContent = msg.message_text;
                             
-                            msgContainer.appendChild(senderLabel);
-                            msgContainer.appendChild(msgBubble);
-                            chatBox.appendChild(msgContainer);
-                        });
-                        chatBox.scrollTop = chatBox.scrollHeight;
-                    }
-                } catch (error) {
-                    console.error('Error fetching chat history:', error);
+                        msgContainer.appendChild(senderLabel);
+                        msgContainer.appendChild(msgBubble);
+                        chatBox.appendChild(msgContainer);
+                    });
+                    chatBox.scrollTop = chatBox.scrollHeight;
                 }
 
                 // Show chat and music room screens
@@ -280,8 +279,11 @@ document.addEventListener("DOMContentLoaded", () => {
                     elements.chatScreen.style.display = 'block';
                     elements.leftContainer.style.display = 'block';
                 }
-            } else {
-                console.error('Required screen elements not found');
+
+                alert(`Room created successfully! Room ID: ${roomData.roomId}`);
+            } catch (error) {
+                console.error('Error joining room:', error);
+                alert('Failed to join room: ' + error.message);
             }
         } catch (error) {
             console.error('Error creating room:', error);
@@ -307,36 +309,34 @@ document.addEventListener("DOMContentLoaded", () => {
             const joinData = await joinRoom(roomId, token);
             console.log('Joined room successfully:', joinData);
 
-            // Join the room via WebSocket and fetch chat history
-            if (wsJoinRoom(roomId)) {
-                console.log('Joined room via WebSocket');
+            try {
+                // Wait for room join via WebSocket to complete
+                console.log('Joining room via WebSocket...');
+                const users = await wsJoinRoom(roomId);
+                console.log('Room joined successfully with users:', users);
 
-                try {
-                    // Fetch and display chat history
-                    const chatHistory = await getRoomMessages(roomId, token);
-                    const chatBox = document.getElementById('chat-box');
-                    if (chatBox && chatHistory.messages) {
+                // Fetch and display chat history
+                const chatHistory = await getRoomMessages(roomId, token);
+                const chatBox = document.getElementById('chat-box');
+                if (chatBox && chatHistory.messages) {
                         chatBox.innerHTML = ''; // Clear existing messages
-                        chatHistory.messages.reverse().forEach(msg => {
-                            const msgContainer = document.createElement('div');
-                            msgContainer.className = 'message-container';
+                    chatHistory.messages.reverse().forEach(msg => {
+                        const msgContainer = document.createElement('div');
+                        msgContainer.className = 'message-container';
                             
-                            const senderLabel = document.createElement('div');
-                            senderLabel.className = 'message-sender';
-                            senderLabel.textContent = msg.username;
+                        const senderLabel = document.createElement('div');
+                        senderLabel.className = 'message-sender';
+                        senderLabel.textContent = msg.username;
                             
-                            const msgBubble = document.createElement('div');
-                            msgBubble.className = `message-bubble ${msg.username === currentUsername ? 'message-sent' : 'message-received'}`;
-                            msgBubble.textContent = msg.message_text;
+                        const msgBubble = document.createElement('div');
+                        msgBubble.className = `message-bubble ${msg.username === currentUsername ? 'message-sent' : 'message-received'}`;
+                        msgBubble.textContent = msg.message_text;
                             
-                            msgContainer.appendChild(senderLabel);
-                            msgContainer.appendChild(msgBubble);
-                            chatBox.appendChild(msgContainer);
-                        });
-                        chatBox.scrollTop = chatBox.scrollHeight;
-                    }
-                } catch (error) {
-                    console.error('Error fetching chat history:', error);
+                        msgContainer.appendChild(senderLabel);
+                        msgContainer.appendChild(msgBubble);
+                        chatBox.appendChild(msgContainer);
+                    });
+                    chatBox.scrollTop = chatBox.scrollHeight;
                 }
 
                 // Show chat and music room screens
@@ -345,8 +345,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     elements.chatScreen.style.display = 'block';
                     elements.leftContainer.style.display = 'block';
                 }
-            } else {
-                console.error('Required screen elements not found');
+            } catch (error) {
+                console.error('Error joining room:', error);
+                alert('Failed to join room: ' + error.message);
             }
         } catch (error) {
             console.error('Error joining room:', error);
