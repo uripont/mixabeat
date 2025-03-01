@@ -5,35 +5,14 @@ require('dotenv').config();
 const WebSocket = require('ws');
 
 // Built-in modules
-const crypto = require('crypto');
 const url = require('url');
 const fs = require('fs');
 
+// Utils
+const { generateSessionToken, hashPassword, verifyPassword } = require('./utils/crypto');
 
-// Logging setup-----------------------------------------
-const logDirectory = 'log';
 
-// Check if the directory exists, create it if not
-if (!fs.existsSync(logDirectory)) {
-    fs.mkdirSync(logDirectory);
-}
-
-const logStream = fs.createWriteStream(`${logDirectory}/server.log`, { flags: 'a' });
-
-const logger = {
-    persistLog: function(level, message) {
-        const timestamp = new Date().toISOString();
-        console.log(message); // Keep console output
-        logStream.write(`${timestamp} - ${level.toUpperCase()}: ${message}\n`); // Write to log file
-    },
-    log: function(message) {
-        this.persistLog('info', message);
-    },
-    error: function(message) {
-        this.persistLog('error', message);
-    }
-};
-//-------------------------------------------------------
+const logger = require('./utils/logger');
 
 
 // Express and Websocket configuration ------------------
@@ -55,7 +34,7 @@ app.use((req, res, next) => {
 app.use(express.json());
 
 const wss = new WebSocket.Server({ server: app.listen(3000, () => {
-    logger.log('Server running on port 3000');
+    logger.info('Server running on port 3000');
 }) });
 
 // WebSocket client tracking
@@ -113,18 +92,18 @@ const authenticateWSConnection = async (socket, request) => {
 
 // Message handlers
 const broadcastToRoom = (roomId, message, excludeSocket = null) => {
-    logger.log(`Broadcasting to room ${roomId}: ${JSON.stringify(message)}`);
+    logger.info(`Broadcasting to room ${roomId}: ${JSON.stringify(message)}`);
     clients.forEach((client, ws) => {
         if (ws.readyState === WebSocket.OPEN && client.roomId === roomId) {
             // Log each eligible client for debugging
-            logger.log(`Found client in room ${roomId}: ${client.userId}`);
+            logger.info(`Found client in room ${roomId}: ${client.userId}`);
             if (ws === excludeSocket) {
-                logger.log('Skipping sender');
+                logger.info('Skipping sender');
                 return;
             }
             try {
                 ws.send(JSON.stringify(message));
-                logger.log('Message sent successfully');
+                logger.info('Message sent successfully');
             } catch (err) {
                 logger.error(`Error sending message to client: ${err}`);
             }
@@ -141,7 +120,7 @@ const handleChatMessage = async (socket, message) => {
         }));
         return;
     }
-    logger.log(`Handling chat message in room ${socket.roomId}`);
+    logger.info(`Handling chat message in room ${socket.roomId}`);
     const userId = socket.userId;
     
     try {
@@ -182,13 +161,11 @@ const handleChatMessage = async (socket, message) => {
 wss.on('connection', async (socket, request) => {
     const authenticated = await authenticateWSConnection(socket, request);
     if (!authenticated) return;
-
-    // Handle incoming messages
     socket.on('message', async (data) => {
         try {
             // Convert Buffer to string before parsing
             const message = JSON.parse(data.toString());
-            logger.log('Received message: ' + data.toString());
+            logger.info('Received message: ' + data.toString());
             
             switch (message.type) {
                 case 'message':
@@ -358,7 +335,7 @@ pool.getConnection((err, connection) => {
         logger.error('Error connecting to database:', err);
         return;
     }
-    logger.log('Connected to database');
+    logger.info('Connected to database');
     connection.release();
 });
 //--------------------------------------------
@@ -465,13 +442,13 @@ app.post('/login', async (req, res) => {
 });
 
 app.get('/getUsers', authenticateSession, (req, res) => {
-    logger.log('Getting users');
+    logger.info('Getting users');
     pool.query('SELECT user_id, username, email, created_at FROM users', (err, rows) => {
         if (err) {
             logger.error('Error executing query:', err);
             return res.status(500).send('Error fetching users');
         }
-        logger.log('Got users:', rows);
+        logger.info('Got users:', rows);
         res.json(rows);
     });
 });
@@ -644,7 +621,7 @@ app.post('/signUp', (req, res) => {
                 res.status(500).send('Error creating user');
                 return;
             }
-            logger.log('Added user:', rows);
+            logger.info('Added user:', rows);
             res.status(201).send({ message: 'User created successfully', userId: rows.insertId });
         }
     );
