@@ -56,8 +56,8 @@ Note: Currently only the root endpoint ("/") is available.
 ## Current backend TODOs
 
 For messages & chat:
-- [ ] Fix room joining websockets (sometimes it doesn't properly connect to joined room)
-- [ ] Endpoint to get connected users on your room, to be called when joining
+- [x] Fix room joining websockets (sometimes it doesn't properly connect to joined room)
+- [x] Get connected users on your room, to be called when joining (async via websocket)
 
 For room management:
 - [ ] Endpoint to list all available rooms to join
