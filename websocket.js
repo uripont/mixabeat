@@ -56,6 +56,34 @@ function connectWebSocket(token) {
                     chatBox.scrollTop = chatBox.scrollHeight;
                 }
             } 
+            else if (message.type === 'room_joined') {
+                // Clear and update connected users list with the full list from server
+                connectedUsers.clear();
+                message.connectedUsers.forEach(user => {
+                    connectedUsers.add(user.username);
+                });
+                updateUsersList();
+                
+                // Announce in chat that connection was successful
+                const chatBox = document.getElementById('chat-box');
+                if (chatBox) {
+                    const msgContainer = document.createElement('div');
+                    msgContainer.className = 'message-container';
+                    
+                    const senderLabel = document.createElement('div');
+                    senderLabel.className = 'message-sender';
+                    senderLabel.textContent = 'System';
+                    
+                    const msgBubble = document.createElement('div');
+                    msgBubble.className = 'message-bubble message-received';
+                    msgBubble.textContent = `Joined the room`;
+                    
+                    msgContainer.appendChild(senderLabel);
+                    msgContainer.appendChild(msgBubble);
+                    chatBox.appendChild(msgContainer);
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                }
+            }
             else if (message.type === 'user_joined') {
                 const chatBox = document.getElementById('chat-box');
                 connectedUsers.add(message.username);
@@ -77,7 +105,7 @@ function connectWebSocket(token) {
                     chatBox.appendChild(msgContainer);
                     chatBox.scrollTop = chatBox.scrollHeight;
                 }
-            } 
+            }
             else if (message.type === 'user_left') {
                 const chatBox = document.getElementById('chat-box');
                 connectedUsers.delete(message.username);
