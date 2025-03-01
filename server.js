@@ -3,13 +3,11 @@ const express = require('express');
 require('dotenv').config();
 const WebSocket = require('ws');
 
-// Built-in modules
-const url = require('url');
-
 // Utils
 const { generateSessionToken, hashPassword, verifyPassword } = require('./utils/crypto');
 const logger = require('./utils/logger');
 const pool = require('./config/database');
+const { authenticateSessionOnHTTPEndpoint, authenticateWSConnection } = require('./middleware/auth.middleware');
 
 
 // Express and Websocket configuration ------------------
@@ -45,46 +43,6 @@ const updateClientsRoomId = (token, newRoomId) => {
             socket.roomId = newRoomId;
         }
     });
-};
-
-// WebSocket authentication middleware
-const authenticateWSConnection = async (socket, request) => {
-    const { query } = url.parse(request.url, true);
-    const token = query.token;
-    socket._token = token; // Store token for later use
-
-    if (!token) {
-        socket.close(4001, 'No token provided');
-        return false;
-    }
-
-    try {
-        const [results] = await pool.promise().query(
-            'SELECT user_id, room_id FROM sessions WHERE token = ? AND expires_at > NOW()',
-            [token]
-        );
-
-        if (results.length === 0) {
-            socket.close(4001, 'Invalid token');
-            return false;
-        }
-
-        const session = results[0];
-        socket.userId = session.user_id;
-        socket.roomId = session.room_id;
-        
-        // Store client info
-        clients.set(socket, {
-            userId: session.user_id,
-            roomId: session.room_id
-        });
-
-        return true;
-    } catch (err) {
-        logger.error('WebSocket auth error:', err);
-        socket.close(4001, 'Authentication error');
-        return false;
-    }
 };
 
 // Message handlers
@@ -278,41 +236,6 @@ wss.on('connection', async (socket, request) => {
     });
 });
 
-// Authentication middleware, used on all endpoints that require authentication
-const authenticateSession = (req, res, next) => {
-    const token = req.headers.authorization;
-
-    if (!token) {
-        return res.status(401).send('No token provided');
-    }
-
-    pool.query(
-        'SELECT user_id, expires_at FROM sessions WHERE token = ?',
-        [token],
-        (err, results) => {
-            if (err) {
-                logger.error('Error verifying session:', err);
-                return res.status(500).send('Error verifying session');
-            }
-
-            if (results.length === 0) {
-                return res.status(401).send('Invalid token');
-            }
-
-            const session = results[0];
-            if (new Date(session.expires_at) < new Date()) {
-                // Session has expired, delete it and return error
-                pool.query('DELETE FROM sessions WHERE token = ?', [token]);
-                return res.status(401).send('Session expired');
-            }
-
-            // Add user info to request object
-            req.userId = session.user_id;
-            next();
-        }
-    );
-};
-//---------------------------------------------
 
 
 
@@ -399,7 +322,7 @@ app.post('/login', async (req, res) => {
     );
 });
 
-app.get('/getUsers', authenticateSession, (req, res) => {
+app.get('/getUsers', authenticateSessionOnHTTPEndpoint, (req, res) => {
     logger.info('Getting users');
     pool.query('SELECT user_id, username, email, created_at FROM users', (err, rows) => {
         if (err) {
@@ -411,7 +334,7 @@ app.get('/getUsers', authenticateSession, (req, res) => {
     });
 });
 
-app.post('/logout', authenticateSession, (req, res) => {
+app.post('/logout', authenticateSessionOnHTTPEndpoint, (req, res) => {
     const token = req.headers.authorization;
 
     if (!token) {
@@ -436,7 +359,7 @@ app.post('/logout', authenticateSession, (req, res) => {
 });
 
 // Join a room
-app.put('/rooms/:roomId/join', authenticateSession, (req, res) => {
+app.put('/rooms/:roomId/join', authenticateSessionOnHTTPEndpoint, (req, res) => {
     const roomId = parseInt(req.params.roomId);
     
     // First check if room exists
@@ -471,7 +394,7 @@ app.put('/rooms/:roomId/join', authenticateSession, (req, res) => {
 });
 
 // Leave a room
-app.put('/rooms/:roomId/leave', authenticateSession, (req, res) => {
+app.put('/rooms/:roomId/leave', authenticateSessionOnHTTPEndpoint, (req, res) => {
     const roomId = parseInt(req.params.roomId);
     
     // Verify user is in this room
@@ -506,7 +429,7 @@ app.put('/rooms/:roomId/leave', authenticateSession, (req, res) => {
 });
 
 // Get room chat history
-app.get('/rooms/:roomId/messages', authenticateSession, (req, res) => {
+app.get('/rooms/:roomId/messages', authenticateSessionOnHTTPEndpoint, (req, res) => {
     const roomId = parseInt(req.params.roomId);
     const limit = parseInt(req.query.limit) || 100;
     const before = req.query.before ? new Date(req.query.before) : new Date();
@@ -533,7 +456,7 @@ app.get('/rooms/:roomId/messages', authenticateSession, (req, res) => {
 });
 
 // Create a new room (with empty contents)
-app.post('/rooms', authenticateSession, (req, res) => {
+app.post('/rooms', authenticateSessionOnHTTPEndpoint, (req, res) => {
     const { songName } = req.body;
     
     if (!songName) {
@@ -586,7 +509,7 @@ app.post('/signUp', (req, res) => {
 });
 
 // List all available rooms
-app.get('/rooms', authenticateSession, (req, res) => {
+app.get('/rooms', authenticateSessionOnHTTPEndpoint, (req, res) => {
     pool.query(
         'SELECT room_id, song_name, created_by, created_at FROM rooms',
         (err, results) => {
