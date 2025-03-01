@@ -1,5 +1,6 @@
 const logger = require('../utils/logger');
 const pool = require('../config/database');
+const { getUserById, getUserSession } = require('../utils/db');
 
 // WebSocket client tracking, to know which clients are in which rooms
 const clients = new Map();
@@ -51,17 +52,16 @@ const handleChatMessage = async (socket, message) => {
             [socket.roomId, userId, message.message]
         );
 
-        // Get username (from socket we know the user id)
-        const [userResult] = await pool.promise().query(
-            'SELECT username FROM users WHERE user_id = ?',
-            [userId]
-        );
+        const user = await getUserById(userId);
+        if (!user) {
+            throw new Error('User not found');
+        }
 
         const broadcastMessage = {
             type: 'message',
             messageId: result.insertId,
             userId: userId,
-            username: userResult[0].username,
+            username: user.username, // user object contains just the username field
             message: message.message,
             timestamp: new Date().toISOString()
         };
@@ -78,23 +78,12 @@ const handleChatMessage = async (socket, message) => {
 
 const handleJoinRoom = async (socket, message) => {
     try {
-        const verifyUserHasJoinedRoom = async (socket, roomId) => {
-            const [sessionResult] = await pool.promise().query(
-                'SELECT room_id FROM sessions WHERE token = ? AND room_id = ?',
-                [socket._token, roomId]
-            );
-
-            if (sessionResult.length === 0) {
-                socket.send(JSON.stringify({
-                    type: 'error',
-                    message: 'First join the room using the /rooms/:roomId/join endpoint'
-                }));
-                return false;
-            }
-            return true;
-        };
-
-        if (!await verifyUserHasJoinedRoom(socket, message.roomId)) {
+        const session = await getUserSession(socket._token);
+        if (!session || !session.room_id || session.room_id !== message.roomId) {
+            socket.send(JSON.stringify({
+                type: 'error',
+                message: 'First join the room using the /rooms/:roomId/join endpoint'
+            }));
             return;
         }
 
@@ -104,11 +93,10 @@ const handleJoinRoom = async (socket, message) => {
             clients.get(socket).roomId = message.roomId;
         }
 
-        // Get username of user joining the room
-        const [userResult] = await pool.promise().query(
-            'SELECT username FROM users WHERE user_id = ?',
-            [socket.userId]
-        );
+        const user = await getUserById(socket.userId);
+        if (!user) {
+            throw new Error('User not found');
+        }
 
         // Get all connected users in this room (excluding the joining user)
         const connectedUsers = [];
@@ -116,14 +104,11 @@ const handleJoinRoom = async (socket, message) => {
             if (clientInfo.roomId === message.roomId && 
                 clientSocket.readyState === WebSocket.OPEN && 
                 clientInfo.userId !== socket.userId) {
-                const [userInfo] = await pool.promise().query(
-                    'SELECT username FROM users WHERE user_id = ?',
-                    [clientInfo.userId]
-                );
-                if (userInfo.length > 0) {
+                const userInfo = await getUserById(clientInfo.userId);
+                if (userInfo) {
                     connectedUsers.push({
                         userId: clientInfo.userId,
-                        username: userInfo[0].username
+                        username: userInfo.username
                     });
                 }
             }
@@ -136,11 +121,10 @@ const handleJoinRoom = async (socket, message) => {
             connectedUsers
         }));
 
-        // Broadcast to room that user joined
         broadcastToRoom(message.roomId, {
             type: 'user_joined',
             userId: socket.userId,
-            username: userResult[0].username,
+            username: user.username,
             timestamp: new Date().toISOString()
         });
 
@@ -163,16 +147,13 @@ const handleDisconnect = async (socket) => {
                 [socket._token]
             );
 
-            const [results] = await pool.promise().query(
-                'SELECT username FROM users WHERE user_id = ?',
-                [clientInfo.userId]
-            );
+            const user = await getUserById(clientInfo.userId);
 
-            if (results.length > 0) {
+            if (user) {
                 broadcastToRoom(clientInfo.roomId, {
                     type: 'user_left',
                     userId: clientInfo.userId,
-                    username: results[0].username,
+                    username: user.username,
                     timestamp: new Date().toISOString()
                 });
             }

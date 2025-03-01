@@ -8,6 +8,7 @@ const getUserById = async (userId) => {
             [userId]
         );
         return results.length > 0 ? results[0] : null;
+        // Returns { username: string }:
     } catch (err) {
         logger.error('Error getting user:', err);
         throw err;
