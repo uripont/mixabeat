@@ -276,11 +276,17 @@ wss.on('connection', async (socket, request) => {
         // Get user info before removing from clients
         const clientInfo = clients.get(socket);
         if (clientInfo && clientInfo.roomId) {
-            // Get username for the leaving user
+            // Update session in database to remove room_id
             pool.promise().query(
-                'SELECT username FROM users WHERE user_id = ?',
-                [clientInfo.userId]
-            ).then(([results]) => {
+                'UPDATE sessions SET room_id = NULL WHERE token = ?',
+                [socket._token]
+            ).then(() => {
+                // Get username for the leaving user
+                return pool.promise().query(
+                    'SELECT username FROM users WHERE user_id = ?',
+                    [clientInfo.userId]
+                );
+            }).then(([results]) => {
                 if (results.length > 0) {
                     broadcastToRoom(clientInfo.roomId, {
                         type: 'user_left',
