@@ -1,4 +1,4 @@
-const mysql = require('mysql2');
+const mysql = require('mysql2'); // npm install mysql2
 const logger = require('../utils/logger');
 
 const config = {
@@ -9,10 +9,7 @@ const config = {
     database: process.env.DB_DATABASE
 };
 
-// Create connection pool
 const pool = mysql.createPool(config);
-
-// Test database connection
 pool.getConnection((err, connection) => {
     if (err) {
         logger.error('Error connecting to database:', err);
