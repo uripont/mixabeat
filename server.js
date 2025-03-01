@@ -1,17 +1,11 @@
-// Node modules
 const express = require('express');
 require('dotenv').config();
-const WebSocket = require('ws');
-
-// Utils
-const { generateSessionToken, hashPassword, verifyPassword } = require('./utils/crypto');
 const logger = require('./utils/logger');
-const pool = require('./config/database');
+const authRoutes = require('./routes/auth.routes');
 const { authenticateSessionOnHTTPEndpoint } = require('./middleware/auth.middleware');
 const { updateClientsRoomId } = require('./websocket/handlers');
 
-
-// Express and Websocket configuration ------------------
+// Express and Websocket configuration
 const app = express();
 
 // Basic CORS middleware
@@ -29,6 +23,9 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 
+// Routes
+app.use('/auth', authRoutes);
+
 // Create HTTP server
 const httpServer = app.listen(3000, () => {
     logger.info('Server running on port 3000');
@@ -38,92 +35,7 @@ const httpServer = app.listen(3000, () => {
 const setupWebSocketServer = require('./websocket/ws-server');
 const wss = setupWebSocketServer(httpServer);
 
-
-
-
-const getSession = async (userId) => {
-    return new Promise((resolve, reject) => {
-        // First try to get an existing valid session
-        pool.query(
-            'SELECT token FROM sessions WHERE user_id = ? AND expires_at > NOW()',
-            [userId],
-            async (err, results) => {
-                if (err) {
-                    reject(err);
-                    return;
-                }
-
-                if (results.length > 0) {
-                    // Return existing valid session token
-                    resolve(results[0].token);
-                    return;
-                }
-
-                // No valid session exists, create a new one
-                const token = generateSessionToken();
-                const expiresAt = new Date();
-                expiresAt.setDate(expiresAt.getDate() + 1); // Session expires in 1 day
-
-                pool.query(
-                    'INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)',
-                    [token, userId, expiresAt],
-                    (err) => {
-                        if (err) {
-                            reject(err);
-                            return;
-                        }
-                        resolve(token);
-                    }
-                );
-            }
-        );
-    });
-};
-
-// Login route
-app.post('/login', async (req, res) => {
-    const { username, password } = req.body;
-
-    if (!username || !password) {
-        return res.status(400).send('Username and password are required');
-    }
-
-    pool.query(
-        'SELECT user_id, username, password_hash FROM users WHERE username = ?',
-        [username],
-        async (err, results) => {
-            if (err) {
-                logger.error('Error executing query:', err);
-                return res.status(500).send('Error during login');
-            }
-
-            if (results.length === 0) {
-                return res.status(401).send('Invalid username or password');
-            }
-
-            const user = results[0];
-            const match = verifyPassword(password, user.password_hash);
-
-            if (!match) {
-                return res.status(401).send('Invalid username or password');
-            }
-
-            try {
-                const token = await getSession(user.user_id);
-                res.json({
-                    message: 'Login successful',
-                    token: token,
-                    userId: user.user_id,
-                    username: user.username
-                });
-            } catch (error) {
-                logger.error('Error creating session:', error);
-                res.status(500).send('Error creating session');
-            }
-        }
-    );
-});
-
+// Get users list
 app.get('/getUsers', authenticateSessionOnHTTPEndpoint, (req, res) => {
     logger.info('Getting users');
     pool.query('SELECT user_id, username, email, created_at FROM users', (err, rows) => {
@@ -134,30 +46,6 @@ app.get('/getUsers', authenticateSessionOnHTTPEndpoint, (req, res) => {
         logger.info('Got users:', rows);
         res.json(rows);
     });
-});
-
-app.post('/logout', authenticateSessionOnHTTPEndpoint, (req, res) => {
-    const token = req.headers.authorization;
-
-    if (!token) {
-        return res.status(401).send('No token provided');
-    }
-        
-    // Delete the session for the token you provided (as in session management, we assume you only know your token)
-    pool.query(
-        'DELETE FROM sessions WHERE token = ?',
-        [token],
-        (err, result) => {
-            if (err) {
-                logger.error('Error during logout:', err);
-                return res.status(500).send('Error during logout');
-            }
-            if (result.affectedRows === 0) {
-                return res.status(401).send('Invalid token');
-            }
-            res.status(200).send({ message: 'Logged out successfully' });
-        }
-    );
 });
 
 // Join a room
@@ -286,30 +174,6 @@ app.post('/rooms', authenticateSessionOnHTTPEndpoint, (req, res) => {
     );
 });
 
-app.post('/signUp', (req, res) => {
-    const { username, email, password } = req.body;
-    
-    if (!username || !email || !password) {
-        return res.status(400).send('All fields are required');
-    }
-
-    const hashedPassword = hashPassword(password);
-
-    pool.query(
-        'INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)',
-        [username, email, hashedPassword],
-        (err, rows) => {
-            if (err) {
-                logger.error('Error executing query:', err);
-                res.status(500).send('Error creating user');
-                return;
-            }
-            logger.info('Added user:', rows);
-            res.status(201).send({ message: 'User created successfully', userId: rows.insertId });
-        }
-    );
-});
-
 // List all available rooms
 app.get('/rooms', authenticateSessionOnHTTPEndpoint, (req, res) => {
     pool.query(
@@ -326,12 +190,3 @@ app.get('/rooms', authenticateSessionOnHTTPEndpoint, (req, res) => {
     );
 });
 
-
-/* // Protected route
-app.get('/profile', (req, res) => {
-    if (req.session.user) {
-        res.send(`Welcome, ${req.session.user}`);
-    } else {
-        res.status(401).send('Not authenticated');
-            }
-}); */
