@@ -1,39 +1,34 @@
 const logger = require('../utils/logger');
-const pool = require('../config/database');
+const db = require('../utils/db');
 const url = require('url');
 
-const authenticateSessionOnHTTPEndpoint = (req, res, next) => {
+const authenticateSessionOnHTTPEndpoint = async (req, res, next) => {
     const token = req.headers.authorization;
 
     if (!token) {
         return res.status(401).send('No token provided');
     }
 
-    pool.query(
-        'SELECT user_id, expires_at FROM sessions WHERE token = ?',
-        [token],
-        (err, results) => {
-            if (err) {
-                logger.error('Error verifying session:', err);
-                return res.status(500).send('Error verifying session');
-            }
-
-            if (results.length === 0) {
-                return res.status(401).send('Invalid token: not found on db query');
-            }
-
-            const session = results[0];
-            const sessionExpired = new Date(session.expires_at) < new Date();
-            if (sessionExpired) {
-                pool.query('DELETE FROM sessions WHERE token = ?', [token]);
-                return res.status(401).send('Session has expired');
-            }
-
-            // If auth has been successful, add user info to request object, and pass execution to next middleware/route
-            req.userId = session.user_id;
-            next();
+    try {
+        const session = await db.getUserSession(token);
+        
+        if (!session) {
+            return res.status(401).send('Invalid token: not found on db query');
         }
-    );
+
+        const sessionExpired = new Date(session.expires_at) < new Date();
+        if (sessionExpired) {
+            await pool.query('DELETE FROM sessions WHERE token = ?', [token]);
+            return res.status(401).send('Session expired');
+        }
+
+        // If auth has been successful, add user info to request object, and pass execution to next middleware/route
+        req.userId = session.user_id;
+        next();
+    } catch (err) {
+        logger.error('Error verifying session on middleware:', err);
+        return res.status(500).send('Error verifying session');
+    }
 };
 
 const authenticateWSConnection = async (socket, request) => {
@@ -47,17 +42,13 @@ const authenticateWSConnection = async (socket, request) => {
     socket._token = token;
 
     try {
-        const [results] = await pool.promise().query(
-            'SELECT user_id, room_id FROM sessions WHERE token = ? AND expires_at > NOW()',
-            [token]
-        );
-
-        if (results.length === 0) {
-            socket.close(4001, 'Invalid token: no non-expired session found on db query');
+        const session = await db.getUserSession(token);
+        const sessionExpired = new Date(session.expires_at) < new Date();
+        if (!session || sessionExpired) {
+            socket.close(4001, 'Invalid or expired token');
             return false;
         }
 
-        const session = results[0];
         socket.userId = session.user_id;
         socket.roomId = session.room_id;
         

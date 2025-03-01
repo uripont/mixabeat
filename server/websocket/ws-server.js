@@ -1,4 +1,5 @@
-const WebSocket = require('ws');
+const WebSocket = require('ws'); // npm install ws
+
 const logger = require('../utils/logger');
 const { authenticateWSConnection } = require('../middleware/auth.middleware');
 const { clients, handleChatMessage, handleJoinRoom, handleDisconnect } = require('./handlers');
@@ -10,7 +11,6 @@ const setupWebSocketServer = (httpServer) => {
         const authResult = await authenticateWSConnection(socket, request);
         if (!authResult) return;
 
-        // Store client info
         clients.set(socket, {
             userId: socket.userId,
             roomId: socket.roomId
@@ -18,7 +18,6 @@ const setupWebSocketServer = (httpServer) => {
 
         socket.on('message', async (data) => {
             try {
-                // Convert Buffer to string before parsing
                 const message = JSON.parse(data.toString());
                 logger.info('Received message: ' + data.toString());
                 
