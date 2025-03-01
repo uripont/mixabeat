@@ -1,6 +1,5 @@
 // Node modules
 const express = require('express');
-const mysql = require('mysql2');
 require('dotenv').config();
 const WebSocket = require('ws');
 
@@ -10,6 +9,7 @@ const url = require('url');
 // Utils
 const { generateSessionToken, hashPassword, verifyPassword } = require('./utils/crypto');
 const logger = require('./utils/logger');
+const pool = require('./config/database');
 
 
 // Express and Websocket configuration ------------------
@@ -314,28 +314,6 @@ const authenticateSession = (req, res, next) => {
 };
 //---------------------------------------------
 
-// Database configuration----------------------
-const config = {
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_DATABASE
-};
-
-// Create connection pool
-const pool = mysql.createPool(config);
-
-// Test database connection
-pool.getConnection((err, connection) => {
-    if (err) {
-        logger.error('Error connecting to database:', err);
-        return;
-    }
-    logger.info('Connected to database');
-    connection.release();
-});
-//--------------------------------------------
 
 
 const getSession = async (userId) => {
