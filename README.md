@@ -1,3 +1,56 @@
+# MixaBeat Frontend
+
+## Target directory structure after refactors
+
+```
+src/
+├── screens/
+│   ├── landing/          # TODO: Landing page with links to auth
+│   │   ├── landing.html
+│   │   └── landing.css
+│   │
+│   ├── auth/            # Login and signup forms
+│   │   ├── auth.html
+│   │   └── auth.css
+│   │
+│   ├── search/          # Room selection/creation screen
+│   │   ├── search.html
+│   │   └── search.css
+│   │
+│   └── room/            # Main music collaboration room
+│       ├── layout.html  # Main container for all room panels
+│       ├── layout.css   # Panel layout styles
+│       │
+│       ├── chat/        # Right panel - Chat interface
+│       │   ├── chat.html
+│       │   └── chat.css
+│       │
+│       ├── canvas/      # Center panel - Main workspace
+│       │   ├── canvas.html
+│       │   └── canvas.css
+│       │
+│       ├── sound-picker/    # Left panel - Sound selection
+│       │   ├── sound-picker.html
+│       │   └── sound-picker.css
+│       │
+│       └── sound-editor/    # Bottom panel - Sound effects
+│           ├── sound-editor.html
+│           └── sound-editor.css
+```
+
+### Screen Descriptions
+
+- **Landing**: TODO - Will be the entry point with links to login/signup
+- **Auth**: Login and signup forms for user authentication
+- **Search**: Room selection and creation interface
+- **Room**: Main application view split into panels:
+  - Chat (Right): Real-time messaging between room participants
+  - Canvas (Center): Main workspace for music collaboration
+  - Sound Picker (Left): Interface for selecting sounds/instruments
+  - Sound Editor (Bottom): Controls for sound effects and editing
+
+Each screen has its own HTML and CSS files to maintain a clear separation of concerns. The room screen uses a layout file to compose its different panels into a cohesive interface while keeping each panel's code modular and maintainable.
+
 Test on: http://20.26.232.219
 
 # Configuring VM for Static File Hosting
