@@ -3,39 +3,37 @@
 ## Target directory structure after refactors
 
 ```
-src/
-├── screens/
-│   ├── landing/          # TODO: Landing page with links to auth
-│   │   ├── landing.html
-│   │   └── landing.css
-│   │
-│   ├── auth/            # Login and signup forms
-│   │   ├── auth.html
-│   │   └── auth.css
-│   │
-│   ├── search/          # Room selection/creation screen
-│   │   ├── search.html
-│   │   └── search.css
-│   │
-│   └── room/            # Main music collaboration room
-│       ├── layout.html  # Main container for all room panels
-│       ├── layout.css   # Panel layout styles
-│       │
-│       ├── chat/        # Right panel - Chat interface
-│       │   ├── chat.html
-│       │   └── chat.css
-│       │
-│       ├── canvas/      # Center panel - Main workspace
-│       │   ├── canvas.html
-│       │   └── canvas.css
-│       │
-│       ├── sound-picker/    # Left panel - Sound selection
-│       │   ├── sound-picker.html
-│       │   └── sound-picker.css
-│       │
-│       └── sound-editor/    # Bottom panel - Sound effects
-│           ├── sound-editor.html
-│           └── sound-editor.css
+landing/          # TODO: Landing page with links to auth
+├── landing.html
+└── landing.css
+
+auth/            # Login and signup forms
+├── auth.html
+└── auth.css
+
+search/          # Room selection/creation screen
+├── search.html
+└── search.css
+
+room/            # Main music collaboration room
+├── layout.html  # Main container for all room panels
+├── layout.css   # Panel layout styles
+│
+├── chat/        # Right panel - Chat interface
+│   ├── chat.html
+│   └── chat.css
+│
+├── canvas/      # Center panel - Main workspace
+│   ├── canvas.html
+│   └── canvas.css
+│
+├── sound-picker/    # Left panel - Sound selection
+│   ├── sound-picker.html
+│   └── sound-picker.css
+│
+└── sound-editor/    # Bottom panel - Sound effects
+    ├── sound-editor.html
+    └── sound-editor.css
 ```
 
 ### Screen Descriptions
