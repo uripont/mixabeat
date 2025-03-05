@@ -1,3 +1,93 @@
+## Architecture Overview
+
+```mermaid
+graph TB
+    subgraph Frontend
+        Client[Browser Client]
+    end
+
+    subgraph Backend
+        Server[server.js]
+        
+        subgraph Routes
+            direction LR
+            AR[auth.routes.js]
+            UR[users.routes.js]
+            RR[rooms.routes.js]
+        end
+        
+        subgraph Services
+            direction LR
+            AS[auth.service.js]
+            US[users.service.js]
+            RS[rooms.service.js]
+        end
+        
+        subgraph WebSocket
+            WS[ws-server.js]
+            WH[handlers.js]
+        end
+        
+        subgraph Utils
+            Logger[logger.js]
+            Crypto[crypto.js]
+        end
+        
+        subgraph Database
+            DBC[database.js]
+            DBQ[db-queries.js]
+        end
+        
+        subgraph Middleware
+            Auth[auth.middleware.js]
+        end
+    end
+
+    subgraph MySQL
+        DB[(MySQL)]
+    end
+
+    %% Core Flow
+    Client <--> Server
+    Client <-.-> WS
+    
+    %% Routes Flow
+    Server --> AR
+    Server --> UR
+    Server --> RR
+    AR & UR & RR --> Auth
+
+    %% Service Flow
+    AR --> AS
+    UR --> US
+    RR --> RS
+    
+    %% WebSocket Flow
+    WS --> WH
+    WH --> DBQ
+    
+    %% Database Access
+    Services --> DBC
+    DBQ --> DBC
+    DBC --> DB
+    Auth --> DBQ
+    
+    %% Utils Usage
+    AS & US & RS & DBQ --> Logger
+    AS --> Crypto
+    
+    %% Style definitions and classes
+    classDef primary fill:#2374e1,stroke:#fff,stroke-width:2px,color:#fff
+    classDef secondary fill:#164e87,stroke:#fff,stroke-width:2px,color:#fff
+    classDef utility fill:#37474f,stroke:#fff,stroke-width:2px,color:#fff
+    classDef database fill:#1b5e20,stroke:#fff,stroke-width:2px,color:#fff
+    
+    class Server,Client primary
+    class AR,UR,RR,AS,US,RS,WS secondary
+    class Logger,Crypto,Auth,WH utility
+    class DBC,DBQ,DB database
+```
+
 ## Server Deployment Guide
 
 ### VM Setup
