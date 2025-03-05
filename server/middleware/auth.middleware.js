@@ -1,5 +1,5 @@
 const logger = require('../utils/logger');
-const db = require('../utils/db');
+const db = require('../database/db-queries');
 const url = require('url');
 
 const authenticateSessionOnHTTPEndpoint = async (req, res, next) => {

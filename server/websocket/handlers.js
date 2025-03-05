@@ -1,6 +1,6 @@
 const logger = require('../utils/logger');
-const pool = require('../config/database');
-const { getUserById, getUserSession } = require('../utils/db');
+const pool = require('../database/database');
+const { getUserById, getUserSession } = require('../database/db-queries');
 
 // WebSocket client tracking, to know which clients are in which rooms
 const clients = new Map();
