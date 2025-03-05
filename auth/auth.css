@@ -16,7 +16,7 @@ body {
     font-weight: 300;
 }
 
-#login-screen {
+.screen {
     background: linear-gradient(135deg, #1a1a1a, #333);
     padding: 40px;
     border-radius: 20px;
@@ -30,6 +30,20 @@ body {
     flex: 1;
     position: relative;
     z-index: 2;
+}
+
+#login-screen {
+    min-height: 400px;
+}
+
+#login-form, #signup-form {
+    opacity: 1;
+    transition: opacity 0.3s ease-in-out;
+}
+
+#login-form.hidden, #signup-form.hidden {
+    opacity: 0;
+    display: none;
 }
 
 h2 {

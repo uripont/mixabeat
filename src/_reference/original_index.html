@@ -3,67 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MixaBeat</title>
+    <title>Chat Application</title>
+    <link rel="stylesheet" href="styles.css">
+    <script type="module" src="websocket.js"></script>
+    <script type="module" src="main.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
-    <div>
-        <h1>MixaBeat Landing</h1>
-        <p>TODO: Landing page with features showcase</p>
-        <a href="src/screens/auth/auth.html">Log In / Sign Up</a>
-    </div>
-</body>
-</html>
-            <h3>Login</h3>
-            <div class="form-group">
-                <label for="username">Username:</label>
-                <input type="text" id="username" placeholder="Enter username">
-            </div>
-            <div class="form-group">
-                <label for="password">Password:</label>
-                <input type="password" id="password" placeholder="Enter password">
-            </div>
-            <button id="login-button">Log in</button>
-            <p>Don't have an account? <a href="#" id="show-signup">Sign up</a></p>
-        </div>
-
-        <!-- Signup Form (initially hidden) -->
-        <div id="signup-form" style="display: none;">
-            <h3>Sign Up</h3>
-            <div class="form-group">
-                <label for="signup-username">Username:</label>
-                <input type="text" id="signup-username" placeholder="Choose username">
-            </div>
-            <div class="form-group">
-                <label for="signup-email">Email:</label>
-                <input type="email" id="signup-email" placeholder="Enter email">
-            </div>
-            <div class="form-group">
-                <label for="signup-password">Password:</label>
-                <input type="password" id="signup-password" placeholder="Choose password">
-            </div>
-            <button id="signup-button">Sign up</button>
-            <p>Already have an account? <a href="#" id="show-login">Log in</a></p>
-        </div>
-    </div>
-    
-    <!-- Room Selection Screen (Initially Hidden) -->
     <!-- Room Selection Screen (Initially Hidden) -->
     <div id="room-selection-screen" class="screen" style="display: none;">
         <!-- Wrap the content in a container similar to login -->
         <div class="room-selection-container">
-        <h2>Select Room</h2>
+            <h2>Select Room</h2>
+            
+            <div class="form-group">
+                <h3>Create New Room</h3>
+                <input type="text" id="room-name" placeholder="Enter song name for new room" />
+                <button id="create-room-button">Create Room</button>
+            </div>
         
-        <div class="form-group">
-            <h3>Create New Room</h3>
-            <input type="text" id="room-name" placeholder="Enter song name for new room" />
-            <button id="create-room-button">Create Room</button>
-        </div>
-    
-        <div class="form-group">
-            <h3>Join Existing Room</h3>
-            <input type="text" id="room-id" placeholder="Enter room ID" />
-            <button id="join-room-button">Join Room</button>
-        </div>
+            <div class="form-group">
+                <h3>Join Existing Room</h3>
+                <input type="text" id="room-id" placeholder="Enter room ID" />
+                <button id="join-room-button">Join Room</button>
+            </div>
         </div>
     </div>
 
@@ -76,8 +39,6 @@
             <div id="vertical-rectangle">
                 <div class="button-row">
                     <button id="track-sound-select"><i class="fas fa-music"></i></button>
-                    <!--<button id="upload"><i class="fas fa-upload"></i></button>-->
-                    <!--<button id="record"><i class="fas fa-microphone"></i></button>-->
                     <select id="instrument-select" style="display: none;">
                         <option value="guitar">Guitar</option>
                         <option value="piano">Piano</option>
@@ -94,7 +55,6 @@
                         <button id="effect-1" class="effect-1"></button>
                         <button id="effect-2" class="effect-2"></button>
                         <button id="effect-3" class="effect-3"></button>
-                        
                     </div>
                     <div class="button-row">
                         <button id="effect-4" class="effect-4"></button>
@@ -116,10 +76,8 @@
             </div>
             <div id="top-rectangle">
                 <div class="button-group-left">
-                    <!--<button class="control-btn" id="prev-btn"><i class="fas fa-backward"></i></button>-->
                     <button class="control-btn" id="play-btn"><i class="fas fa-play"></i></button>
                     <button class="control-btn" id="pause-btn"><i class="fas fa-stop"></i></button>
-                    <!--<button class="control-btn" id="next-btn"><i class="fas fa-forward"></i></button>-->
                     <button class="control-btn" id="restart-btn"><i class="fas fa-redo"></i></button>
                 </div>
                 <div id="timer">00:00</div>
@@ -127,8 +85,7 @@
                     <button class="action-btn" id="send-btn"><i class="fas fa-paper-plane"></i></button>
                 </div>
             </div>
-
-        <!-- <h4>Under Construction ... </h4>  -->
+        </div>
     </div>
     
     <div id="chat-screen" class="screen" style="display: none;">
@@ -137,10 +94,8 @@
             
             <!-- Chat Header -->
             
-
             <!-- Stacked Layout: User List on top, Chat Box below -->
             <div id="user-list-container">
-<!--            <h3>Connected Users</h3> -->                
                 <div id="user-list">
                     <h3>Online Users</h3>
                     <ul id="users"></ul>
@@ -175,7 +130,7 @@
                 </button>
             </div>
 
-<!--             <label for="message">Message:</label> -->            <input type="text" id="message" placeholder="Type your message">
+            <input type="text" id="message" placeholder="Type your message">
             <div id="send-message-container">
                 <button id="send-message-btn">Send Message</button>
             </div>
