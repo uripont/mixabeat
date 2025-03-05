@@ -1,4 +1,4 @@
-const pool = require('./database');
+const pool = require('./db-connection');
 const logger = require('../utils/logger');
 
 const getUserById = async (userId) => {

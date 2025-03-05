@@ -34,7 +34,7 @@ graph TB
         end
         
         subgraph Database
-            DBC[database.js]
+            DBC[db-connection.js]
             DBQ[db-queries.js]
         end
         
@@ -157,7 +157,6 @@ For song management:
 - [ ] Websocket message to update your current track
     - [ ] Also makes server update the db with the updated track
 - [ ] Endpoint to get current song on this room (read from db, "checkpointed")
-
 
 For audio files:
 - [ ] Endpoint to upload a new audio file (mp3, max size, rate limited)

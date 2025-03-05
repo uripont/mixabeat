@@ -1,4 +1,4 @@
-const pool = require('../database/database');
+const pool = require('../database/db-connection');
 const logger = require('../utils/logger');
 const { updateClientsRoomId } = require('../websocket/handlers');
 

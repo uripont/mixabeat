@@ -1,5 +1,5 @@
 const { generateSessionToken, hashPassword, verifyPassword } = require('../utils/crypto');
-const pool = require('../database/database');
+const pool = require('../database/db-connection');
 const logger = require('../utils/logger');
 
 const getSession = async (userId) => {
