@@ -16,9 +16,12 @@ const getSession = async (userId) => {
 
                 if (results.length > 0) {
                     // Return existing valid session token
+                    logger.info(`Reusing existing valid session for user ${userId}`);
                     resolve(results[0].token);
                     return;
                 }
+
+                logger.info(`Creating new session for user ${userId}`);
 
                 // No valid session exists, create a new one
                 const token = generateSessionToken();
@@ -30,9 +33,11 @@ const getSession = async (userId) => {
                     [token, userId, expiresAt],
                     (err) => {
                         if (err) {
+                            logger.error(`Failed to create session for user ${userId}:`, err);
                             reject(err);
                             return;
                         }
+                        logger.info(`New session created for user ${userId}, expires at ${expiresAt}`);
                         resolve(token);
                     }
                 );
@@ -73,6 +78,7 @@ const loginUser = async (username, password) => {
 
                 try {
                     const token = await getSession(user.user_id);
+                    logger.info(`Session created for user ${user.username} (ID: ${user.user_id})`);
                     resolve({
                         token,
                         userId: user.user_id,
@@ -102,9 +108,13 @@ const signupUser = async (username, email, password) => {
             (err, result) => {
                 if (err) {
                     logger.error('Error executing query:', err);
+                    if (err.code === 'ER_DUP_ENTRY') {
+                        logger.warn(`Registration attempt with duplicate ${err.sqlMessage.includes('email') ? 'email' : 'username'}: ${err.sqlMessage.includes('email') ? email : username}`);
+                    }
                     reject(new Error('Error creating user'));
                     return;
                 }
+                logger.info(`User account created - ID: ${result.insertId}, Username: ${username}, Email: ${email}`);
                 resolve({
                     userId: result.insertId,
                     message: 'User created successfully'

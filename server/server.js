@@ -11,13 +11,19 @@ const { updateClientsRoomId } = require('./websocket/handlers');
 // Express and Websocket configuration
 const app = express();
 
-// Basic CORS middleware
+// CORS middleware with credentials support
 app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*');
+    // Always use the request's origin to support any domain
+    const origin = req.headers.origin;
+    if (origin) {
+        res.header('Access-Control-Allow-Origin', origin);
+    }
+    
+    // Always enable credentials
+    res.header('Access-Control-Allow-Credentials', 'true');
     res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     
-    // Handle preflight requests
     if (req.method === 'OPTIONS') {
         return res.sendStatus(200);
     }
@@ -26,8 +32,13 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 
+// Health check endpoint
+app.get('/', (req, res) => {
+    res.json({ status: 'OK', message: 'MixaBeat API is running' });
+});
+
 // Routes
-app.use('/', authRoutes);
+app.use('/auth', authRoutes);
 app.use('/users', usersRoutes);
 app.use('/rooms', roomsRoutes);
 
