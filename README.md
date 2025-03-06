@@ -79,12 +79,32 @@ Note: Apache serves files from `/var/www/html/` by default.
 
 Landing page and login:
 - [ ] Make index page be a landing page showcasing the interface / features, with a button to redirect to sign up or log in (instead of a full screen login form)
-- [ ] UI-based feedback on form filling errors:
-    - [ ] Username already exists (after endpoint response)
-    - [ ] Invalid email (client side verified OR after endpoint response)
-    - [ ] Password too short (client side verified OR after endpoint response)
-    - [ ] Wrong password (after endpoint response)
-    - [ ] Username not found (after endpoint response)
+- [x] UI-based feedback on form filling errors:
+    - [x] Client-side validation for required fields
+    - [x] Client-side email format validation
+    - [x] Client-side password length validation (min 6 chars)
+    - [x] Username already exists (after endpoint response)
+    - [x] Wrong password (after endpoint response)
+    - [x] Username not found (after endpoint response)
+    - [x] Loading states during API calls
+    - [x] Error message display with auto-dismiss
+    - [x] Auto login after signup
+    - [x] Store user info in localStorage
+    - [x] Success feedback before redirect
+
+Migration Status (as of latest update):
+1. Completed:
+   - Set up auth HTML structure with login/signup forms
+   - Implemented auth API wrapper (login, signup, logout)
+   - Added client-side form validation
+   - Added loading states and error handling
+   - Fixed module loading issues
+   - Updated redirects to main page
+   - Fixed auth route paths and error handling
+
+2. Pending to reimplement:
+   - Room creation and joining
+   - Real-time chat interface
 
 For room management:
 - [ ] Screen to show all available rooms (after endpoint response), as well as small moving song creation form to small widget on this screen

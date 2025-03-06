@@ -120,6 +120,27 @@ button:hover {
     text-decoration: none;
 }
 
+.error-message {
+    background-color: rgba(255, 0, 0, 0.1);
+    border: 1px solid #ff3333;
+    color: #ff3333;
+    padding: 10px;
+    border-radius: 5px;
+    margin: 10px auto;
+    max-width: 100%;
+    text-align: center;
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.error-message.hidden {
+    display: none;
+}
+
 @keyframes fadeIn {
     0% {
         opacity: 0;
