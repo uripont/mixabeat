@@ -151,25 +151,19 @@ For messages & chat:
 
 For room management:
 - [x] Endpoint to list all available rooms to join
-- [ ] Endpoint to join room by its current name (note that name can change over time, it's not an ID)
+- [x] Endpoint to join room by its current name (note that name can change over time, it's not an ID)
 
 For song management:
-- [ ] Websocket message to update your current track
-    - [ ] Also makes server update the db with the updated track
+- [x] Websocket message to update your current track
+    - [x] Also makes server update the db with the updated track
 - [x] Endpoint to get current song on this room (read from db, "checkpointed")
-
-For audio files:
-- [ ] Endpoint to upload a new audio file (mp3, max size, rate limited)
-- [ ] Way to serve to the client only the source audios relevant to this song, based on the tracks it has and the sounds they use   
-    - [ ] Endpoint / way to request a specific subset of sound files from all the available ones
-    - [ ] Serving any of the custom-uploaded audios, stored on the VM filesystem, if they are present in a song
 
 For real-time editing experience:
 - [ ] Websocket message to send mouse position on the canvas over time
 - [ ] Websocket messages to send track status changes (connected but not editing, editing, marked as finished)
 
 For auth:
-- [ ] Better auth validation on endpoint (no repeated usernames, valid emails, minimum password length)
-- [ ] Endpoint to change username
-- [ ] Endpoint to change password
-- [ ] Endpoint to delete account
+- [x] Better auth validation on endpoint (no repeated usernames, valid emails, minimum password length)
+- [x] Endpoint to change username
+- [x] Endpoint to change password
+- [x] Endpoint to delete account

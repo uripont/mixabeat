@@ -1,7 +1,15 @@
 const express = require('express');
 const router = express.Router();
 
-const { loginUser, signupUser, logoutUser } = require('../services/auth.service');
+const { 
+    loginUser, 
+    signupUser, 
+    logoutUser,
+    changeUsername,
+    changePassword,
+    deleteAccount,
+    validateUserData
+} = require('../services/auth.service');
 const { authenticateSessionOnHTTPEndpoint } = require('../middleware/auth.middleware');
 const logger = require('../utils/logger');
 
@@ -27,6 +35,11 @@ router.post('/login', async (req, res) => {
 
 router.post('/signup', async (req, res) => {
     const { username, email, password } = req.body;
+
+    const errors = validateUserData(username, email, password);
+    if (errors.length > 0) {
+        return res.status(400).json({ error: true, message: errors.join(', ') });
+    }
 
     try {
         const result = await signupUser(username, email, password);
@@ -77,6 +90,57 @@ router.post('/logout', authenticateSessionOnHTTPEndpoint, async (req, res) => {
             error: true,
             message: error.message || 'Error during logout'
         });
+    }
+});
+
+router.post('/change-username', authenticateSessionOnHTTPEndpoint, async (req, res) => {
+    const { newUsername } = req.body;
+    const userId = req.userId;
+
+    if (!newUsername) {
+        return res.status(400).json({ error: true, message: 'New username is required' });
+    }
+
+    try {
+        const result = await changeUsername(userId, newUsername);
+        res.json(result);
+    } catch (error) {
+        logger.error('Change username error:', error);
+        res.status(400).json({ error: true, message: error.message });
+    }
+});
+
+router.post('/change-password', authenticateSessionOnHTTPEndpoint, async (req, res) => {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.userId;
+
+    if (!currentPassword || !newPassword) {
+        return res.status(400).json({ error: true, message: 'Current and new passwords are required' });
+    }
+
+    try {
+        const result = await changePassword(userId, currentPassword, newPassword);
+        res.json(result);
+    } catch (error) {
+        logger.error('Change password error:', error);
+        res.status(401).json({ error: true, message: error.message });
+    }
+});
+
+router.post('/delete-account', authenticateSessionOnHTTPEndpoint, async (req, res) => {
+    const { password } = req.body;
+    const userId = req.userId;
+
+    if (!password) {
+        return res.status(400).json({ error: true, message: 'Password is required to delete account' });
+    }
+
+    try {
+        const result = await deleteAccount(userId, password);
+        res.json(result);
+    } catch (error) {
+        logger.error('Delete account error:', error);
+        res.status(401).json({ error: true, message: error.message });
     }
 });
 

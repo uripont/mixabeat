@@ -2,6 +2,55 @@ const { generateSessionToken, hashPassword, verifyPassword } = require('../utils
 const pool = require('../database/db-connection');
 const logger = require('../utils/logger');
 
+// Validation functions
+const isValidUsername = (username) => {
+    if (!username || typeof username !== 'string') return false;
+    // Username should be 3-20 characters, alphanumeric and underscores only
+    return /^[a-zA-Z0-9_]{3,20}$/.test(username);
+};
+
+const isValidEmail = (email) => {
+    if (!email || typeof email !== 'string') return false;
+    // Basic email validation with common patterns
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+};
+
+const isValidPassword = (password) => {
+    if (!password || typeof password !== 'string') return false;
+    // Password should be at least 6 characters, 
+    // contain at least one uppercase, one lowercase, one number
+    return password.length >= 6 &&
+           /[A-Z]/.test(password) &&
+           /[a-z]/.test(password) &&
+           /[0-9]/.test(password);
+};
+
+const validateUserData = (username, email, password) => {
+    const errors = [];
+    
+    if (!isValidUsername(username)) {
+        errors.push('Username must be 3-20 characters long and contain only letters, numbers, and underscores');
+    }
+    
+    if (!isValidEmail(email)) {
+        errors.push('Please provide a valid email address');
+    }
+    
+    if (!isValidPassword(password)) {
+        errors.push('Password must be at least 6 characters long and contain uppercase, lowercase, and numbers');
+    }
+    
+    return errors;
+};
+
+const checkUsernameAvailable = async (username, excludeUserId = null) => {
+    const [results] = await pool.promise().query(
+        'SELECT user_id FROM users WHERE username = ? AND user_id != COALESCE(?, -1)',
+        [username, excludeUserId]
+    );
+    return results.length === 0;
+};
+
 const getSession = async (userId) => {
     return new Promise((resolve, reject) => {
         // First try to get an existing valid session
@@ -150,9 +199,131 @@ const logoutUser = async (token) => {
     });
 };
 
+const changeUsername = async (userId, newUsername) => {
+    if (!isValidUsername(newUsername)) {
+        throw new Error('Invalid username format');
+    }
+
+    const isAvailable = await checkUsernameAvailable(newUsername, userId);
+    if (!isAvailable) {
+        throw new Error('Username already taken');
+    }
+
+    return new Promise((resolve, reject) => {
+        pool.query(
+            'UPDATE users SET username = ? WHERE user_id = ?',
+            [newUsername, userId],
+            (err, result) => {
+                if (err) {
+                    logger.error('Error changing username:', err);
+                    reject(new Error('Error changing username'));
+                    return;
+                }
+                if (result.affectedRows === 0) {
+                    reject(new Error('User not found'));
+                    return;
+                }
+                logger.info(`Username changed for user ${userId} to ${newUsername}`);
+                resolve({
+                    userId,
+                    username: newUsername,
+                    message: 'Username changed successfully'
+                });
+            }
+        );
+    });
+};
+
+const changePassword = async (userId, currentPassword, newPassword) => {
+    if (!isValidPassword(newPassword)) {
+        throw new Error('Invalid new password format');
+    }
+
+    // First verify current password
+    const [[user]] = await pool.promise().query(
+        'SELECT password_hash FROM users WHERE user_id = ?',
+        [userId]
+    );
+
+    if (!user) {
+        throw new Error('User not found');
+    }
+
+    const isCurrentPasswordValid = verifyPassword(currentPassword, user.password_hash);
+    if (!isCurrentPasswordValid) {
+        throw new Error('Current password is incorrect');
+    }
+
+    const hashedNewPassword = hashPassword(newPassword);
+
+    return new Promise((resolve, reject) => {
+        pool.query(
+            'UPDATE users SET password_hash = ? WHERE user_id = ?',
+            [hashedNewPassword, userId],
+            (err, result) => {
+                if (err) {
+                    logger.error('Error changing password:', err);
+                    reject(new Error('Error changing password'));
+                    return;
+                }
+                logger.info(`Password changed for user ${userId}`);
+                resolve({ message: 'Password changed successfully' });
+            }
+        );
+    });
+};
+
+const deleteAccount = async (userId, password) => {
+    // First verify password
+    const [[user]] = await pool.promise().query(
+        'SELECT password_hash FROM users WHERE user_id = ?',
+        [userId]
+    );
+
+    if (!user) {
+        throw new Error('User not found');
+    }
+
+    const isPasswordValid = verifyPassword(password, user.password_hash);
+    if (!isPasswordValid) {
+        throw new Error('Password is incorrect');
+    }
+
+    return new Promise((resolve, reject) => {
+        pool.query(
+            'DELETE FROM users WHERE user_id = ?',
+            [userId],
+            async (err, result) => {
+                if (err) {
+                    logger.error('Error deleting account:', err);
+                    reject(new Error('Error deleting account'));
+                    return;
+                }
+                
+                // Also delete all sessions for this user
+                try {
+                    await pool.promise().query(
+                        'DELETE FROM sessions WHERE user_id = ?',
+                        [userId]
+                    );
+                } catch (error) {
+                    logger.error('Error cleaning up sessions:', error);
+                }
+                
+                logger.info(`Account deleted for user ${userId}`);
+                resolve({ message: 'Account deleted successfully' });
+            }
+        );
+    });
+};
+
 module.exports = {
     getSession,
     loginUser,
     signupUser,
-    logoutUser
+    logoutUser,
+    changeUsername,
+    changePassword,
+    deleteAccount,
+    validateUserData
 };
