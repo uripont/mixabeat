@@ -6,6 +6,44 @@ const { getUserById, getUserSession } = require('../database/db-common-queries')
 // WebSocket client tracking, to know which clients are in which rooms
 const clients = new Map();
 
+// Mouse position and track status handlers
+const handleMousePosition = (socket, message) => {
+    if (!socket.roomId) {
+        logger.error('Attempt to send mouse position without room context');
+        socket.send(JSON.stringify({
+            type: 'error',
+            message: 'You must join a room first'
+        }));
+        return;
+    }
+    
+    broadcastToRoom(socket.roomId, {
+        type: 'broadcast_mouse_position',
+        userId: socket.userId,
+        x: message.x,
+        y: message.y,
+        timestamp: message.timestamp
+    }, socket);
+};
+
+const handleTrackStatus = (socket, message) => {
+    if (!socket.roomId) {
+        logger.error('Attempt to send track status without room context');
+        socket.send(JSON.stringify({
+            type: 'error',
+            message: 'You must join a room first'
+        }));
+        return;
+    }
+    
+    broadcastToRoom(socket.roomId, {
+        type: 'broadcast_track_status',
+        userId: socket.userId,
+        trackId: message.trackId,
+        status: message.status
+    }, socket);
+};
+
 const updateClientsRoomId = (token, newRoomId) => {
     clients.forEach((client, socket) => {
         if (socket._token === token) {
@@ -221,5 +259,7 @@ module.exports = {
     handleChatMessage,
     handleJoinRoom,
     handleDisconnect,
-    handleUpdateTrack
+    handleUpdateTrack,
+    handleMousePosition,
+    handleTrackStatus
 };

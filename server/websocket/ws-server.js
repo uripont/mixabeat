@@ -2,7 +2,15 @@ const WebSocket = require('ws'); // npm install ws
 
 const logger = require('../utils/logger');
 const { authenticateWSConnection } = require('../middleware/auth.middleware');
-const { clients, handleChatMessage, handleJoinRoom, handleDisconnect, handleUpdateTrack } = require('./handlers');
+const { 
+    clients, 
+    handleChatMessage, 
+    handleJoinRoom, 
+    handleDisconnect, 
+    handleUpdateTrack,
+    handleMousePosition,
+    handleTrackStatus 
+} = require('./handlers');
 
 const setupWebSocketServer = (httpServer) => {
     const wss = new WebSocket.Server({ server: httpServer });
@@ -30,6 +38,12 @@ const setupWebSocketServer = (httpServer) => {
                         break;
                     case 'update_track':
                         await handleUpdateTrack(socket, message);
+                        break;
+                    case 'mouse_position':
+                        handleMousePosition(socket, message); // No need for await as it's synchronous
+                        break;
+                    case 'track_status':
+                        handleTrackStatus(socket, message); // No need for await as it's synchronous
                         break;
                 }
             } catch (err) {
