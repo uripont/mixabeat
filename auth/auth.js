@@ -46,6 +46,7 @@ function handleAuthSuccess(result, message) {
     localStorage.setItem('username', result.username);
     
     console.log(message, result);
+    console.log('Redirecting to room selection...');
     
     // Clear any previous errors
     errorMessageElement.classList.add('hidden');
@@ -59,6 +60,7 @@ function handleAuthSuccess(result, message) {
 // Toggle between login and signup forms
 document.getElementById('show-signup').addEventListener('click', function(e) {
     e.preventDefault();
+    console.log('Switching to signup form');
     loginForm.classList.add('hidden');
     signupForm.classList.remove('hidden');
     errorMessageElement.classList.add('hidden');
@@ -66,6 +68,7 @@ document.getElementById('show-signup').addEventListener('click', function(e) {
 
 document.getElementById('show-login').addEventListener('click', function(e) {
     e.preventDefault();
+    console.log('Switching to login form');
     signupForm.classList.add('hidden');
     loginForm.classList.remove('hidden');
     errorMessageElement.classList.add('hidden');
@@ -79,16 +82,20 @@ loginButton.addEventListener('click', async function(e) {
     const password = document.getElementById('password').value;
 
     try {
+        console.log('Login attempt for username:', username);
+        
         // Validate input
         validateInput({ username, password });
+        console.log('Login validation passed');
 
         // Start loading state
         setLoading(loginButton, true);
 
         const result = await login(username, password);
+        console.log('Login successful');
         handleAuthSuccess(result, 'Login successful:');
     } catch (error) {
-        console.error('Login error:', error);
+        console.error('Login failed:', error);
         showError(error.message || 'Login failed. Please try again.');
     } finally {
         setLoading(loginButton, false);
@@ -104,16 +111,21 @@ signupButton.addEventListener('click', async function(e) {
     const password = document.getElementById('signup-password').value;
 
     try {
+        console.log('Signup attempt for username:', username);
+        
         // Validate input
         validateInput({ username, email, password });
+        console.log('Signup validation passed');
 
         // Start loading state
         setLoading(signupButton, true);
 
         const result = await signup(username, email, password);
+        console.log('Signup successful');
+        console.log('Auto-login after signup...');
         handleAuthSuccess(result, 'Signup successful:');
     } catch (error) {
-        console.error('Signup error:', error);
+        console.error('Signup failed:', error);
         showError(error.message || 'Signup failed. Please try again.');
     } finally {
         setLoading(signupButton, false);

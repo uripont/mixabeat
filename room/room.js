@@ -15,10 +15,15 @@ const roomsGrid = document.getElementById('rooms-grid');
 
 // Initialize page
 async function initializePage() {
+    console.log('Checking auth for room access...');
+    
     // Check auth first
     if (!(await requireAuth())) {
-        return; // Page will redirect
+        console.log('Auth check failed, page will redirect');
+        return;
     }
+
+    console.log('Auth valid, initializing room selection...');
 
     // Display username
     const username = localStorage.getItem('username');
@@ -49,7 +54,9 @@ function setLoading(button, isLoading) {
 
 async function loadRooms() {
     try {
+        console.log('Fetching room list...');
         const { rooms } = await listRooms();
+        console.log(`Received ${rooms.length} rooms`);
         displayRooms(rooms);
     } catch (error) {
         console.error('Error loading rooms:', error);
@@ -93,8 +100,11 @@ async function handleCreateRoom() {
     }
     
     try {
+        console.log('Creating room:', songName);
         setLoading(createRoomBtn, true);
         const result = await createRoom(songName);
+        console.log('Room created successfully');
+        console.log('Joining newly created room...');
         await handleJoinRoom(result.roomId);
     } catch (error) {
         console.error('Error creating room:', error);
@@ -106,7 +116,9 @@ async function handleCreateRoom() {
 
 async function handleJoinRoom(roomId) {
     try {
+        console.log('Joining room:', roomId);
         await joinRoom(roomId);
+        console.log('Join successful, redirecting...');
         window.location.href = `/index.html?roomId=${roomId}`;
     } catch (error) {
         console.error('Error joining room:', error);
@@ -122,14 +134,17 @@ async function handleJoinByName() {
     }
     
     try {
+        console.log('Searching for room:', roomName);
         setLoading(joinRoomBtn, true);
         const { rooms } = await listRooms();
         const room = rooms.find(r => r.songName === roomName);
         
         if (!room) {
+            console.log('Room not found');
             throw new Error('Room not found');
         }
         
+        console.log('Room found, attempting to join...');
         await handleJoinRoom(room.roomId);
     } catch (error) {
         console.error('Error joining room:', error);
@@ -141,7 +156,9 @@ async function handleJoinByName() {
 
 async function handleLogout() {
     try {
+        console.log('Logging out...');
         await logout();
+        console.log('Logout successful, redirecting to landing');
         window.location.href = '/index.html';
     } catch (error) {
         console.error('Error logging out:', error);
@@ -155,7 +172,10 @@ joinRoomBtn.addEventListener('click', handleJoinByName);
 logoutBtn.addEventListener('click', handleLogout);
 
 // Auto-refresh rooms list periodically
-setInterval(loadRooms, 10000);
+setInterval(() => {
+    console.log('Auto-refresh: fetching room list...');
+    loadRooms();
+}, 10000);
 
 // Initialize page on load
 document.addEventListener('DOMContentLoaded', initializePage);
