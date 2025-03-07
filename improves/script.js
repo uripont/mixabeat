@@ -1,4 +1,4 @@
-const canvas = document.getElementById('timelineCanvas');
+/* const canvas = document.getElementById('timelineCanvas');
 const ctx = canvas.getContext('2d');
 
 const tracks = []; // Arreglo para almacenar las pistas
@@ -114,6 +114,20 @@ function drawTimeline() {
     const trackHeight = 30; // Altura de cada pista
     const padding = 10; // Espaciado entre las pistas
     const trackWidth = 100; // Ancho de cada pista
+    const totalDuration = 10;
+
+    for (let i = 0; i <= totalDuration; i++) {
+        const x = (canvas.width / totalDuration) * i;
+        ctx.strokeStyle = '#ddd'; // Color de la separación
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+        
+        // Dibujar los números de los segundos
+        ctx.fillStyle = '#333'; // Color del texto
+        ctx.fillText(i, x + 2, 20); // Posicionar el número al principio de cada segundo
+    }
 
     // Dibujar cada pista en el canvas
     tracks.forEach((track, index) => {
@@ -132,3 +146,346 @@ function drawTimeline() {
     ctx.lineTo(indicatorX, canvas.height);
     ctx.stroke();
 }
+ 
+
+ */
+
+
+/* const canvas = document.getElementById('timelineCanvas');
+const ctx = canvas.getContext('2d');
+
+const tracks = [];
+const audioElements = [];
+const trackPositions = [];
+let draggingIndex = null;
+let currentTime = 0;
+let isPlaying = false;
+let scrollOffset = 0;
+const canvasWidth = 600; // Ancho visible del canvas
+const timelineDuration = 10; // Duración total en segundos
+const totalWidth = 1200; // Ancho total del timeline (mayor que el ancho del canvas)
+
+canvas.width = canvasWidth; // Establecer el ancho visible
+
+document.getElementById('addTrackButton').addEventListener('click', function() {
+    const trackInput = document.getElementById('trackInput');
+    const files = trackInput.files;
+
+    if (files.length > 0 && tracks.length < 4) {
+        const file = files[0];
+        const trackName = file.name;
+
+        const audio = new Audio(URL.createObjectURL(file));
+        audioElements.push(audio);
+        tracks.push(trackName);
+        trackPositions.push(tracks.length * 150); // Separar las pistas en el timeline
+        drawTimeline();
+    } else if (tracks.length >= 4) {
+        document.getElementById('message').textContent = 'No puedes agregar más de 4 pistas.';
+    } else {
+        alert('Por favor, selecciona un archivo de audio.');
+    }
+
+    trackInput.value = '';
+});
+
+document.getElementById('playAllButton').addEventListener('click', function() {
+    if (!isPlaying) {
+        isPlaying = true;
+        currentTime = 0;
+        scrollOffset = 0; // Reiniciar el desplazamiento al comenzar
+        playTracks();
+    }
+});
+
+function playTracks() {
+    // Verificar si todos los audios han terminado
+    const allAudiosFinished = audioElements.every(audio => audio.currentTime >= audio.duration);
+
+    if (allAudiosFinished) {
+        // Si todos los audios han terminado, reiniciar al principio
+        resetTimeline();
+        return;
+    }
+
+    // Reproducir audios según la posición de tiempo
+    audioElements.forEach((audio, index) => {
+        const trackX = trackPositions[index];
+        const startTime = (trackX / totalWidth) * timelineDuration;
+
+        if (currentTime >= startTime && audio.paused) {
+            audio.play();
+        }
+    });
+
+    // Ajustar desplazamiento si la línea roja se acerca al final del canvas
+    const indicatorX = (currentTime / timelineDuration) * totalWidth;
+    const threshold = scrollOffset + canvasWidth * 0.7; // Desplazamiento al 70%
+
+    if (indicatorX > threshold) {
+        scrollOffset = Math.min(indicatorX - canvasWidth * 0.7, totalWidth - canvasWidth);
+    }
+
+    currentTime += 0.1; // Incrementar el tiempo
+    drawTimeline();
+
+    if (currentTime < timelineDuration) {
+        requestAnimationFrame(playTracks);
+    } else {
+        isPlaying = false; // Desactivar reproducción cuando termine
+    }
+}
+
+// Función para reiniciar el tiempo y los audios
+function resetTimeline() {
+    currentTime = 0;
+    scrollOffset = 0;
+    audioElements.forEach(audio => {
+        audio.pause();
+        audio.currentTime = 0;
+    });
+    drawTimeline(); // Redibujar el canvas al principio
+}
+
+// Evento de desplazamiento con la rueda del mouse
+canvas.addEventListener('wheel', (event) => {
+    event.preventDefault();
+    scrollOffset += event.deltaY * 0.5;
+    scrollOffset = Math.max(0, Math.min(scrollOffset, totalWidth - canvasWidth));
+    drawTimeline();
+});
+
+canvas.addEventListener('mousedown', (event) => {
+    const mouseX = event.offsetX + scrollOffset;
+    const mouseY = event.offsetY;
+
+    tracks.forEach((track, index) => {
+        const y = index * 50 + 40;
+        const width = 100;
+        const height = 30;
+
+        if (mouseX > trackPositions[index] && mouseX < trackPositions[index] + width && mouseY > y && mouseY < y + height) {
+            draggingIndex = index;
+        }
+    });
+});
+
+canvas.addEventListener('mousemove', (event) => {
+    if (draggingIndex !== null) {
+        const mouseX = event.offsetX + scrollOffset;
+        trackPositions[draggingIndex] = mouseX;
+        drawTimeline();
+    }
+});
+
+canvas.addEventListener('mouseup', () => {
+    draggingIndex = null;
+});
+
+canvas.addEventListener('mouseleave', () => {
+    draggingIndex = null;
+});
+
+function drawTimeline() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const trackHeight = 30;
+    const padding = 10;
+    const trackWidth = 100;
+
+    // Dibujar pistas con desplazamiento
+    tracks.forEach((track, index) => {
+        const y = index * (trackHeight + padding) + padding + 40;
+        const x = trackPositions[index] - scrollOffset;
+        ctx.fillStyle = '#e7f3fe';
+        ctx.fillRect(x, y, trackWidth, trackHeight);
+        ctx.fillStyle = '#333';
+        ctx.fillText(track, x + 5, y + (trackHeight / 1.5));
+    });
+
+    // Dibujar el indicador de tiempo con desplazamiento
+    const indicatorX = (currentTime / timelineDuration) * totalWidth - scrollOffset;
+
+    // Asegurarse de que la línea roja se dibuje dentro de los límites del canvas
+    ctx.strokeStyle = 'red';
+    ctx.beginPath();
+    ctx.moveTo(indicatorX, 0);
+    ctx.lineTo(indicatorX, canvas.height);
+    ctx.stroke();
+}
+ */
+
+const canvas = document.getElementById('timelineCanvas');
+const ctx = canvas.getContext('2d');
+
+const tracks = [];
+const audioElements = [];
+const trackPositions = [];
+let draggingIndex = null;
+let currentTime = 0;
+let isPlaying = false;
+let scrollOffset = 0;
+const canvasWidth = 600; // Ancho visible del canvas
+const timelineDuration = 10; // Duración total del timeline (en segundos)
+const totalWidth = 1200; // Ancho total del timeline (es mayor que el ancho del canvas)
+
+canvas.width = canvasWidth; // Establecer el ancho visible del canvas
+
+document.getElementById('addTrackButton').addEventListener('click', function() {
+    const trackInput = document.getElementById('trackInput');
+    const files = trackInput.files;
+
+    if (files.length > 0 && tracks.length < 20) {
+        const file = files[0];
+        const trackName = file.name;
+
+        const audio = new Audio(URL.createObjectURL(file));
+        audioElements.push(audio);
+        tracks.push(trackName);
+        trackPositions.push(tracks.length * 150); // Separar las pistas en el timeline
+        drawTimeline();
+    } else if (tracks.length >= 20) {
+        document.getElementById('message').textContent = 'No puedes agregar más de 4 pistas.';
+    } else {
+        alert('Por favor, selecciona un archivo de audio.');
+    }
+
+    trackInput.value = '';
+});
+
+document.getElementById('playAllButton').addEventListener('click', function() {
+    if (!isPlaying) {
+        isPlaying = true;
+        currentTime = 0;
+        scrollOffset = 0; // Reiniciar el desplazamiento al comenzar
+        playTracks();
+    }
+});
+
+function playTracks() {
+    // Verificar si todos los audios han terminado
+    const allAudiosFinished = audioElements.every(audio => audio.currentTime >= audio.duration);
+
+    if (allAudiosFinished) {
+        // Si todos los audios han terminado, reiniciar al principio
+        resetTimeline();
+        return;
+    }
+
+    // Reproducir audios según la posición de tiempo
+    audioElements.forEach((audio, index) => {
+        const trackX = trackPositions[index];
+        const startTime = (trackX / totalWidth) * timelineDuration;
+
+        if (currentTime >= startTime && audio.paused) {
+            audio.play();
+        }
+    });
+
+    // Ajustar desplazamiento si la línea roja se acerca al final del canvas
+    const indicatorX = (currentTime / timelineDuration) * totalWidth;
+    const threshold = scrollOffset + canvasWidth * 0.7; // Desplazamiento al 70%
+
+    if (indicatorX > threshold) {
+        scrollOffset = Math.min(indicatorX - canvasWidth * 0.7, totalWidth - canvasWidth);
+    }
+
+    currentTime += 0.1; // Incrementar el tiempo
+    drawTimeline();
+
+    if (currentTime < timelineDuration) {
+        requestAnimationFrame(playTracks);
+    } else {
+        isPlaying = false; // Desactivar reproducción cuando termine
+    }
+}
+
+// Función para reiniciar el tiempo y los audios
+function resetTimeline() {
+    currentTime = 0;
+    scrollOffset = 0;
+    audioElements.forEach(audio => {
+        audio.pause();
+        audio.currentTime = 0;
+    });
+    drawTimeline(); // Redibujar el canvas al principio
+}
+
+// Evento de desplazamiento con la rueda del mouse
+canvas.addEventListener('wheel', (event) => {
+    event.preventDefault();
+    scrollOffset += event.deltaY * 0.5;
+    scrollOffset = Math.max(0, Math.min(scrollOffset, totalWidth - canvasWidth));
+    drawTimeline();
+});
+
+canvas.addEventListener('mousedown', (event) => {
+    const mouseX = event.offsetX + scrollOffset;
+    const mouseY = event.offsetY;
+
+    tracks.forEach((track, index) => {
+        const y = index * 50 + 40;
+        const width = 100;
+        const height = 30;
+
+        if (mouseX > trackPositions[index] && mouseX < trackPositions[index] + width && mouseY > y && mouseY < y + height) {
+            draggingIndex = index;
+        }
+    });
+});
+
+canvas.addEventListener('mousemove', (event) => {
+    if (draggingIndex !== null) {
+        const mouseX = event.offsetX + scrollOffset;
+        trackPositions[draggingIndex] = mouseX;
+        drawTimeline();
+    }
+});
+
+canvas.addEventListener('mouseup', () => {
+    draggingIndex = null;
+});
+
+canvas.addEventListener('mouseleave', () => {
+    draggingIndex = null;
+});
+
+
+function drawTimeline() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const trackHeight = 30;
+    const padding = 10;
+
+    // Dibujar las pistas con desplazamiento
+    tracks.forEach((track, index) => {
+        const y = index * (trackHeight + padding) + padding + 40;
+        const x = trackPositions[index] - scrollOffset;
+
+        // Obtener la duración del audio y calcular la longitud del rectángulo
+        const audio = audioElements[index];
+        const trackDuration = audio.duration || 0; // Duración del audio, default a 0 si no está disponible
+        const trackLength = (trackDuration / timelineDuration) * totalWidth; // Longitud proporcional
+
+        // Asegurarse de que el rectángulo cubra toda la duración del audio
+        const trackStartTime = (trackPositions[index] / totalWidth) * timelineDuration;
+        const trackEndTime = trackStartTime + trackDuration;
+
+        // Dibujar el rectángulo que abarca toda la duración de la pista
+        ctx.fillStyle = '#e7f3fe';
+        ctx.fillRect(x, y, trackLength, trackHeight);
+        ctx.fillStyle = '#333';
+        ctx.fillText(track, x + 5, y + (trackHeight / 1.5));
+    });
+
+    // Dibujar el indicador de tiempo con desplazamiento
+    const indicatorX = (currentTime / timelineDuration) * totalWidth - scrollOffset;
+
+    // Asegurarse de que la línea roja se dibuje dentro de los límites del canvas
+    ctx.strokeStyle = 'red';
+    ctx.beginPath();
+    ctx.moveTo(indicatorX, 0);
+    ctx.lineTo(indicatorX, canvas.height);
+    ctx.stroke();
+}
+
