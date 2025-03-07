@@ -171,6 +171,39 @@ canvas.addEventListener('mouseup', () => {
 canvas.addEventListener('mouseleave', () => {
     draggingIndex = null;
 });
+
+// Event listener for the 'dragover' event to allow files to be dropped onto the canvas
+canvas.addEventListener('dragover', (event) => {
+    event.preventDefault(); // Prevent the default behavior (e.g., opening the file)
+});
+
+// Event listener for the 'drop' event when files are dropped onto the canvas
+canvas.addEventListener('drop', (event) => {
+    event.preventDefault(); // Prevent the default behavior
+    const files = event.dataTransfer.files;
+
+    // Loop through each dropped file
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (file.type.startsWith('audio/')) {  // Check if the dropped file is an audio file
+            const trackName = file.name;
+
+            // Create a new audio element
+            const audio = new Audio(URL.createObjectURL(file));
+            audioElements.push(audio);
+            tracks.push(trackName);
+            trackPositions.push(tracks.length * 150); // Place each track with a little gap on the timeline
+            trackColors.push(getRandomColor());
+
+            // Draw the updated timeline with the new track
+            drawTimeline();
+        } else {
+            alert('Por favor, selecciona un archivo de audio.');
+        }
+    }
+});
+
+
 /* 
 function drawTimeline() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
