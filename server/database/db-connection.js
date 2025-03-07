@@ -10,13 +10,29 @@ const config = {
 };
 
 const pool = mysql.createPool(config);
+
+// Log any pool errors
+pool.on('error', (err) => {
+    logger.error('Unexpected database pool error:', err);
+});
+
 pool.getConnection((err, connection) => {
     if (err) {
-        logger.error('Error connecting to database:', err);
+        logger.error(`Error connecting to database at ${config.host}:${config.port}:`, err);
         return;
     }
-    logger.info('Connected to database');
+    logger.info(`Connected to database ${config.database} at ${config.host}:${config.port}`);
     connection.release();
 });
+
+// Log pool status periodically
+setInterval(() => {
+    const status = pool.pool ? {
+        all: pool.pool._allConnections.length,
+        acquired: pool.pool._acquiringConnections.length,
+        free: pool.pool._freeConnections.length
+    } : {};
+    logger.info('Database pool status:', status);
+}, 300000); // 5 minutes
 
 module.exports = pool;

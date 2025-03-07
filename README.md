@@ -159,8 +159,8 @@ For song management:
 - [x] Endpoint to get current song on this room (read from db, "checkpointed")
 
 For real-time editing experience:
-- [ ] Websocket message to send mouse position on the canvas over time
-- [ ] Websocket messages to send track status changes (connected but not editing, editing, marked as finished)
+- [x] Websocket message to send mouse position on the canvas over time
+- [x] Websocket messages to send track status changes (connected but not editing, editing, marked as finished)
 
 For auth:
 - [x] Better auth validation on endpoint (no repeated usernames, valid emails, minimum password length)

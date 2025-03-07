@@ -84,10 +84,11 @@ async function joinRoom(roomId, token) {
 }
 
 async function leaveRoom(roomId, token) {
+    logger.info(`Leave room attempt - Room ID: ${roomId}`);
     return new Promise((resolve, reject) => {
         // Verify user is in this room
         pool.query(
-            'SELECT room_id FROM sessions WHERE token = ? AND room_id = ?',
+            'SELECT s.user_id, r.song_name FROM sessions s LEFT JOIN rooms r ON r.room_id = s.room_id WHERE s.token = ? AND s.room_id = ?',
             [token, roomId],
             (err, results) => {
                 if (err) {
@@ -97,9 +98,13 @@ async function leaveRoom(roomId, token) {
                 }
 
                 if (results.length === 0) {
+                    logger.warn(`Failed to leave room ${roomId}: user not in room`);
                     reject(new Error('You are not in this room'));
                     return;
                 }
+
+                const userId = results[0].user_id;
+                const songName = results[0].song_name;
 
                 // Remove room_id from session and WebSocket client
                 pool.query(
@@ -112,6 +117,7 @@ async function leaveRoom(roomId, token) {
                             return;
                         }
                         updateClientsRoomId(token, null);
+                        logger.info(`User ${userId} left room ${roomId} ("${songName}")`);
                         resolve({ message: 'Left room successfully' });
                     }
                 );
@@ -178,11 +184,12 @@ async function getRoomSong(roomId) {
 }
 
 async function joinRoomByName(roomName, token) {
+    logger.info(`Attempting to join room by name: "${roomName}"`);
     return new Promise((resolve, reject) => {
         // First check if room exists by name
         pool.query(
-            'SELECT room_id FROM rooms WHERE song_name = ?',
-            [roomName],
+            'SELECT r.room_id, s.user_id FROM rooms r LEFT JOIN sessions s ON s.token = ? WHERE r.song_name = ?',
+            [token, roomName],
             (err, results) => {
                 if (err) {
                     logger.error('Error checking room by name:', err);
@@ -191,11 +198,13 @@ async function joinRoomByName(roomName, token) {
                 }
 
                 if (results.length === 0) {
+                    logger.warn(`Failed to join: Room "${roomName}" not found`);
                     reject(new Error('Room not found'));
                     return;
                 }
 
                 const roomId = results[0].room_id;
+                const userId = results[0].user_id;
 
                 // Update session record and WebSocket client's room
                 pool.query(
@@ -208,6 +217,7 @@ async function joinRoomByName(roomName, token) {
                             return;
                         }
                         updateClientsRoomId(token, roomId);
+                        logger.info(`User ${userId} joined room "${roomName}" (ID: ${roomId})`);
                         resolve({ message: 'Joined room successfully', roomId });
                     }
                 );

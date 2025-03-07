@@ -35,7 +35,10 @@ const authenticateSessionOnHTTPEndpoint = async (req, res, next) => {
 const authenticateWSConnection = async (socket, request) => {
     const { query } = url.parse(request.url, true);
     const token = query.token;
+    const clientIp = request.socket.remoteAddress;
+
     if (!token) {
+        logger.warn(`WebSocket authentication failed: No token provided from ${clientIp}`);
         socket.close(4001, 'No token provided');
         return false;
     }
@@ -44,8 +47,15 @@ const authenticateWSConnection = async (socket, request) => {
 
     try {
         const session = await db.getUserSession(token);
+        if (!session) {
+            logger.warn(`WebSocket authentication failed: Invalid token from ${clientIp}`);
+            socket.close(4001, 'Invalid or expired token');
+            return false;
+        }
+
         const sessionExpired = new Date(session.expires_at) < new Date();
-        if (!session || sessionExpired) {
+        if (sessionExpired) {
+            logger.info(`WebSocket session expired for user ${session.user_id} from ${clientIp}`);
             socket.close(4001, 'Invalid or expired token');
             return false;
         }
@@ -53,6 +63,7 @@ const authenticateWSConnection = async (socket, request) => {
         socket.userId = session.user_id;
         socket.roomId = session.room_id;
         
+        logger.info(`WebSocket authenticated for user ${session.user_id} from ${clientIp}`);
         return { userId: session.user_id, roomId: session.room_id };
     } catch (err) {
         logger.error('WebSocket auth error:', err);

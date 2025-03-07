@@ -45,6 +45,8 @@ const setupWebSocketServer = (httpServer) => {
                     case 'track_status':
                         handleTrackStatus(socket, message); // No need for await as it's synchronous
                         break;
+                    default:
+                        logger.warn(`Unhandled message type received: ${message.type}`);
                 }
             } catch (err) {
                 logger.error('WebSocket message error:', err);
