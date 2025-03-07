@@ -1,5 +1,6 @@
 const logger = require('../utils/logger');
 const db = require('../database/db-common-queries');
+const pool = require('../database/db-connection');
 const url = require('url');
 
 const authenticateSessionOnHTTPEndpoint = async (req, res, next) => {
@@ -18,7 +19,7 @@ const authenticateSessionOnHTTPEndpoint = async (req, res, next) => {
 
         const sessionExpired = new Date(session.expires_at) < new Date();
         if (sessionExpired) {
-            await pool.query('DELETE FROM sessions WHERE token = ?', [token]);
+            await pool.promise().query('DELETE FROM sessions WHERE token = ?', [token]);
             return res.status(401).send('Session expired');
         }
 
