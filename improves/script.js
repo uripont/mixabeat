@@ -326,8 +326,8 @@ let currentTime = 0;
 let isPlaying = false;
 let scrollOffset = 0;
 const canvasWidth = 600; // Ancho visible del canvas
-const timelineDuration = 10; // Duración total del timeline (en segundos)
-const totalWidth = 1200; // Ancho total del timeline (es mayor que el ancho del canvas)
+const timelineDuration = 30; // Duración total del timeline (en segundos)
+const totalWidth = 6000; // Ancho total del timeline (es mayor que el ancho del canvas)
 
 canvas.width = canvasWidth; // Establecer el ancho visible del canvas
 
@@ -450,42 +450,49 @@ canvas.addEventListener('mouseleave', () => {
     draggingIndex = null;
 });
 
-
 function drawTimeline() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     const trackHeight = 30;
     const padding = 10;
 
-    // Dibujar las pistas con desplazamiento
+    // Draw vertical lines along the canvas
+    const numDivisions = 60; // Number of vertical lines (e.g., 10 divisions)
+    const divisionWidth = totalWidth / numDivisions;
+
+    ctx.strokeStyle = '#ccc'; // Light gray color for the vertical lines
+    for (let i = 1; i < numDivisions; i++) {
+        const xPos = i * divisionWidth - scrollOffset; // Calculate x position based on the number of divisions
+        ctx.beginPath();
+        ctx.moveTo(xPos, 0);
+        ctx.lineTo(xPos, canvas.height);
+        ctx.stroke();
+    }
+
+    // Draw the tracks with offset
     tracks.forEach((track, index) => {
         const y = index * (trackHeight + padding) + padding + 40;
         const x = trackPositions[index] - scrollOffset;
 
-        // Obtener la duración del audio y calcular la longitud del rectángulo
+        // Get the track duration and calculate the length of the track
         const audio = audioElements[index];
-        const trackDuration = audio.duration || 0; // Duración del audio, default a 0 si no está disponible
-        const trackLength = (trackDuration / timelineDuration) * totalWidth; // Longitud proporcional
+        const trackDuration = audio.duration || 0; // Default to 0 if the duration is not available
+        const trackLength = (trackDuration / timelineDuration) * totalWidth; // Proportional length of the track
 
-        // Asegurarse de que el rectángulo cubra toda la duración del audio
-        const trackStartTime = (trackPositions[index] / totalWidth) * timelineDuration;
-        const trackEndTime = trackStartTime + trackDuration;
-
-        // Dibujar el rectángulo que abarca toda la duración de la pista
+        // Draw the track rectangle
         ctx.fillStyle = '#e7f3fe';
         ctx.fillRect(x, y, trackLength, trackHeight);
         ctx.fillStyle = '#333';
         ctx.fillText(track, x + 5, y + (trackHeight / 1.5));
     });
 
-    // Dibujar el indicador de tiempo con desplazamiento
+    // Draw the time indicator with scroll offset
     const indicatorX = (currentTime / timelineDuration) * totalWidth - scrollOffset;
 
-    // Asegurarse de que la línea roja se dibuje dentro de los límites del canvas
+    // Ensure the red line stays within canvas bounds
     ctx.strokeStyle = 'red';
     ctx.beginPath();
     ctx.moveTo(indicatorX, 0);
     ctx.lineTo(indicatorX, canvas.height);
     ctx.stroke();
 }
-
