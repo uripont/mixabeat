@@ -3,9 +3,9 @@ import { config } from '../config.js';
 export async function validateSession() {
     console.log('Checking auth state...');
     
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('authToken');
     if (!token) {
-        console.log('No token found, showing landing');
+        console.log('No token found');
         return false;
     }
     
@@ -14,7 +14,7 @@ export async function validateSession() {
         // since there's no specific validation endpoint yet
         const response = await fetch(`${config.API_BASE_URL}/rooms`, {
             headers: {
-                'Authorization': token,
+                'Authorization': `${token}`,
                 'Accept': 'application/json'
             }
         });
@@ -34,14 +34,12 @@ export async function validateSession() {
     }
 }
 
-export function requireAuth() {
-    return validateSession().then(isValid => {
-        if (!isValid) {
-            console.log('Auth check failed, redirecting to landing');
-            window.location.href = '/index.html';
-            return false;
-        }
-        console.log('Auth valid, allowing access');
-        return true;
-    });
+export async function requireAuth() {
+    const isValid = await validateSession();
+    if (!isValid) {
+        console.log('Auth check failed');
+        return false;
+    }
+    console.log('Auth valid, allowing access');
+    return true;
 }

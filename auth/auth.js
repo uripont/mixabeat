@@ -44,8 +44,10 @@ function handleAuthSuccess(result, message) {
     // Store user info
     localStorage.setItem('userId', result.userId);
     localStorage.setItem('username', result.username);
-    
+    localStorage.setItem('authToken', result.authToken);
+
     console.log(message, result);
+    console.log('authToken stored:', localStorage.getItem('authToken'));
     console.log('Redirecting to room selection...');
     
     // Clear any previous errors
@@ -53,8 +55,8 @@ function handleAuthSuccess(result, message) {
     
     // Small delay to show success before redirect
     setTimeout(() => {
-        window.location.href = '/room/room.html';
-    }, 500);
+        window.location.href = '../search/search.html';
+    }, 1000);
 }
 
 // Toggle between login and signup forms
