@@ -52,7 +52,7 @@ function handleAuthSuccess(result, message) {
     
     // Small delay to show success before redirect
     setTimeout(() => {
-        window.location.href = '/index.html';
+        window.location.href = '/room/room.html';
     }, 500);
 }
 
