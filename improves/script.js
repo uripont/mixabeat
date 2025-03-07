@@ -324,7 +324,9 @@ const trackPositions = [];
 let draggingIndex = null;
 let currentTime = 0;
 let isPlaying = false;
+let isPaused = false; 
 let scrollOffset = 0;
+const trackColors = []; 
 const canvasWidth = 600; // Ancho visible del canvas
 const timelineDuration = 30; // Duración total del timeline (en segundos)
 const totalWidth = 6000; // Ancho total del timeline (es mayor que el ancho del canvas)
@@ -343,6 +345,7 @@ document.getElementById('addTrackButton').addEventListener('click', function() {
         audioElements.push(audio);
         tracks.push(trackName);
         trackPositions.push(tracks.length * 150); // Separar las pistas en el timeline
+        trackColors.push(getRandomColor());
         drawTimeline();
     } else if (tracks.length >= 20) {
         document.getElementById('message').textContent = 'No puedes agregar más de 4 pistas.';
@@ -354,15 +357,50 @@ document.getElementById('addTrackButton').addEventListener('click', function() {
 });
 
 document.getElementById('playAllButton').addEventListener('click', function() {
-    if (!isPlaying) {
+    if (!isPlaying && !isPaused) {
         isPlaying = true;
         currentTime = 0;
-        scrollOffset = 0; // Reiniciar el desplazamiento al comenzar
+        scrollOffset = 0; // Reset scroll when starting
+        playTracks();
+    } else if (isPaused) {
+        // Unpause and continue playback
+        isPaused = false;
         playTracks();
     }
 });
 
+document.getElementById('pauseButton').addEventListener('click', function() {
+    pauseTracks();
+});
+
+document.getElementById('restartButton').addEventListener('click', function() {
+    resetTimeline();
+    playTracks(); // Optionally restart the playback after resetting
+});
+
+function pauseTracks() {
+    // Pause all audio elements and reset their current time
+    audioElements.forEach(audio => {
+        audio.pause();
+
+    });
+    isPlaying = false; // Set playing status to false
+    isPaused = true;
+    drawTimeline(); // Redraw the timeline to reflect the stopped state
+}
+
+function resetTimeline() {
+    // Reset the time and scroll offset
+    currentTime = 0;
+    scrollOffset = 0;
+    drawTimeline(); // Redraw the timeline at the beginning
+}
+
+
 function playTracks() {
+    
+    if (isPaused) return;
+    
     // Verificar si todos los audios han terminado
     const allAudiosFinished = audioElements.every(audio => audio.currentTime >= audio.duration);
 
@@ -449,7 +487,7 @@ canvas.addEventListener('mouseup', () => {
 canvas.addEventListener('mouseleave', () => {
     draggingIndex = null;
 });
-
+/* 
 function drawTimeline() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -482,6 +520,71 @@ function drawTimeline() {
         // Draw the track rectangle
         ctx.fillStyle = '#e7f3fe';
         ctx.fillRect(x, y, trackLength, trackHeight);
+        ctx.fillStyle = '#333';
+        ctx.fillText(track, x + 5, y + (trackHeight / 1.5));
+    });
+
+    // Draw the time indicator with scroll offset
+    const indicatorX = (currentTime / timelineDuration) * totalWidth - scrollOffset;
+
+    // Ensure the red line stays within canvas bounds
+    ctx.strokeStyle = 'red';
+    ctx.beginPath();
+    ctx.moveTo(indicatorX, 0);
+    ctx.lineTo(indicatorX, canvas.height);
+    ctx.stroke();
+}
+ 
+
+ */
+
+// Function to generate a random color in hexadecimal format
+function getRandomColor() {
+    const letters = '0123456789ABCDEF';
+    let color = '#';
+    for (let i = 0; i < 6; i++) {
+        color += letters[Math.floor(Math.random() * 16)];
+    }
+    return color;
+}
+
+function drawTimeline() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const trackHeight = 30;
+    const padding = 10;
+
+    // Draw vertical lines along the canvas
+    const numDivisions = 60; // Number of vertical lines (e.g., 10 divisions)
+    const divisionWidth = totalWidth / numDivisions;
+
+    ctx.strokeStyle = '#ccc'; // Light gray color for the vertical lines
+    for (let i = 1; i < numDivisions; i++) {
+        const xPos = i * divisionWidth - scrollOffset; // Calculate x position based on the number of divisions
+        ctx.beginPath();
+        ctx.moveTo(xPos, 0);
+        ctx.lineTo(xPos, canvas.height);
+        ctx.stroke();
+    }
+
+    // Draw the tracks with offset
+    tracks.forEach((track, index) => {
+        const y = index * (trackHeight + padding) + padding + 40;
+        const x = trackPositions[index] - scrollOffset;
+
+        // Get the track duration and calculate the length of the track
+        const audio = audioElements[index];
+        const trackDuration = audio.duration || 0; // Default to 0 if the duration is not available
+        const trackLength = (trackDuration / timelineDuration) * totalWidth; // Proportional length of the track
+
+        // Assign a random color to the track
+        const trackColor = trackColors[index];
+
+        // Draw the track rectangle with the random color
+        ctx.fillStyle = trackColor;
+        ctx.fillRect(x, y, trackLength, trackHeight);
+
+        // Draw the track name text
         ctx.fillStyle = '#333';
         ctx.fillText(track, x + 5, y + (trackHeight / 1.5));
     });
