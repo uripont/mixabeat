@@ -103,6 +103,9 @@ Migration Status (as of latest update):
    - Fixed auth route paths and error handling
 
 2. Pending to reimplement:
+    -  Auto login after signup
+    - Redirect to room selection after login
+    - Auto redirect to room selection if already logged in (token in localStorage is still valid)
    - Room creation and joining
    - Real-time chat interface
 
