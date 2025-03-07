@@ -150,13 +150,13 @@ For messages & chat:
 - [x] Get connected users on your room, to be called when joining (async via websocket)
 
 For room management:
-- [ ] Endpoint to list all available rooms to join
+- [x] Endpoint to list all available rooms to join
 - [ ] Endpoint to join room by its current name (note that name can change over time, it's not an ID)
 
 For song management:
 - [ ] Websocket message to update your current track
     - [ ] Also makes server update the db with the updated track
-- [ ] Endpoint to get current song on this room (read from db, "checkpointed")
+- [x] Endpoint to get current song on this room (read from db, "checkpointed")
 
 For audio files:
 - [ ] Endpoint to upload a new audio file (mp3, max size, rate limited)

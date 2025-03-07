@@ -6,7 +6,8 @@ const {
     createRoom,
     joinRoom,
     leaveRoom,
-    getRoomMessages
+    getRoomMessages,
+    getRoomSong
 } = require('../services/rooms.service');
 const logger = require('../utils/logger');
 
@@ -71,6 +72,19 @@ router.get('/:roomId/messages', authenticateSessionOnHTTPEndpoint, async (req, r
     } catch (error) {
         logger.error('Error fetching messages:', error);
         res.status(500).send('Error fetching messages');
+    }
+});
+
+// Get current song in room
+router.get('/:roomId/song', authenticateSessionOnHTTPEndpoint, async (req, res) => {
+    const roomId = parseInt(req.params.roomId);
+    try {
+        const song = await getRoomSong(roomId);
+        res.json({ song });
+    } catch (error) {
+        logger.error('Error fetching room song:', error);
+        res.status(error.message.includes('not found') ? 404 : 500)
+           .send(error.message);
     }
 });
 

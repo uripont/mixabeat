@@ -143,10 +143,46 @@ async function getRoomMessages(roomId, limit = 100, before = new Date()) {
     });
 }
 
+async function getRoomSong(roomId) {
+    return new Promise((resolve, reject) => {
+        pool.query(
+            'SELECT contents FROM rooms WHERE room_id = ?',
+            [roomId],
+            (err, results) => {
+                if (err) {
+                    logger.error('Error fetching room song:', err);
+                    reject(new Error('Error fetching room song'));
+                    return;
+                }
+
+                if (results.length === 0) {
+                    reject(new Error('Room not found'));
+                    return;
+                }
+
+                // Check if contents is already an object (MySQL might parse JSON automatically)
+                const contents = results[0].contents;
+                if (typeof contents === 'object') {
+                    resolve(contents);
+                } else {
+                    try {
+                        resolve(JSON.parse(contents));
+                    } catch (err) {
+                        logger.error('Error parsing room contents:', err);
+                        reject(new Error('Error parsing room contents'));
+                    }
+                }
+            }
+        );
+    });
+}
+
+
 module.exports = {
     listRooms,
     createRoom,
     joinRoom,
     leaveRoom,
-    getRoomMessages
+    getRoomMessages,
+    getRoomSong
 };
