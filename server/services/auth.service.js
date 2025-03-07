@@ -143,33 +143,61 @@ const loginUser = async (username, password) => {
 };
 
 const signupUser = async (username, email, password) => {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
         if (!username || !email || !password) {
             reject(new Error('All fields are required'));
             return;
         }
 
-        const hashedPassword = hashPassword(password);
+        // Validate input format first
+        const validationErrors = validateUserData(username, email, password);
+        if (validationErrors.length > 0) {
+            reject(new Error(validationErrors.join(', ')));
+            return;
+        }
 
-        pool.query(
-            'INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)',
-            [username, email, hashedPassword],
-            (err, result) => {
-                if (err) {
-                    logger.error('Error executing query:', err);
-                    if (err.code === 'ER_DUP_ENTRY') {
-                        logger.warn(`Registration attempt with duplicate ${err.sqlMessage.includes('email') ? 'email' : 'username'}: ${err.sqlMessage.includes('email') ? email : username}`);
-                    }
-                    reject(new Error('Error creating user'));
-                    return;
-                }
-                logger.info(`User account created - ID: ${result.insertId}, Username: ${username}, Email: ${email}`);
-                resolve({
-                    userId: result.insertId,
-                    message: 'User created successfully'
-                });
+        try {
+            // Check for duplicate username and email before attempting to insert
+            const [[existingEmail]] = await pool.promise().query(
+                'SELECT user_id FROM users WHERE email = ?',
+                [email]
+            );
+
+            if (existingEmail) {
+                logger.warn(`Registration attempt with duplicate email: ${email}`);
+                reject(new Error('Email already registered'));
+                return;
             }
-        );
+
+            const [[existingUsername]] = await pool.promise().query(
+                'SELECT user_id FROM users WHERE username = ?',
+                [username]
+            );
+
+            if (existingUsername) {
+                logger.warn(`Registration attempt with duplicate username: ${username}`);
+                reject(new Error('Username already taken'));
+                return;
+            }
+
+            // If we get here, both username and email are unique
+            const hashedPassword = hashPassword(password);
+
+            const [result] = await pool.promise().query(
+                'INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)',
+                [username, email, hashedPassword]
+            );
+
+            logger.info(`User account created - ID: ${result.insertId}, Username: ${username}, Email: ${email}`);
+            resolve({
+                userId: result.insertId,
+                message: 'User created successfully'
+            });
+
+        } catch (err) {
+            logger.error('Error during signup:', err);
+            reject(new Error('An error occurred during signup'));
+        }
     });
 };
 
