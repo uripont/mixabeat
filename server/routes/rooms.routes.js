@@ -5,6 +5,7 @@ const {
     listRooms,
     createRoom,
     joinRoom,
+    joinRoomByName,
     leaveRoom,
     getRoomMessages,
     getRoomSong
@@ -83,6 +84,19 @@ router.get('/:roomId/song', authenticateSessionOnHTTPEndpoint, async (req, res) 
         res.json({ song });
     } catch (error) {
         logger.error('Error fetching room song:', error);
+        res.status(error.message.includes('not found') ? 404 : 500)
+           .send(error.message);
+    }
+});
+
+// Join room by name
+router.put('/join/:roomName', authenticateSessionOnHTTPEndpoint, async (req, res) => {
+    const roomName = req.params.roomName;
+    try {
+        const result = await joinRoomByName(roomName, req.headers.authorization);
+        res.json(result);
+    } catch (error) {
+        logger.error('Error joining room by name:', error);
         res.status(error.message.includes('not found') ? 404 : 500)
            .send(error.message);
     }

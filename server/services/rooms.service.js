@@ -177,6 +177,44 @@ async function getRoomSong(roomId) {
     });
 }
 
+async function joinRoomByName(roomName, token) {
+    return new Promise((resolve, reject) => {
+        // First check if room exists by name
+        pool.query(
+            'SELECT room_id FROM rooms WHERE song_name = ?',
+            [roomName],
+            (err, results) => {
+                if (err) {
+                    logger.error('Error checking room by name:', err);
+                    reject(new Error('Error joining room'));
+                    return;
+                }
+
+                if (results.length === 0) {
+                    reject(new Error('Room not found'));
+                    return;
+                }
+
+                const roomId = results[0].room_id;
+
+                // Update session record and WebSocket client's room
+                pool.query(
+                    'UPDATE sessions SET room_id = ? WHERE token = ?',
+                    [roomId, token],
+                    (err, result) => {
+                        if (err) {
+                            logger.error('Error updating session:', err);
+                            reject(new Error('Error joining room'));
+                            return;
+                        }
+                        updateClientsRoomId(token, roomId);
+                        resolve({ message: 'Joined room successfully', roomId });
+                    }
+                );
+            }
+        );
+    });
+}
 
 module.exports = {
     listRooms,
@@ -184,5 +222,6 @@ module.exports = {
     joinRoom,
     leaveRoom,
     getRoomMessages,
-    getRoomSong
+    getRoomSong,
+    joinRoomByName
 };
