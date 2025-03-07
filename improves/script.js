@@ -203,6 +203,34 @@ canvas.addEventListener('drop', (event) => {
     }
 });
 
+// Event listener for the 'contextmenu' event to handle right-click (track delete)
+canvas.addEventListener('contextmenu', (event) => {
+    event.preventDefault(); // Prevent the default context menu from appearing
+
+    const mouseX = event.offsetX + scrollOffset; // Get the mouse X position considering the scroll offset
+    const mouseY = event.offsetY;
+
+    // Check if a track was right-clicked
+    tracks.forEach((track, index) => {
+        const y = index * 50 + 40;
+        const width = 100;
+        const height = 30;
+
+        // Check if the mouse is within the bounds of the track
+        if (mouseX > trackPositions[index] && mouseX < trackPositions[index] + width && mouseY > y && mouseY < y + height) {
+            // Delete the track by removing it from all arrays
+            tracks.splice(index, 1);
+            audioElements[index].pause(); // Pause the audio if it is playing
+            audioElements.splice(index, 1); // Remove the audio element
+            trackPositions.splice(index, 1); // Remove the track position
+            trackColors.splice(index, 1); // Remove the track color
+
+            // Redraw the timeline after the deletion
+            drawTimeline();
+        }
+    });
+});
+
 
 /* 
 function drawTimeline() {
