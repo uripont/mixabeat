@@ -2,7 +2,7 @@ const WebSocket = require('ws'); // npm install ws
 
 const logger = require('../utils/logger');
 const { authenticateWSConnection } = require('../middleware/auth.middleware');
-const { clients, handleChatMessage, handleJoinRoom, handleDisconnect } = require('./handlers');
+const { clients, handleChatMessage, handleJoinRoom, handleDisconnect, handleUpdateTrack } = require('./handlers');
 
 const setupWebSocketServer = (httpServer) => {
     const wss = new WebSocket.Server({ server: httpServer });
@@ -27,6 +27,9 @@ const setupWebSocketServer = (httpServer) => {
                         break;
                     case 'join_room':
                         await handleJoinRoom(socket, message);
+                        break;
+                    case 'update_track':
+                        await handleUpdateTrack(socket, message);
                         break;
                 }
             } catch (err) {

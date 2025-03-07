@@ -1,3 +1,4 @@
+const WebSocket = require('ws');
 const logger = require('../utils/logger');
 const pool = require('../database/db-connection');
 const { getUserById, getUserSession } = require('../database/db-common-queries');
@@ -165,11 +166,60 @@ const handleDisconnect = async (socket) => {
     clients.delete(socket);
 };
 
+const handleUpdateTrack = async (socket, message) => {
+    if (!socket.roomId) {
+        logger.error('Attempt to update track without room context');
+        socket.send(JSON.stringify({
+            type: 'error',
+            message: 'You must join a room before updating track'
+        }));
+        return;
+    }
+    logger.info(`Handling update track message in room ${socket.roomId}`);
+
+    try {
+        // Update room contents in database
+        const [[roomResult]] = await pool.promise().query(
+            'SELECT contents FROM rooms WHERE room_id = ?',
+            [socket.roomId]
+        );
+        if (!roomResult) {
+            throw new Error('Room not found');
+        }
+
+        let roomContents = roomResult.contents;
+        if (typeof roomContents === 'string') {
+            roomContents = JSON.parse(roomContents);
+        }
+        roomContents.tracks = message.tracks; // Assuming message.tracks is the updated tracks array
+
+        await pool.promise().query(
+            'UPDATE rooms SET contents = ? WHERE room_id = ?',
+            [JSON.stringify(roomContents), socket.roomId]
+        );
+
+
+        const broadcastMessage = {
+            type: 'track_updated',
+            tracks: message.tracks // Broadcast the updated tracks
+        };
+        broadcastToRoom(socket.roomId, broadcastMessage, socket);
+
+    } catch (err) {
+        logger.error('Error handling update track message:', err);
+        socket.send(JSON.stringify({
+            type: 'error',
+            message: 'Error updating track'
+        }));
+    }
+};
+
 module.exports = {
     clients,
     updateClientsRoomId,
     broadcastToRoom,
     handleChatMessage,
     handleJoinRoom,
-    handleDisconnect
+    handleDisconnect,
+    handleUpdateTrack
 };
