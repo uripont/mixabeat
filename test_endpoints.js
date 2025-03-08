@@ -95,13 +95,101 @@
             return;
         }
 
-        // Note: The following endpoints were removed as they appear to be unavailable or not configured correctly:
-        // - /rooms/{id}/join
-        // - /rooms/{id}/messages
-        // - /rooms/{id}/song
-        // - /rooms/{id}/leave
-        
-        console.log("Skipping room-specific endpoints as they appear to be unavailable.");
+        // 4. Join a room by ID (using PUT method)
+        console.log("Joining room " + roomId + "...");
+        const joinRoomResponse = await fetch(BASE_URL + "/rooms/" + roomId + "/join", {
+            method: 'PUT', // Changed from POST to PUT based on the routes file
+            headers: {
+                'Authorization': `${token}`
+            }
+        });
+        let joinRoomResponseData;
+        try {
+            joinRoomResponseData = await joinRoomResponse.text();
+            try {
+                joinRoomResponseData = JSON.parse(joinRoomResponseData);
+                console.log("Join Room Response:", joinRoomResponseData);
+            } catch (e) {
+                console.error("Error parsing Join Room Response JSON:", e);
+                console.log("Raw Join Room Response:", joinRoomResponseData);
+                return;
+            }
+        } catch (e) {
+            console.error("Error getting Join Room Response text:", e);
+            return;
+        }
+
+        // 5. Request room chat messages
+        console.log("Requesting room chat messages...");
+        const messagesResponse = await fetch(BASE_URL + "/rooms/" + roomId + "/messages", {
+            method: 'GET',
+            headers: {
+                'Authorization': `${token}`
+            }
+        });
+        let messagesResponseData;
+        try {
+            messagesResponseData = await messagesResponse.text();
+            try {
+                messagesResponseData = JSON.parse(messagesResponseData);
+                console.log("Messages Response:", messagesResponseData);
+            } catch (e) {
+                console.error("Error parsing Messages Response JSON:", e);
+                console.log("Raw Messages Response:", messagesResponseData);
+                return;
+            }
+        } catch (e) {
+            console.error("Error getting Messages Response text:", e);
+            return;
+        }
+
+        // 6. Request room's song
+        console.log("Requesting room's song...");
+        const songResponse = await fetch(BASE_URL + `/rooms/${roomId}/song`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `${token}`
+            }
+        });
+        let songResponseData;
+        try {
+            songResponseData = await songResponse.text();
+            try {
+                songResponseData = JSON.parse(songResponseData);
+                console.log("Song Response:", songResponseData);
+            } catch (e) {
+                console.error("Error parsing Song Response JSON:", e);
+                console.log("Raw Song Response:", songResponseData);
+                return;
+            }
+        } catch (e) {
+            console.error("Error getting Song Response text:", e);
+            return;
+        }
+
+        // 7. Leave room (using PUT method)
+        console.log("Leaving room " + roomId + "...");
+        const leaveRoomResponse = await fetch(BASE_URL + "/rooms/" + roomId + "/leave", {
+            method: 'PUT', // Changed from POST to PUT based on the routes file
+            headers: {
+                'Authorization': `${token}`
+            }
+        });
+        let leaveRoomResponseData;
+        try {
+            leaveRoomResponseData = await leaveRoomResponse.text();
+            try {
+                leaveRoomResponseData = JSON.parse(leaveRoomResponseData);
+                console.log("Leave Room Response:", leaveRoomResponseData);
+            } catch (e) {
+                console.error("Error parsing Leave Room Response JSON:", e);
+                console.log("Raw Leave Room Response:", leaveRoomResponseData);
+                return;
+            }
+        } catch (e) {
+            console.error("Error getting Leave Room Response text:", e);
+            return;
+        }
 
         // 8. Logout
         console.log("Logging out...");
