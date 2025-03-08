@@ -1,0 +1,142 @@
+.sound-picker {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: #2a2a2a;
+    color: #fff;
+}
+
+.sound-picker__header {
+    padding: 10px;
+    background: #1a1a1a;
+    border-bottom: 1px solid #333;
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.sound-picker__header i.fa-music {
+    color: #2962ff;
+    font-size: 1.2rem;
+    margin-top: 0.2rem;
+}
+
+.sound-picker__title {
+    flex: 1;
+}
+
+.sound-picker__title h3 {
+    margin: 0;
+    color: #888;
+    font-size: 1rem;
+    font-weight: normal;
+}
+
+.sound-picker__instrument {
+    font-size: 0.9rem;
+    color: #888;
+    margin-top: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.sound-picker__instrument i {
+    color: #2962ff;
+    font-size: 0.8rem;
+}
+
+.sound-picker__content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+}
+
+.sound-picker__loading {
+    color: #888;
+    text-align: center;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.sound-picker__loading i {
+    color: #2962ff;
+    font-size: 1.2rem;
+}
+
+.sound-picker__list {
+    display: none;
+}
+
+.sound-picker__list.active {
+    display: block;
+}
+
+.sound-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    border-radius: 12px;
+    background: #333;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.sound-item:hover {
+    background: #404040;
+}
+
+.sound-item.selected {
+    background: #2962ff;
+    color: #fff;
+}
+
+.sound-item__name {
+    flex: 1;
+    padding: 0 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.sound-item__name i {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.sound-item__preview {
+    padding: 8px 12px;
+    background: #1a1a1a;
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.sound-item__preview i {
+    font-size: 0.8rem;
+    color: #2962ff;
+}
+
+.sound-item__preview:hover {
+    background: #404040;
+}
+
+.sound-item.selected .sound-item__preview {
+    background: #1a4ba8;
+}
+
+.sound-item.selected .sound-item__preview:hover {
+    background: #2255bb;
+}
