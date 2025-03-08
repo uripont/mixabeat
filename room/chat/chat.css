@@ -73,12 +73,42 @@
     background: #2962ff;
 }
 
+.message.system {
+    align-self: center;
+    max-width: 90%;
+}
+
+.message.system .message-sender {
+    color: #ff9800;
+    text-align: center;
+}
+
+.message.system .message-bubble {
+    background: rgba(255, 152, 0, 0.1);
+    border: 1px solid rgba(255, 152, 0, 0.3);
+    color: #ff9800;
+    text-align: center;
+}
+
 .input-container {
     display: flex;
+    flex-direction: column;
     gap: 8px;
     padding: 15px;
     background: #1a1a1a;
     border-top: 1px solid #333;
+    position: relative;
+}
+
+.input-controls {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 5px;
+}
+
+.input-row {
+    display: flex;
+    gap: 8px;
 }
 
 #chatInput {
@@ -120,8 +150,8 @@
 
 .emoji-panel {
     position: absolute;
-    bottom: 80px;
-    right: 20px;
+    top: 40px;
+    right: 15px;
     background: #333;
     padding: 10px;
     border-radius: 8px;
@@ -129,6 +159,7 @@
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 8px;
+    z-index: 10;
 }
 
 .emoji {
