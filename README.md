@@ -171,6 +171,34 @@ We can leave the "how this state change affects the overall interface" to the el
 
 This is part of the motivation behind modern frontend frameworks like React, where these pseudo-groups of DOM elements with logic are "components", and they are supposed to "react" to changes in the state of the application.
 
+## Audio Loading Strategy
+
+
+## Audio Loading Strategy
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant API
+    participant Storage
+
+    Client->>API: GET /rooms/:roomId/song
+    Note over API: Returns song metadata with track names
+    API-->>Client: { tracks: [{name: "kick.mp3", position: 150}, ...] }
+    
+    Client->>API: GET /rooms/:roomId/audio
+    Note over API: Returns ALL audio files needed for this song
+    API->>Storage: Read all required files
+    Storage-->>API: Audio files
+    API-->>Client: ZIP or multi-part response with all files
+```
+
+1. Server stores raw audio files in `/audio` directory
+2. Room contents in database references audio files by name
+3. Client makes two main requests when joining a room:
+   - GET metadata (track positions, names = the "song" object as a JSON)
+   - GET all audio files in one request (ZIP or multi-part response of all audio files needed for a given song).
+
 # Configuring VM for Static File Hosting
 
 To serve static files via Apache on the VM:
