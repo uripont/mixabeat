@@ -1,0 +1,30 @@
+<link rel="stylesheet" href="chat/chat.css">
+
+<div class="chat-container">
+    <div class="users-list">
+        <h4>Connected Users</h4>
+        <ul id="connectedUsers">
+            <!-- Will be populated with connected users -->
+        </ul>
+    </div>
+    <div class="messages-container" id="chatMessages">
+        <!-- Will be populated with chat messages -->
+    </div>
+    <div class="input-container">
+        <input type="text" id="chatInput" placeholder="Type a message...">
+        <button id="emojiButton" title="Insert emoji">😊</button>
+        <button id="sendButton">Send</button>
+    </div>
+    <div class="emoji-panel" id="emojiPanel" style="display: none;">
+        <span class="emoji" data-emoji="😊">😊</span>
+        <span class="emoji" data-emoji="👋">👋</span>
+        <span class="emoji" data-emoji="👍">👍</span>
+        <span class="emoji" data-emoji="❤️">❤️</span>
+        <span class="emoji" data-emoji="🎵">🎵</span>
+        <span class="emoji" data-emoji="🎸">🎸</span>
+        <span class="emoji" data-emoji="🎹">🎹</span>
+        <span class="emoji" data-emoji="🥁">🥁</span>
+    </div>
+</div>
+
+<script type="module" src="chat/chat.js"></script>
