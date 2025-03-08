@@ -116,6 +116,30 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Initialize shared playback controls
         const cleanupPlayback = initializePlaybackControls();
 
+        // Load canvas panel
+        fetch('canvas/canvas.html')
+            .then(response => response.text())
+            .then(async html => { // Make callback async
+                // Create temporary container to parse HTML
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const template = doc.querySelector('template');
+                
+                if (template) {
+                    const canvasPanel = document.querySelector('.center-panel .panel-content');
+                    canvasPanel.appendChild(template.content.cloneNode(true));
+                    
+                    // Import and initialize canvas module
+                    const canvasModule = await import('./canvas/canvas.js');
+                    canvasModule.initializeCanvas(window.roomState, window.roomState.ws);
+                    console.log('Canvas module loaded');
+                } else {
+                    throw new Error('Canvas template not found');
+                }
+            })
+            .catch(error => console.error('Error loading canvas panel:', error));
+
+
         // Initialize navigation
         const backButton = document.querySelector('.action-btn[title="Back to Rooms"]');
         if (backButton) {
