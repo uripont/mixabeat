@@ -1,10 +1,14 @@
 // Initialize and expose room state
 export function initializeRoomState() {
     window.roomState = {
-        // Core state with logical domains
-        users: [],
-        tracks: [],
-        mousePositions: {},
+        // Core state with logical domains (shared between components)
+        users: [],        // Used by chat (user list) and canvas (cursors)
+        tracks: [],       // Used by canvas and sound-editor
+        mousePositions: {},  // Used by canvas to show other users
+        playback: {       // Used by all audio-related components
+            isPlaying: false,
+            currentTime: 0
+        },
 
         // Update methods for each domain
         updateUsers(changes) {
@@ -48,6 +52,16 @@ export function initializeRoomState() {
             }));
         },
 
+        updatePlayback(changes) {
+            this.playback = {
+                ...this.playback,
+                ...changes
+            };
+            window.dispatchEvent(new CustomEvent('state:playback', {
+                detail: this.playback
+            }));
+        },
+
         // Watch methods for each domain
         watchUsers(callback) {
             const handler = e => callback(e.detail);
@@ -65,6 +79,12 @@ export function initializeRoomState() {
             const handler = e => callback(e.detail);
             window.addEventListener('state:mouse', handler);
             return () => window.removeEventListener('state:mouse', handler);
+        },
+
+        watchPlayback(callback) {
+            const handler = e => callback(e.detail);
+            window.addEventListener('state:playback', handler);
+            return () => window.removeEventListener('state:playback', handler);
         }
     };
 

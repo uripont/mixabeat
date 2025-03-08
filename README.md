@@ -54,7 +54,7 @@ export async function requireAuth() {
 
 ## State Management
 
-The room state system we have implemented is a wrapper over the browser's native DOM Event system, for simple yet flexible state management and UI updates.
+The room state system we have implemented is a wrapper over the browser's native DOM Event system, for simple yet flexible state management and UI updates for all information that multiple parts of the application need to be aware of.
 
 ### Room State Implementation
 

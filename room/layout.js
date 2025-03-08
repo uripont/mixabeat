@@ -2,6 +2,61 @@ import { initializeRoomState } from './room-state.js';
 import { initializeWebSocket } from './websocket.js';
 import { initializePanelResizing } from './panel-resizer.js';
 
+// Initialize playback controls and bind to shared state
+function initializePlaybackControls() {
+    const playButton = document.querySelector('.play-btn');
+    const stopButton = document.querySelector('.stop-btn');
+    const restartButton = document.querySelector('.restart-btn');
+    const timer = document.querySelector('.timer');
+
+    // Watch playback state changes
+    const cleanupPlayback = window.roomState.watchPlayback(state => {
+        // Update play/pause button icon
+        const icon = playButton.querySelector('i');
+        if (state.isPlaying) {
+            icon.classList.remove('fa-play');
+            icon.classList.add('fa-pause');
+        } else {
+            icon.classList.remove('fa-pause');
+            icon.classList.add('fa-play');
+        }
+
+        // Update timer display
+        const minutes = Math.floor(state.currentTime / 60);
+        const seconds = Math.floor(state.currentTime % 60);
+        timer.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    });
+
+    // Playback control handlers
+    if (playButton) {
+        playButton.addEventListener('click', () => {
+            const currentState = window.roomState.playback;
+            window.roomState.updatePlayback({
+                isPlaying: !currentState.isPlaying
+            });
+        });
+    }
+
+    if (stopButton) {
+        stopButton.addEventListener('click', () => {
+            window.roomState.updatePlayback({
+                isPlaying: false,
+                currentTime: 0
+            });
+        });
+    }
+
+    if (restartButton) {
+        restartButton.addEventListener('click', () => {
+            window.roomState.updatePlayback({
+                currentTime: 0
+            });
+        });
+    }
+
+    return cleanupPlayback;
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     // Get roomId from URL parameters
     const urlParams = new URLSearchParams(window.location.search);
@@ -24,21 +79,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log(`Initializing room ${roomId}`);
     
     try {
-        // First initialize room state
+        // First initialize shared state
         console.log('Initializing room state...');
         initializeRoomState();
         
-        // Initialize WebSocket connection and wait for room join
+        // Initialize WebSocket connection
         console.log('Initializing WebSocket connection...');
         const ws = await initializeWebSocket(token, roomId);
         
-        // Store WebSocket connection in room state
-        window.roomState.update({ ws });
+        // Store WebSocket reference in room state
+        window.roomState.ws = ws;
         
-        // Initialize panel resizing
+        // Initialize panel layout
         initializePanelResizing();
         
-        // Load chat component template
+        // Load chat component
         const chatResponse = await fetch('chat/chat.html');
         const chatHtml = await chatResponse.text();
         
@@ -57,59 +112,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else {
             throw new Error('Chat template not found');
         }
+
+        // Initialize shared playback controls
+        const cleanupPlayback = initializePlaybackControls();
+
+        // Initialize navigation
+        const backButton = document.querySelector('.action-btn[title="Back to Rooms"]');
+        if (backButton) {
+            backButton.addEventListener('click', () => {
+                window.location.href = '../index.html';
+            });
+        }
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            cleanupPlayback();
+        });
             
     } catch (error) {
         console.error('Failed to initialize room:', error);
         alert('Failed to connect to room. Please try again.');
         window.location.href = '../index.html';
         return;
-    }
-
-    // Initialize UI event listeners
-    const backButton = document.querySelector('.action-btn[title="Back to Rooms"]');
-    if (backButton) {
-        backButton.addEventListener('click', () => {
-            window.location.href = '../index.html';
-        });
-    }
-
-    // Initialize playback controls
-    const playButton = document.querySelector('.play-btn');
-    const stopButton = document.querySelector('.stop-btn');
-    const restartButton = document.querySelector('.restart-btn');
-    const timer = document.querySelector('.timer');
-
-    if (playButton) {
-        playButton.addEventListener('click', () => {
-            const icon = playButton.querySelector('i');
-            if (icon.classList.contains('fa-play')) {
-                icon.classList.remove('fa-play');
-                icon.classList.add('fa-pause');
-            } else {
-                icon.classList.remove('fa-pause');
-                icon.classList.add('fa-play');
-            }
-        });
-    }
-
-    if (stopButton) {
-        stopButton.addEventListener('click', () => {
-            const playIcon = playButton.querySelector('i');
-            if (playIcon.classList.contains('fa-pause')) {
-                playIcon.classList.remove('fa-pause');
-                playIcon.classList.add('fa-play');
-            }
-        });
-    }
-
-    if (restartButton) {
-        restartButton.addEventListener('click', () => {
-            timer.textContent = '00:00';
-            const playIcon = playButton.querySelector('i');
-            if (playIcon.classList.contains('fa-pause')) {
-                playIcon.classList.remove('fa-pause');
-                playIcon.classList.add('fa-play');
-            }
-        });
     }
 });

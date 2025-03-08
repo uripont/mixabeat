@@ -5,7 +5,7 @@ export function initializePanelResizing() {
     const bottomPanel = document.querySelector('.bottom-panel');
     const mainContent = document.querySelector('.main-content');
     
-    // Create and append actual resize handles instead of using pseudo-elements
+    // Create and append resize handles
     const leftPanelResizer = document.createElement('div');
     leftPanelResizer.className = 'panel-resizer left-resizer';
     leftPanel.appendChild(leftPanelResizer);
@@ -18,48 +18,13 @@ export function initializePanelResizing() {
     bottomPanelResizer.className = 'panel-resizer bottom-resizer';
     bottomPanel.appendChild(bottomPanelResizer);
     
-    // Add CSS for the resizers
-    const style = document.createElement('style');
-    style.textContent = `
-        .panel-resizer {
-            position: absolute;
-            z-index: 10;
-            background: rgba(255, 255, 255, 0.1);
-            transition: background 0.2s;
-        }
-        .panel-resizer:hover {
-            background: rgba(255, 255, 255, 0.3);
-        }
-        .left-resizer {
-            cursor: ew-resize;
-            width: 8px;
-            top: 0;
-            right: 0;
-            bottom: 0;
-        }
-        .right-resizer {
-            cursor: ew-resize;
-            width: 8px;
-            top: 0;
-            left: 0;
-            bottom: 0;
-        }
-        .bottom-resizer {
-            cursor: ns-resize;
-            height: 8px;
-            left: 0;
-            right: 0;
-            top: 0;
-        }
-    `;
-    document.head.appendChild(style);
-    
-    // Minimum sizes
+    // Panel size constraints
     const MIN_WIDTH = 150;
     const MIN_HEIGHT = 100;
+    const MAX_SIDE_PERCENTAGE = 40;
     
-    // Initial column and row sizes
-    const initialLayout = {
+    // Internal layout state (only used here, no need to react to this from other places)
+    const layout = {
         columns: {
             left: 20,
             center: 55,
@@ -67,9 +32,22 @@ export function initializePanelResizing() {
         },
         rows: {
             top: 'auto',
-            bottom: '200px'
+            bottom: 200
         }
     };
+
+    // Apply layout to grid
+    function applyLayout() {
+        mainContent.style.gridTemplateColumns = 
+            `${layout.columns.left}% ${layout.columns.center}% ${layout.columns.right}%`;
+        
+        if (typeof layout.rows.bottom === 'number') {
+            mainContent.style.gridTemplateRows = `1fr ${layout.rows.bottom}px`;
+        }
+    }
+
+    // Initial layout
+    applyLayout();
     
     // Left panel resize
     leftPanelResizer.addEventListener('mousedown', function(e) {
@@ -85,9 +63,10 @@ export function initializePanelResizing() {
             const newPercentage = (newWidth / containerWidth) * 100;
             
             // Limit to reasonable percentage
-            if (newPercentage < 40) {
-                // Update left column width
-                mainContent.style.gridTemplateColumns = `${newPercentage}% ${100 - newPercentage - initialLayout.columns.right}% ${initialLayout.columns.right}%`;
+            if (newPercentage < MAX_SIDE_PERCENTAGE) {
+                layout.columns.left = newPercentage;
+                layout.columns.center = 100 - newPercentage - layout.columns.right;
+                applyLayout();
             }
         }
         
@@ -115,10 +94,11 @@ export function initializePanelResizing() {
             const newWidth = Math.max(MIN_WIDTH, startWidth + deltaX);
             const newPercentage = (newWidth / containerWidth) * 100;
             
-            // Limit to between 17% and 30%
+            // Limit to reasonable percentage
             if (newPercentage >= 17 && newPercentage <= 30) {
-                // Update right column width
-                mainContent.style.gridTemplateColumns = `${initialLayout.columns.left}% ${100 - newPercentage - initialLayout.columns.left}% ${newPercentage}%`;
+                layout.columns.right = newPercentage;
+                layout.columns.center = 100 - newPercentage - layout.columns.left;
+                applyLayout();
             }
         }
         
@@ -144,8 +124,8 @@ export function initializePanelResizing() {
             const deltaY = startY - moveEvent.clientY;
             const newHeight = Math.max(MIN_HEIGHT, startHeight + deltaY);
             
-            // Update bottom row height
-            mainContent.style.gridTemplateRows = `1fr ${newHeight}px`;
+            layout.rows.bottom = newHeight;
+            applyLayout();
         }
         
         function onMouseUp() {
