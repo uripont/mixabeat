@@ -77,14 +77,15 @@ body {
 .main-content {
     flex: 1;
     display: grid;
-    grid-template-columns: 20% 60% 20%;
+    grid-template-columns: minmax(200px, 20%) minmax(300px, 1fr) minmax(200px, 20%);
     grid-template-rows: 1fr 200px;
     grid-template-areas:
         "left center right"
-        "bottom bottom bottom";
+        "bottom bottom right";
     gap: 1px;
     background: rgba(255, 255, 255, 0.1);
     height: calc(100vh - 80px);
+    position: relative;
 }
 
 /* Panel Styles */
@@ -93,6 +94,23 @@ body {
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    position: relative;
+    min-width: 0; /* Ensures content can shrink below min-width */
+}
+
+
+/* Styles for when resizing is active */
+body.resizing {
+    user-select: none;
+    cursor: ew-resize;
+}
+
+body.resizing .panel {
+    transition: none;
+}
+
+body.resizing .panel-content {
+    pointer-events: none;
 }
 
 .panel h3 {

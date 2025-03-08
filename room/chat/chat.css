@@ -98,6 +98,8 @@
     background: #1a1a1a;
     border-top: 1px solid #333;
     position: relative;
+    border-radius: 12px;
+    margin: 10px;
 }
 
 .emoji-scroll {
@@ -108,10 +110,11 @@
     gap: 10px;
     scrollbar-width: thin;
     scrollbar-color: #444 #333;
+    height: 40px; /* Fixed height to make it thinner */
 }
 
 .emoji-scroll::-webkit-scrollbar {
-    height: 6px;
+    height: 4px; /* Thinner scrollbar */
 }
 
 .emoji-scroll::-webkit-scrollbar-track {
