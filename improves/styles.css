@@ -1,8 +1,13 @@
 body {
-    font-family: Arial, sans-serif;
-    background-color: #f4f4f4;
+    font-family: 'Montserrat', sans-serif;
+    background: linear-gradient(135deg, #2a2a2a, #3c3c3c);
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
     margin: 0;
-    padding: 20px;
+    font-weight: 300;
 }
 
 .container {
@@ -19,6 +24,7 @@ h1 {
 }
 
 canvas {
-    border: 1px solid #ccc;
-    margin-bottom: 20px;
+    background: rgb(251, 222, 226);
+    height: 100%;
+    flex-direction: column;
 }
