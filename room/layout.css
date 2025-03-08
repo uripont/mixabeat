@@ -16,8 +16,6 @@ body {
 }
 
 .editor-layout {
-    display: flex;
-    flex-direction: column;
     height: 100vh;
     width: 100vw;
 }
@@ -31,6 +29,9 @@ body {
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    position: sticky;
+    top: 0;
+    z-index: 1;
 }
 
 .control-group {
@@ -75,16 +76,15 @@ body {
 
 /* Main Content Grid */
 .main-content {
-    flex: 1;
     display: grid;
-    grid-template-columns: minmax(200px, 20%) minmax(300px, 1fr) minmax(200px, 20%);
+    grid-template-columns: minmax(200px, 20%) minmax(300px, 1fr) clamp(250px, 25%, 30%);
     grid-template-rows: 1fr 200px;
     grid-template-areas:
         "left center right"
         "bottom bottom right";
     gap: 1px;
     background: rgba(255, 255, 255, 0.1);
-    height: calc(100vh - 80px);
+    height: 100vh;
     position: relative;
 }
 
@@ -136,6 +136,13 @@ body.resizing .panel-content {
 .center-panel {
     grid-area: center;
     background: #1a1a1a;
+    display: flex;
+    flex-direction: column;
+}
+
+.center-panel .panel-content {
+    flex: 1;
+    overflow: auto;
 }
 
 .right-panel {

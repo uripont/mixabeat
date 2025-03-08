@@ -191,8 +191,8 @@ function initializePanelResizing() {
     let initialLayout = {
         columns: {
             left: 20,
-            center: 60,
-            right: 20
+            center: 55,
+            right: 25
         },
         rows: {
             top: 'auto',
@@ -244,8 +244,8 @@ function initializePanelResizing() {
             const newWidth = Math.max(MIN_WIDTH, startWidth + deltaX);
             const newPercentage = (newWidth / containerWidth) * 100;
             
-            // Limit to reasonable percentage
-            if (newPercentage < 40) {
+            // Limit to between 17% and 30%
+            if (newPercentage >= 17 && newPercentage <= 30) {
                 // Update right column width
                 mainContent.style.gridTemplateColumns = `${initialLayout.columns.left}% ${100 - newPercentage - initialLayout.columns.left}% ${newPercentage}%`;
             }
