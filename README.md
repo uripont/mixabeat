@@ -88,9 +88,19 @@ Landing page and login:
     - [x] Username not found (after endpoint response)
     - [x] Loading states during API calls
     - [x] Error message display with auto-dismiss
-    - [x] Auto login after signup
     - [x] Store user info in localStorage
     - [x] Success feedback before redirect
+
+Room Selection Screen:
+- [x] List available rooms with song names
+- [x] Create room functionality
+- [x] Join room by ID functionality
+- [x] Basic error handling and loading states
+- [x] Auto-refresh room list
+- [x] Separate search screen API wrapper
+- [x] Dedicated styles for room selection
+- [ ] Show room creator usernames (requires backend changes)
+- [ ] Add room deletion if you're the creator
 
 Migration Status (as of latest update):
 1. Completed:
@@ -101,13 +111,16 @@ Migration Status (as of latest update):
    - Fixed module loading issues
    - Updated redirects to main page
    - Fixed auth route paths and error handling
+   - Refactored search screen with its own API wrapper
+   - Fixed room creation and joining functionality
+   - Improved error handling for room operations
+   - Added fallback for undefined creator names
 
-2. Pending to reimplement:
-    -  Auto login after signup
-    - Redirect to room selection after login
-    - Auto redirect to room selection if already logged in (token in localStorage is still valid)
-   - Room creation and joining
-   - Real-time chat interface
+2. Next Steps:
+   - Auto redirect to room selection if already logged in (token in localStorage is still valid)
+   - Implement real-time chat interface in room
+   - Add room creator username to room list from backend
+   - Allow room deletion for creators
 
 For room management:
 - [ ] Screen to show all available rooms (after endpoint response), as well as small moving song creation form to small widget on this screen
