@@ -1,57 +1,175 @@
 # MixaBeat Frontend
 
+Test on: http://20.26.232.219
+
 ## Target directory structure after refactors
 
 ```
-src/
-├── screens/
-│   ├── landing/          # TODO: Landing page with links to auth
-│   │   ├── landing.html
-│   │   └── landing.css
-│   │
-│   ├── auth/            # Login and signup forms
-│   │   ├── auth.html
-│   │   └── auth.css
-│   │
-│   ├── search/          # Room selection/creation screen
-│   │   ├── search.html
-│   │   └── search.css
-│   │
-│   └── room/            # Main music collaboration room
-│       ├── layout.html  # Main container for all room panels
-│       ├── layout.css   # Panel layout styles
-│       │
-│       ├── chat/        # Right panel - Chat interface
-│       │   ├── chat.html
-│       │   └── chat.css
-│       │
-│       ├── canvas/      # Center panel - Main workspace
-│       │   ├── canvas.html
-│       │   └── canvas.css
-│       │
-│       ├── sound-picker/    # Left panel - Sound selection
-│       │   ├── sound-picker.html
-│       │   └── sound-picker.css
-│       │
-│       └── sound-editor/    # Bottom panel - Sound effects
-│           ├── sound-editor.html
-│           └── sound-editor.css
+landing/          # TODO: Landing page with links to auth
+└── ...
+
+auth/            # Login and signup forms
+└── ...
+
+search/          # Room selection/creation screen
+└── ...
+
+room/            # Main music collaboration room
+├── layout.html        # Main container for all room panels
+├── room-state.js      # Global state management
+├── websocket.js       # WebSocket connection & messaging
+├── panel-resizer.js   # Panel resize logic
+|
+├── chat/...          # Right panel - Chat interface
+├── canvas/...        # Center panel - Main workspace
+├── sound-picker/...  # Left panel - Sound selection
+└── sound-editor/...  # Bottom panel - Sound effects
 ```
 
-### Screen Descriptions
+## Auth and Session Management
+Every page except the landing and auth pages implements session validation:
 
-- **Landing**: TODO - Will be the entry point with links to login/signup
-- **Auth**: Login and signup forms for user authentication
-- **Search**: Room selection and creation interface
-- **Room**: Main application view split into panels:
-  - Chat (Right): Real-time messaging between room participants
-  - Canvas (Center): Main workspace for music collaboration
-  - Sound Picker (Left): Interface for selecting sounds/instruments
-  - Sound Editor (Bottom): Controls for sound effects and editing
+```javascript
+// utils/auth.js
+export async function requireAuth() {
+    const token = localStorage.getItem('authToken');
+    if (!token) { // Redirect to login if logged out
+        window.location.href = '/auth.html';
+        return false;
+    }
+    // Validate token with backend
+    try {
+        const response = await fetch('/api/auth/validate', {
+            headers: { 'Authorization': token }
+        });
+        if (!response.ok) throw new Error('Invalid token');
+        return true;
+    } catch (error) { // Token invalid or expired
+        localStorage.removeItem('authToken');
+        window.location.href = '/auth.html';
+        return false;
+    }
+}
+```
 
-Each screen has its own HTML and CSS files to maintain a clear separation of concerns. The room screen uses a layout file to compose its different panels into a cohesive interface while keeping each panel's code modular and maintainable.
+## State Management
 
-Test on: http://20.26.232.219
+The room state system we have implemented is a wrapper over the browser's native DOM Event system, for simple yet flexible state management and UI updates for all information that multiple parts of the application need to be aware of.
+
+### Room State Implementation
+
+```javascript
+// room/room-state.js
+window.roomState = {
+    // State is split into specific domains
+    users: [],
+    tracks: [],
+
+    // and more (mouse positions, track status,...)
+    
+    // Update methods for each domain
+    updateUsers(changes) {
+        this.users = {...this.users, ...changes};
+        // Notify only components watching users
+        window.dispatchEvent(new CustomEvent('state:users', {
+            detail: this.users
+        }));
+    },
+
+    // Watch methods return cleanup functions
+    watchUsers(callback) {
+        const handler = e => callback(e.detail);
+        window.addEventListener('state:users', handler);
+        return () => window.removeEventListener('state:users', handler);
+    }
+};
+```
+
+Then the different logic parts of the application only subscribe to state they need, to *react* to changes.
+
+Example: when adding a track clicking a button from sound-picker, it is updating the song's object, and we want to be making the canvas be aware of this change to display the new audio in the track correctly. This is why the song object (persisted as JSON) is stored in the room state, and the canvas is watching ("subscribed") for changes in the song object. We can have a handler that will be called every time the song object changes, and will re-render the canvas with the appropiate modifications.
+
+Current overview:
+
+```mermaid
+graph TD
+    subgraph "Room State Management"
+        subgraph "Central State Store (room-state.js)"
+            users["Users<br/>- Connected users<br/>- User status"]
+            tracks["Tracks<br/>- Audio tracks<br/>- Track metadata"]
+            mouse["Mouse<br/>- Cursor positions<br/>- Selection states"]
+            trackStatus["Track Status<br/>- Playback state<br/>- Effects"]
+        end
+
+        subgraph "Update Sources"
+            ws["WebSocket Server<br/>(Remote updates)"]
+            sp["Sound Picker Panel<br/>(Track creation)"]
+            se["Sound Editor Panel<br/>(Track modification)"]
+            chat["Chat Panel<br/>(User Messages)"]
+        end
+
+        subgraph "State Subscribers"
+            canvas["Canvas Panel<br/>Listens to: tracks, mouse"]
+            chatUI["Chat Interface<br/>Listens to: users, messages"]
+            trackList["Track List View<br/>Listens to: tracks"]
+            userList["User List<br/>Listens to: users"]
+        end
+    end
+
+    %% WebSocket updates flow
+    ws -->|"Event: user_joined"| users
+    ws -->|"Event: track_updated"| tracks
+    ws -->|"Event: cursor_moved"| mouse
+
+    %% Direct state updates
+    sp -->|"updateTracks() call"| tracks
+    se -->|"updateTracks() call"| tracks
+    chat -->|"updateUsers() call"| users
+
+    %% State change notifications (DOM Events)
+    users -->|"DOM Event: state:users"| userList
+    users -->|"DOM Event: state:users"| chatUI
+    tracks -->|"DOM Event: state:tracks"| canvas
+    tracks -->|"DOM Event: state:tracks"| trackList
+    mouse -->|"DOM Event: state:mouse"| canvas
+
+    %% Styling
+    classDef stateNode fill:#f9f,stroke:#333,stroke-width:2px
+    classDef updateNode fill:#bbf,stroke:#333,stroke-width:2px
+    classDef listenerNode fill:#2a4,stroke:#333,stroke-width:2px
+    
+    class users,tracks,mouse,trackStatus stateNode
+    class ws,sp,se,chat updateNode
+    class canvas,chatUI,trackList,userList listenerNode
+```
+
+### WebSocket Integration
+
+WebSocket messages map directly to state updates:
+
+```javascript
+ws.addEventListener('message', (event) => {
+    const data = JSON.parse(event.data);
+    
+    switch (data.type) {
+        case 'user_joined':
+            // Only notifies user list watchers
+            window.roomState.updateUsers([...users, data.user]);
+            break;
+            
+        case 'track_updated':
+            // Only notifies track watchers
+            window.roomState.updateTracks({
+                [data.trackId]: data.changes
+            });
+            break;
+    }
+});
+```
+
+We can leave the "how this state change affects the overall interface" to the elements/scripts that are watching the state, and only care about the "what has changed" in the WebSocket handler. This way we have a centralized source of truth over which to read/write data, knowing that everything else is implemented to update accordingly.
+
+This is part of the motivation behind modern frontend frameworks like React, where these pseudo-groups of DOM elements with logic are "components", and they are supposed to "react" to changes in the state of the application.
 
 # Configuring VM for Static File Hosting
 
@@ -76,56 +194,3 @@ sudo chmod -R 775 /var/www/html/
     - Verify that the files are accessible via a web browser (e.g. `http://<VM_IP>/` to access `index.html`)
 
 Note: Apache serves files from `/var/www/html/` by default.
-
-## Current frontend TODOs
-
-Landing page and login:
-- [ ] Make index page be a landing page showcasing the interface / features, with a button to redirect to sign up or log in (instead of a full screen login form)
-- [ ] UI-based feedback on form filling errors:
-    - [ ] Username already exists (after endpoint response)
-    - [ ] Invalid email (client side verified OR after endpoint response)
-    - [ ] Password too short (client side verified OR after endpoint response)
-    - [ ] Wrong password (after endpoint response)
-    - [ ] Username not found (after endpoint response)
-
-For room management:
-- [ ] Screen to show all available rooms (after endpoint response), as well as small moving song creation form to small widget on this screen
-- [ ] Join room by room name option (small widget)
-- [ ] UI Errors on both room creation and room joining
-- [ ] Section on this page that allows changing username / password / logout / delete account, using backend endnpoints
-
-
-For song room interface:
-- [ ] Left side, list all available sounds in your track based on its instrument/role
-- [ ] Left side, list as well uploaded sounds during this session
-- [ ] Click on sound to instantiate it on the timeline ON the current time position
-- [ ] Drag to move selected sound on the track
-- [ ] Click on sound inside track to open a small widget with options to delete / edit parameters: change volume / pitch / ...?
-- [ ] Click space to play / pause the song
-- [ ] Click keys on keyboard to instantiate sounds on the track
-    - [ ] Lower part "pad": associate different available sounds to different keys
-    - [ ] "Pad": click on a box to edit the sound associated to that key
-- [ ] Click square buttom to move audio time to the beginning
-- [ ] Use mouse scroll to horizontally scroll the timeline (your track is always centered / at the top, other tracks are shown smaller because you can't edit them)
-- [ ] Button to confirm your track is finished (= send message to others as finished editing track)
-- [ ] Button to leave the room, back to room selection screen
-- [ ] Button to download the song inside room (encodes client-side the current song to a file, and gets downloaded automatically). 
-
-For song update management (yours):
-- [ ] Send websocket message to notify when you have connected to a track
-- [ ] Send websocket message to notify when you have made changes to a track you have not confirmed yet
-- [ ] Send websocket message to notify when you have finished editing that change
-- [ ] Send websocket message to notify when you have stopped editing the track (disconnected)
-
-- [ ] Send websocket messages continuously with the mouse position on the canvas (when it changes)
-
-
-For song update management (others):
-- [ ] When receiving that someone has connected to its track, show the track background highlighted (to know that track is being edited)
-- [ ] When someone is editing the track, show the track background highlighted differently (to know that track is being edited as of now)
-- [ ] When someone has finished editing the track, show the track background highlighted differently (to know that track has been edited, and that the edit will aply as soon as possible when you are not reproducing the song's audio).
-    - [ ] Apply song changes from the queue of pending updates to apply, re-rendering canvas for other's tracks.
-- [ ] When someone has disconnected from the track, show the track background as normal (to know that track is not being edited anymore, owner has disconnected).
-
-- [ ] Use received positions to show the mouse position of other users on the canvas, color matching their color on the connected users widget on the chat
-    - [ ] Smoothly interpolate mouse position from the last received position to the current one, to make it look like a smooth movement over time.
