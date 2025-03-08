@@ -10,12 +10,12 @@ let isPlaying = false;
 let isPaused = false; 
 let scrollOffset = 0;
 const trackColors = []; 
-const canvasWidth = 600; // Ancho visible del canvas
+const canvasWidth = 1500; // Ancho visible del canvas
 const timelineDuration = 30; // Duración total del timeline (en segundos)
-const totalWidth = 6000; // Ancho total del timeline (es mayor que el ancho del canvas)
+const totalWidth = 9000; // Ancho total del timeline (es mayor que el ancho del canvas)
 
 canvas.width = canvasWidth; // Establecer el ancho visible del canvas
-canvas.height = 300;
+canvas.height = 900;
 
 document.getElementById('addTrackButton').addEventListener('click', function() {
     const trackInput = document.getElementById('trackInput');
@@ -300,7 +300,7 @@ function drawTimeline() {
     const padding = 10;
 
     // Draw vertical lines along the canvas
-    const numDivisions = 60; // Number of vertical lines (e.g., 10 divisions)
+    const numDivisions = 90; // Number of vertical lines (e.g., 10 divisions)
     const divisionWidth = totalWidth / numDivisions;
 
     ctx.strokeStyle = '#ccc'; // Light gray color for the vertical lines
@@ -330,7 +330,8 @@ function drawTimeline() {
         ctx.fillRect(x, y, trackLength, trackHeight);
 
         // Draw the track name text
-        ctx.fillStyle = '#333';
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = '20px Montserrat , sans-serif';
         ctx.fillText(track, x + 5, y + (trackHeight / 1.5));
     });
 
