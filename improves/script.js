@@ -32,7 +32,7 @@ document.getElementById('addTrackButton').addEventListener('click', function() {
         trackColors.push(getRandomColor());
         drawTimeline();
     } else if (tracks.length >= 20) {
-        document.getElementById('message').textContent = 'No puedes agregar más de 4 pistas.';
+        document.getElementById('message').textContent = 'No puedes agregar más de 20 pistas.';
     } else {
         alert('Por favor, selecciona un archivo de audio.');
     }
@@ -280,7 +280,7 @@ function drawTimeline() {
 
         // Draw the track name text
         ctx.fillStyle = '#ccc';
-        ctx.font = '20px Montserrat , sans-serif';
+        ctx.font = '15px Montserrat , sans-serif';
         ctx.fillText(track, x + 5, y + (trackHeight / 1.5));
     });
 

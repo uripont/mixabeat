@@ -10,16 +10,19 @@
 </head>
 <body>
     <div class="container">
+        <button id="selectSound"><i class="fas fa-music"></i></button>
         <input type="file" id="trackInput" accept="audio/*">
         <label for="trackInput"><i class="fas fa-upload"></i></label>
         <button id="addTrackButton">Add</button>
         <button id="playAllButton"><i class="fas fa-play"></i></button>
         <button id="pauseButton"><i class="fas fa-pause"></i></button>
         <button id="restartButton"><i class="fas fa-redo"></i></button>
+        <button id="exportButton"><i class="fas fa-download"></i></button>
         <canvas id="timelineCanvas"></canvas>
         
         <div id="message" style="color: red;"></div>
     </div>
     <script src="script.js"></script>
+    
 </body>
 </html>
