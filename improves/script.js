@@ -133,6 +133,22 @@ function resetTimeline() {
     drawTimeline(); // Redibujar el canvas al principio
 }
 
+document.addEventListener('keydown', function(event) {
+    if (event.code === 'Space') {
+        // Prevent the default spacebar behavior (scrolling the page)
+        event.preventDefault();
+
+        if (isPlaying) {
+            pauseTracks(); // Pause if currently playing
+        } else if (isPaused || !isPlaying) {
+            // If it's paused or not playing, play the tracks
+            isPlaying = true;
+            isPaused = false;
+            playTracks();
+        }
+    }
+});
+
 // Evento de desplazamiento con la rueda del mouse
 canvas.addEventListener('wheel', (event) => {
     event.preventDefault();
