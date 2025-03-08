@@ -1,11 +1,12 @@
 import { getRoomMessages } from './chat-api.js';
+import { sendMessage } from '../websocket.js';
 
 // Get room ID from URL
 const roomId = new URLSearchParams(window.location.search).get('roomId');
 
 // Initialize UI elements after DOM is loaded
 let chatMessages, chatInput, connectedUsers;
-let ws, userId;
+let cleanup;
 
 function initializeUIElements() {
     chatMessages = document.getElementById('chatMessages');
@@ -48,28 +49,6 @@ function appendSystemMessage(message) {
     appendMessage(message, 'System', false, true);
 }
 
-// Handle state updates
-function handleStateUpdate(state) {
-    console.log('Chat handleStateUpdate:', state);
-    
-    // Update WebSocket reference if changed
-    if (state.ws && state.ws !== ws) {
-        ws = state.ws;
-        setupWebSocketListeners();
-    }
-    
-    // Update userId if changed
-    if (state.userId && state.userId !== userId) {
-        userId = state.userId;
-    }
-
-    // Update users list
-    if (state.connectedUsers) {
-        console.log('Chat updateUsersList:', state.connectedUsers);
-        updateUsersList(state.connectedUsers);
-    }
-}
-
 function updateUsersList(users) {
     if (!users || !Array.isArray(users)) return;
     connectedUsers.innerHTML = users
@@ -78,19 +57,16 @@ function updateUsersList(users) {
 }
 
 // Message sending
-function sendMessage() {
+function onSendMessage() {
     const message = chatInput.value.trim();
-    if (!message || !ws) {
+    if (!message || !window.roomState.ws) {
         console.error('sendMessage: WebSocket not initialized or message empty');
         return;
     }
 
     console.log('sendMessage: Sending message via WebSocket:', message);
     try {
-        ws.send(JSON.stringify({
-            type: 'message',
-            message: message
-        }));
+        sendMessage(window.roomState.ws, 'message', { message });
         console.log('sendMessage: Message sent successfully');
         
         // Also display the message for the sender immediately
@@ -104,40 +80,6 @@ function sendMessage() {
     chatInput.value = '';
 }
 
-// WebSocket message handling
-function setupWebSocketListeners() {
-    ws.addEventListener('message', (event) => {
-        try {
-            const data = JSON.parse(event.data);
-            
-            if (data.type === 'message') {
-                // Handle chat messages
-                console.log('ws.onmessage - Received chat message:', data);
-                appendMessage(data.message, data.username, data.userId === userId);
-            } else {
-                // Handle system messages
-                console.log('ws.onmessage - Received system message:', data.type);
-                
-                switch (data.type) {
-                    case 'user_joined':
-                        appendSystemMessage(`${data.username} joined the room`);
-                        break;
-                    case 'user_left':
-                        appendSystemMessage(`${data.username} left the room`);
-                        break;
-                    case 'room_joined':
-                        appendSystemMessage(`You joined the room`);
-                        break;
-                    default:
-                        console.log('Unhandled system message type:', data.type);
-                }
-            }
-        } catch (error) {
-            console.error('ws.onmessage - Error parsing WebSocket message:', error);
-        }
-    });
-}
-
 // Set up all event listeners
 function setupEventListeners() {
     console.log('setupEventListeners: Setting up event listeners...');
@@ -146,7 +88,7 @@ function setupEventListeners() {
     chatInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            sendMessage();
+            onSendMessage();
         }
     });
 
@@ -162,6 +104,30 @@ function setupEventListeners() {
             chatInput.selectionStart = chatInput.selectionEnd = start + emojiChar.length;
         });
     });
+
+    // WebSocket message handlers
+    const handleWsMessage = (e) => {
+        const data = e.detail;
+        switch (data.type) {
+            case 'message':
+                appendMessage(
+                    data.message, 
+                    data.username, 
+                    data.userId === window.roomState.userId
+                );
+                break;
+        }
+    };
+
+    window.addEventListener('ws:message', handleWsMessage);
+    window.addEventListener('ws:disconnected', () => {
+        appendSystemMessage('Disconnected from chat');
+    });
+
+    return () => {
+        window.removeEventListener('ws:message', handleWsMessage);
+        window.removeEventListener('ws:disconnected', handleWsMessage);
+    };
 }
 
 // Initialize chat panel
@@ -181,15 +147,20 @@ async function initialize() {
         }
         console.log('initialize: UI elements initialized');
 
-        // Set up event listeners
-        setupEventListeners();
-        console.log('initialize: Event listeners setup');
+        // Watch connected users list
+        const cleanupUsers = window.roomState.watchUsers(users => {
+            console.log('Users updated:', users);
+            updateUsersList(users);
+        });
         
-        // Set initial users list if available
-        if (window.roomState.connectedUsers) {
-            console.log('initialize: Initial users list from state:', window.roomState.connectedUsers);
-            updateUsersList(window.roomState.connectedUsers);
-        }
+        // Set up event listeners
+        const cleanupEvents = setupEventListeners();
+        
+        // Save cleanup function
+        cleanup = () => {
+            cleanupUsers();
+            cleanupEvents();
+        };
 
         // Load message history
         try {
@@ -197,7 +168,11 @@ async function initialize() {
             if (messages) {
                 console.log('initialize: Loaded message history:', messages);
                 messages.forEach(msg => {
-                    appendMessage(msg.message_text, msg.username, parseInt(msg.userId) === parseInt(window.roomState.userId));
+                    appendMessage(
+                        msg.message_text, 
+                        msg.username, 
+                        parseInt(msg.userId) === parseInt(window.roomState.userId)
+                    );
                 });
             } else {
                 console.warn('initialize: No message history loaded (empty response).');
@@ -208,14 +183,15 @@ async function initialize() {
             console.error('initialize: Error loading message history:', error);
         }
 
-        // Subscribe to state changes
-        window.roomState.subscribe(handleStateUpdate);
-        console.log('initialize: Subscribed to roomState updates');
-
     } catch (error) {
         console.error('initialize: Error initializing chat:', error);
     }
 }
+
+// Cleanup on panel removal
+window.addEventListener('beforeunload', () => {
+    if (cleanup) cleanup();
+});
 
 // Initialize when script loads
 initialize();
