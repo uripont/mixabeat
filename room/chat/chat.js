@@ -4,18 +4,17 @@ import { getRoomMessages } from './chat-api.js';
 const roomId = new URLSearchParams(window.location.search).get('roomId');
 
 // Initialize UI elements after DOM is loaded
-let chatMessages, chatInput, sendButton, emojiButton, emojiPanel, connectedUsers;
+let chatMessages, chatInput, connectedUsers;
 let ws, userId;
 
 function initializeUIElements() {
     chatMessages = document.getElementById('chatMessages');
     chatInput = document.getElementById('chatInput');
-    sendButton = document.getElementById('sendButton');
-    emojiButton = document.getElementById('emojiButton');
-    emojiPanel = document.getElementById('emojiPanel');
     connectedUsers = document.getElementById('connectedUsers');
-
-    if (!chatMessages || !chatInput || !sendButton || !emojiButton || !emojiPanel || !connectedUsers) {
+    
+    const emojiElements = document.querySelectorAll('.emoji');
+    
+    if (!chatMessages || !chatInput || !connectedUsers || emojiElements.length === 0) {
         console.error('Failed to find chat UI elements');
         return false;
     }
@@ -143,50 +142,25 @@ function setupWebSocketListeners() {
 function setupEventListeners() {
     console.log('setupEventListeners: Setting up event listeners...');
     
-    // Message sending
-    sendButton.addEventListener('click', () => {
-        console.log('setupEventListeners - Send button clicked');
-        sendMessage();
+    // Enter to send
+    chatInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
     });
 
-// Enter to send
-chatInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage();
-    }
-});
-
-    // Emoji picker
-    let isEmojiPanelVisible = false;
-
-    emojiButton.addEventListener('click', (e) => {
-        e.stopPropagation();
-        isEmojiPanelVisible = !isEmojiPanelVisible;
-        emojiPanel.style.display = isEmojiPanelVisible ? 'grid' : 'none';
-    });
-
-    emojiPanel.addEventListener('click', (e) => {
-        if (e.target.classList.contains('emoji')) {
-            const emoji = e.target.dataset.emoji;
+    // Emoji click handlers
+    document.querySelectorAll('.emoji').forEach(emoji => {
+        emoji.addEventListener('click', (e) => {
+            const emojiChar = e.target.dataset.emoji;
             const start = chatInput.selectionStart;
             const end = chatInput.selectionEnd;
             const value = chatInput.value;
-            chatInput.value = value.substring(0, start) + emoji + value.substring(end);
+            chatInput.value = value.substring(0, start) + emojiChar + value.substring(end);
             chatInput.focus();
-            chatInput.selectionStart = chatInput.selectionEnd = start + emoji.length;
-            isEmojiPanelVisible = false;
-            emojiPanel.style.display = 'none';
-        }
-        e.stopPropagation();
-    });
-
-    // Close emoji panel when clicking outside
-    document.addEventListener('click', (e) => {
-        if (isEmojiPanelVisible && !emojiButton.contains(e.target) && !emojiPanel.contains(e.target)) {
-            isEmojiPanelVisible = false;
-            emojiPanel.style.display = 'none';
-        }
+            chatInput.selectionStart = chatInput.selectionEnd = start + emojiChar.length;
+        });
     });
 }
 

@@ -15,7 +15,7 @@
 .users-list h4 {
     margin: 0 0 10px 0;
     color: #888;
-}
+}s
 
 .users-list ul {
     list-style: none;
@@ -100,20 +100,37 @@
     position: relative;
 }
 
-.input-controls {
+.emoji-scroll {
     display: flex;
-    justify-content: flex-end;
-    margin-bottom: 5px;
+    overflow-x: auto;
+    padding: 8px 0;
+    margin-bottom: 8px;
+    gap: 10px;
+    scrollbar-width: thin;
+    scrollbar-color: #444 #333;
+}
+
+.emoji-scroll::-webkit-scrollbar {
+    height: 6px;
+}
+
+.emoji-scroll::-webkit-scrollbar-track {
+    background: #333;
+    border-radius: 3px;
+}
+
+.emoji-scroll::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 3px;
 }
 
 .input-row {
     display: flex;
-    gap: 8px;
 }
 
 #chatInput {
     flex: 1;
-    padding: 8px 12px;
+    padding: 12px 15px;
     border: none;
     border-radius: 20px;
     background: #333;
@@ -124,42 +141,6 @@
 #chatInput:focus {
     outline: none;
     background: #404040;
-}
-
-#emojiButton, #sendButton {
-    padding: 8px 16px;
-    border: none;
-    border-radius: 20px;
-    background: #333;
-    color: #fff;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-
-#sendButton {
-    background: #2962ff;
-}
-
-#emojiButton:hover {
-    background: #404040;
-}
-
-#sendButton:hover {
-    background: #1e88e5;
-}
-
-.emoji-panel {
-    position: absolute;
-    top: 40px;
-    right: 15px;
-    background: #333;
-    padding: 10px;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
-    z-index: 10;
 }
 
 .emoji {
