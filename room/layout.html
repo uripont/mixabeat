@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MixaBeat - Audio Editor</title>
+    <link rel="stylesheet" href="layout.css">
+    <link rel="stylesheet" href="chat/chat.css">
+    <link rel="stylesheet" href="sound-editor/sound-editor.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="editor-layout">
+        <!-- Main Content Grid -->
+        <div class="main-content">
+            <!-- Left Panel - Sound Picker -->
+            <div class="left-panel panel">
+                <h3>Sound Picker</h3>
+                <div class="panel-content">
+                    <!-- Will be populated by sound-picker component -->
+                </div>
+            </div>
+
+            <!-- Center Panel - Timeline Canvas -->
+            <div class="center-panel panel">
+                <!-- Top Controls -->
+                <div class="top-panel">
+                    <div class="control-group left">
+                        <button class="control-btn play-btn" title="Play/Pause">
+                            <i class="fas fa-play"></i>
+                        </button>
+                        <button class="control-btn stop-btn" title="Stop">
+                            <i class="fas fa-stop"></i>
+                        </button>
+                        <button class="control-btn restart-btn" title="Restart">
+                            <i class="fas fa-redo"></i>
+                        </button>
+                    </div>
+
+                    <div class="control-group center">
+                        <div class="timer">00:00</div>
+                    </div>
+
+                    <div class="control-group right">
+                        <button class="action-btn" title="Back to Rooms">
+                            <i class="fas fa-arrow-left"></i>
+                        </button>
+                        <button class="action-btn" title="Download Song">
+                            <i class="fas fa-download"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="panel-content">
+                    <!-- Will be populated by canvas component -->
+                </div>
+            </div>
+
+            <!-- Right Panel - Chat -->
+            <div class="right-panel panel">
+                <div class="panel-content">
+                    <!-- Will be populated by chat component -->
+                </div>
+            </div>
+
+            <!-- Bottom Panel - Sound Editor -->
+            <div class="bottom-panel panel">
+                <h3>Sound Editor</h3>
+                <div class="panel-content">
+                    <!-- Sound Editor Component -->
+                    <div id="soundEditorContainer"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script imports will go here -->
+    <script type="module" src="layout.js"></script>
+    <script type="module">
+        // Load sound editor component
+        fetch('sound-editor/sound-editor.html')
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('soundEditorContainer').innerHTML = html;
+            })
+            .catch(error => console.error('Error loading sound editor:', error));
+    </script>
+</body>
+</html>
