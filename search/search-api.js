@@ -1,8 +1,5 @@
 import { config } from '../config.js';
 
-/**
- * Fetch list of available rooms
- */
 export async function listRooms() {
     const token = localStorage.getItem('authToken');
     console.log('listRooms - authToken:', token);
@@ -23,9 +20,6 @@ export async function listRooms() {
     return await response.json();
 }
 
-/**
- * Create a new room
- */
 export async function createRoom(songName) {
     const token = localStorage.getItem('authToken');
     console.log('createRoom - authToken:', token);
@@ -49,9 +43,6 @@ export async function createRoom(songName) {
     return await response.json();
 }
 
-/**
- * Join an existing room
- */
 export async function joinRoom(roomId) {
     const token = localStorage.getItem('authToken');
     console.log('joinRoom - authToken:', token);
