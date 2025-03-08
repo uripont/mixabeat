@@ -146,6 +146,13 @@ document.addEventListener('keydown', function(event) {
             isPaused = false;
             playTracks();
         }
+    } else if (event.code === 'Enter') {
+        // Prevent default behavior (form submission or other actions)
+        event.preventDefault();
+
+        // Call the resetTimeline and playTracks functions when Enter is pressed
+        resetTimeline();
+        playTracks(); // Optionally restart the playback after resetting
     }
 });
 
@@ -310,3 +317,5 @@ function drawTimeline() {
     ctx.lineTo(indicatorX, canvas.height);
     ctx.stroke();
 }
+
+
