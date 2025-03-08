@@ -89,6 +89,60 @@ Then the different logic parts of the application only subscribe to state they n
 
 Example: when adding a track clicking a button from sound-picker, it is updating the song's object, and we want to be making the canvas be aware of this change to display the new audio in the track correctly. This is why the song object (persisted as JSON) is stored in the room state, and the canvas is watching ("subscribed") for changes in the song object. We can have a handler that will be called every time the song object changes, and will re-render the canvas with the appropiate modifications.
 
+Current overview:
+
+```mermaid
+graph TD
+    subgraph "Room State Management"
+        subgraph "Central State Store (room-state.js)"
+            users["Users<br/>- Connected users<br/>- User status"]
+            tracks["Tracks<br/>- Audio tracks<br/>- Track metadata"]
+            mouse["Mouse<br/>- Cursor positions<br/>- Selection states"]
+            trackStatus["Track Status<br/>- Playback state<br/>- Effects"]
+        end
+
+        subgraph "Update Sources"
+            ws["WebSocket Server<br/>(Remote updates)"]
+            sp["Sound Picker Panel<br/>(Track creation)"]
+            se["Sound Editor Panel<br/>(Track modification)"]
+            chat["Chat Panel<br/>(User Messages)"]
+        end
+
+        subgraph "State Subscribers"
+            canvas["Canvas Panel<br/>Listens to: tracks, mouse"]
+            chatUI["Chat Interface<br/>Listens to: users, messages"]
+            trackList["Track List View<br/>Listens to: tracks"]
+            userList["User List<br/>Listens to: users"]
+        end
+    end
+
+    %% WebSocket updates flow
+    ws -->|"Event: user_joined"| users
+    ws -->|"Event: track_updated"| tracks
+    ws -->|"Event: cursor_moved"| mouse
+
+    %% Direct state updates
+    sp -->|"updateTracks() call"| tracks
+    se -->|"updateTracks() call"| tracks
+    chat -->|"updateUsers() call"| users
+
+    %% State change notifications (DOM Events)
+    users -->|"DOM Event: state:users"| userList
+    users -->|"DOM Event: state:users"| chatUI
+    tracks -->|"DOM Event: state:tracks"| canvas
+    tracks -->|"DOM Event: state:tracks"| trackList
+    mouse -->|"DOM Event: state:mouse"| canvas
+
+    %% Styling
+    classDef stateNode fill:#f9f,stroke:#333,stroke-width:2px
+    classDef updateNode fill:#bbf,stroke:#333,stroke-width:2px
+    classDef listenerNode fill:#2a4,stroke:#333,stroke-width:2px
+    
+    class users,tracks,mouse,trackStatus stateNode
+    class ws,sp,se,chat updateNode
+    class canvas,chatUI,trackList,userList listenerNode
+```
+
 ### WebSocket Integration
 
 WebSocket messages map directly to state updates:
