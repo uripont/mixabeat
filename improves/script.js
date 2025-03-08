@@ -232,57 +232,6 @@ canvas.addEventListener('contextmenu', (event) => {
 });
 
 
-/* 
-function drawTimeline() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    const trackHeight = 30;
-    const padding = 10;
-
-    // Draw vertical lines along the canvas
-    const numDivisions = 60; // Number of vertical lines (e.g., 10 divisions)
-    const divisionWidth = totalWidth / numDivisions;
-
-    ctx.strokeStyle = '#ccc'; // Light gray color for the vertical lines
-    for (let i = 1; i < numDivisions; i++) {
-        const xPos = i * divisionWidth - scrollOffset; // Calculate x position based on the number of divisions
-        ctx.beginPath();
-        ctx.moveTo(xPos, 0);
-        ctx.lineTo(xPos, canvas.height);
-        ctx.stroke();
-    }
-
-    // Draw the tracks with offset
-    tracks.forEach((track, index) => {
-        const y = index * (trackHeight + padding) + padding + 40;
-        const x = trackPositions[index] - scrollOffset;
-
-        // Get the track duration and calculate the length of the track
-        const audio = audioElements[index];
-        const trackDuration = audio.duration || 0; // Default to 0 if the duration is not available
-        const trackLength = (trackDuration / timelineDuration) * totalWidth; // Proportional length of the track
-
-        // Draw the track rectangle
-        ctx.fillStyle = '#e7f3fe';
-        ctx.fillRect(x, y, trackLength, trackHeight);
-        ctx.fillStyle = '#333';
-        ctx.fillText(track, x + 5, y + (trackHeight / 1.5));
-    });
-
-    // Draw the time indicator with scroll offset
-    const indicatorX = (currentTime / timelineDuration) * totalWidth - scrollOffset;
-
-    // Ensure the red line stays within canvas bounds
-    ctx.strokeStyle = 'red';
-    ctx.beginPath();
-    ctx.moveTo(indicatorX, 0);
-    ctx.lineTo(indicatorX, canvas.height);
-    ctx.stroke();
-}
- 
-
- */
-
 // Function to generate a random color in hexadecimal format
 function getRandomColor() {
     const letters = '0123456789ABCDEF';
@@ -330,7 +279,7 @@ function drawTimeline() {
         ctx.fillRect(x, y, trackLength, trackHeight);
 
         // Draw the track name text
-        ctx.fillStyle = '#FFFFFF';
+        ctx.fillStyle = '#ccc';
         ctx.font = '20px Montserrat , sans-serif';
         ctx.fillText(track, x + 5, y + (trackHeight / 1.5));
     });

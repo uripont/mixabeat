@@ -5,14 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Timeline de Canciones en Canvas</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
 </head>
 <body>
     <div class="container">
         <input type="file" id="trackInput" accept="audio/*">
-        <button id="addTrackButton">Agregar Pista</button>
-        <button id="playAllButton">Reproducir Todo</button>
-        <button id="pauseButton">Pause</button>
-        <button id="restartButton">Restart</button>
+        <label for="trackInput"><i class="fas fa-upload"></i></label>
+        <button id="addTrackButton">Add</button>
+        <button id="playAllButton"><i class="fas fa-play"></i></button>
+        <button id="pauseButton"><i class="fas fa-pause"></i></button>
+        <button id="restartButton"><i class="fas fa-redo"></i></button>
         <canvas id="timelineCanvas"></canvas>
         
         <div id="message" style="color: red;"></div>
