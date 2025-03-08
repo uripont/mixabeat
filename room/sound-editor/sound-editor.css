@@ -1,0 +1,52 @@
+.sound-editor {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    gap: 20px;
+    padding: 15px;
+}
+
+.effects-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.button-row {
+    display: flex;
+    gap: 10px;
+}
+
+.effect-btn {
+    width: 70px;
+    height: 70px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: opacity 0.3s ease;
+}
+
+.effect-btn:hover {
+    opacity: 0.8;
+}
+
+/* Effect button colors from original CSS */
+.effect-1 { background-color: #f42f2f; }
+.effect-2 { background-color: #00d0c2; }
+.effect-3 { background-color: #f17000; }
+.effect-4 { background-color: #00c066; }
+.effect-5 { background-color: #eebf00; }
+.effect-6 { background-color: #00a7cd; }
+
+.editor-content {
+    flex-grow: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 20px;
+    font-size: 24px;
+    font-weight: bold;
+    color: rgba(255, 255, 255, 0.3);
+}

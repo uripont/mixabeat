@@ -1,0 +1,148 @@
+/* Global styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Montserrat', sans-serif;
+    background: linear-gradient(135deg, #2a2a2a, #3c3c3c);
+    color: #fff;
+    min-height: 100vh;
+    margin: 0;
+    font-weight: 300;
+    overflow: hidden;
+}
+
+.editor-layout {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100vw;
+}
+
+/* Top Panel Styles */
+.top-panel {
+    height: 80px;
+    background: linear-gradient(135deg, #1a1a1a, #333);
+    padding: 0 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.control-group {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.control-group.center {
+    flex-grow: 1;
+    justify-content: center;
+}
+
+.timer {
+    font-size: 2.5rem;
+    color: #fff;
+    font-weight: 300;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.control-btn, .action-btn {
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.control-btn:hover, .action-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.control-btn i, .action-btn i {
+    font-size: 1.2rem;
+}
+
+/* Main Content Grid */
+.main-content {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 20% 60% 20%;
+    grid-template-rows: 1fr 200px;
+    grid-template-areas:
+        "left center right"
+        "bottom bottom bottom";
+    gap: 1px;
+    background: rgba(255, 255, 255, 0.1);
+    height: calc(100vh - 80px);
+}
+
+/* Panel Styles */
+.panel {
+    background: #2a2a2a;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.panel h3 {
+    padding: 15px;
+    margin: 0;
+    background: linear-gradient(135deg, #1a1a1a, #333);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+.panel-content {
+    flex: 1;
+    overflow: auto;
+    padding: 15px;
+}
+
+/* Panel-specific styles */
+.left-panel {
+    grid-area: left;
+}
+
+.center-panel {
+    grid-area: center;
+    background: #1a1a1a;
+}
+
+.right-panel {
+    grid-area: right;
+}
+
+.bottom-panel {
+    grid-area: bottom;
+}
+
+/* Scrollbar styles */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.4);
+}

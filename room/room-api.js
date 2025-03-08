@@ -4,12 +4,13 @@ import { config } from '../config.js';
  * Fetch list of available rooms
  */
 export async function listRooms() {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('authToken');
+    console.log('listRooms - authToken:', token);
     if (!token) throw new Error('Authentication required');
 
     const response = await fetch(`${config.API_BASE_URL}/rooms`, {
         headers: {
-            'Authorization': token,
+            'Authorization': `${token}`,
             'Accept': 'application/json'
         }
     });
@@ -26,13 +27,14 @@ export async function listRooms() {
  * Create a new room
  */
 export async function createRoom(songName) {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('authToken');
+    console.log('createRoom - authToken:', token);
     if (!token) throw new Error('Authentication required');
 
     const response = await fetch(`${config.API_BASE_URL}/rooms`, {
         method: 'POST',
         headers: {
-            'Authorization': token,
+            'Authorization': `${token}`,
             'Content-Type': 'application/json',
             'Accept': 'application/json'
         },
@@ -51,13 +53,14 @@ export async function createRoom(songName) {
  * Join an existing room
  */
 export async function joinRoom(roomId) {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('authToken');
+    console.log('joinRoom - authToken:', token);
     if (!token) throw new Error('Authentication required');
 
     const response = await fetch(`${config.API_BASE_URL}/rooms/${roomId}/join`, {
         method: 'PUT',
         headers: {
-            'Authorization': token,
+            'Authorization': `${token}`,
             'Accept': 'application/json'
         }
     });
@@ -74,13 +77,13 @@ export async function joinRoom(roomId) {
  * Leave current room
  */
 export async function leaveRoom(roomId) {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('authToken');
     if (!token) throw new Error('Authentication required');
 
     const response = await fetch(`${config.API_BASE_URL}/rooms/${roomId}/leave`, {
         method: 'PUT',
         headers: {
-            'Authorization': token,
+            'Authorization': `${token}`,
             'Accept': 'application/json'
         }
     });

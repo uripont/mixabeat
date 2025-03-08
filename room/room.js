@@ -1,7 +1,6 @@
 import { requireAuth } from '../utils/auth.js';
 import { logout } from '../auth/auth-api.js';
 import { listRooms, createRoom, joinRoom } from './room-api.js';
-import { initializeWebSocket } from '../websocket.js';
 
 // UI Elements
 const errorMessageElement = document.getElementById('error-message');
@@ -29,12 +28,16 @@ async function initializePage() {
     const username = localStorage.getItem('username');
     usernameDisplay.textContent = username;
 
+    // Display authToken
+    const authToken = localStorage.getItem('authToken');
+    console.log('Room List - authToken:', authToken); // Log authToken
+    
+    if (!authToken) {
+        console.error('AuthToken not found in localStorage on room page load!');
+    }
+
     // Load rooms
     await loadRooms();
-
-    // Initialize WebSocket
-    const token = localStorage.getItem('token');
-    initializeWebSocket(token);
 }
 
 // Helper functions
@@ -118,8 +121,8 @@ async function handleJoinRoom(roomId) {
     try {
         console.log('Joining room:', roomId);
         await joinRoom(roomId);
-        console.log('Join successful, redirecting...');
-        window.location.href = `/index.html?roomId=${roomId}`;
+        console.log('Join successful, redirecting to room layout...');
+        window.location.href = `../room/layout.html?roomId=\${roomId}`;
     } catch (error) {
         console.error('Error joining room:', error);
         showError(error.message || 'Failed to join room');
@@ -159,7 +162,7 @@ async function handleLogout() {
         console.log('Logging out...');
         await logout();
         console.log('Logout successful, redirecting to landing');
-        window.location.href = '/index.html';
+        window.location.href = '../index.html';
     } catch (error) {
         console.error('Error logging out:', error);
         showError(error.message || 'Failed to logout');
