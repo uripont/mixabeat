@@ -1,6 +1,8 @@
 const WebSocket = require('ws');
 const logger = require('../utils/logger');
 const pool = require('../database/db-connection');
+const fs = require('fs').promises;
+const path = require('path');
 const { getUserById, getUserSession } = require('../database/db-common-queries');
 
 // WebSocket client tracking, to know which clients are in which rooms
@@ -100,7 +102,7 @@ const handleChatMessage = async (socket, message) => {
             type: 'message',
             messageId: result.insertId,
             userId: userId,
-            username: user.username, // user object contains just the username field
+            username: user.username,
             message: message.message,
             timestamp: new Date().toISOString()
         };
@@ -111,6 +113,92 @@ const handleChatMessage = async (socket, message) => {
         socket.send(JSON.stringify({
             type: 'error',
             message: 'Error sending message'
+        }));
+    }
+};
+
+const handleUseSound = async (socket, message) => {
+    if (!socket.roomId) {
+        logger.error('Attempt to use sound without room context');
+        socket.send(JSON.stringify({
+            type: 'error',
+            message: 'You must join a room first'
+        }));
+        return;
+    }
+
+    const { trackId, instrument, soundName } = message;
+    if (!trackId || !instrument || !soundName) {
+        socket.send(JSON.stringify({
+            type: 'error',
+            message: 'Missing required parameters'
+        }));
+        return;
+    }
+
+    try {
+        // Get room contents to verify track ownership
+        const [[roomResult]] = await pool.promise().query(
+            'SELECT contents FROM rooms WHERE room_id = ?',
+            [socket.roomId]
+        );
+
+        if (!roomResult) {
+            throw new Error('Room not found');
+        }
+
+        let roomContents = roomResult.contents;
+        if (typeof roomContents === 'string') {
+            roomContents = JSON.parse(roomContents);
+        }
+
+        // Find the track and verify ownership
+        const track = roomContents.tracks.find(t => t.id === trackId);
+        if (!track) {
+            throw new Error('Track not found');
+        }
+        if (track.ownerId !== socket.userId) {
+            throw new Error('You do not own this track');
+        }
+
+        // Load the audio file
+        const audioPath = path.join(__dirname, '../audio', instrument, soundName);
+        try {
+            const audioBuffer = await fs.readFile(audioPath);
+            const base64Audio = audioBuffer.toString('base64');
+
+            // Update track in database
+            track.audioFile = soundName;
+            track.instrument = instrument;
+            await pool.promise().query(
+                'UPDATE rooms SET contents = ? WHERE room_id = ?',
+                [JSON.stringify(roomContents), socket.roomId]
+            );
+
+            // Broadcast to all clients in room except sender
+            broadcastToRoom(socket.roomId, {
+                type: 'track_updated',
+                trackData: track,
+                audioBuffer: base64Audio
+            }, socket);
+
+            // Send success response to sender
+            socket.send(JSON.stringify({
+                type: 'sound_updated',
+                trackId,
+                success: true
+            }));
+
+        } catch (err) {
+            logger.error('Error loading audio file:', err);
+            throw new Error('Audio file not found');
+        }
+
+    } catch (err) {
+        logger.error('Error handling use_sound:', err);
+        socket.send(JSON.stringify({
+            type: 'error',
+            message: err.message
         }));
     }
 };
@@ -236,10 +324,9 @@ const handleUpdateTrack = async (socket, message) => {
             [JSON.stringify(roomContents), socket.roomId]
         );
 
-
         const broadcastMessage = {
             type: 'track_updated',
-            tracks: message.tracks // Broadcast the updated tracks
+            tracks: message.tracks
         };
         broadcastToRoom(socket.roomId, broadcastMessage, socket);
 
@@ -261,5 +348,6 @@ module.exports = {
     handleDisconnect,
     handleUpdateTrack,
     handleMousePosition,
-    handleTrackStatus
+    handleTrackStatus,
+    handleUseSound
 };

@@ -9,7 +9,8 @@ const {
     handleDisconnect, 
     handleUpdateTrack,
     handleMousePosition,
-    handleTrackStatus 
+    handleTrackStatus,
+    handleUseSound
 } = require('./handlers');
 
 const setupWebSocketServer = (httpServer) => {
@@ -44,6 +45,9 @@ const setupWebSocketServer = (httpServer) => {
                         break;
                     case 'track_status':
                         handleTrackStatus(socket, message); // No need for await as it's synchronous
+                        break;
+                    case 'use_sound':
+                        await handleUseSound(socket, message);
                         break;
                     default:
                         logger.warn(`Unhandled message type received: ${message.type}`);
