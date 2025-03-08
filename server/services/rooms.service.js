@@ -1,6 +1,9 @@
 const pool = require('../database/db-connection');
 const logger = require('../utils/logger');
 const { updateClientsRoomId } = require('../websocket/handlers');
+const AdmZip = require('adm-zip');
+const path = require('path');
+const fs = require('fs').promises;
 
 async function listRooms() {
     return new Promise((resolve, reject) => {
@@ -183,6 +186,70 @@ async function getRoomSong(roomId) {
     });
 }
 
+async function getRoomAudio(roomId) {
+    try {
+        // Get the room's song data to know which audio files are needed
+        const songData = await getRoomSong(roomId);
+        
+        // Get unique audio files needed with their instrument types
+        const uniqueAudioFiles = new Map(); // Map<filename, instrumentType>
+        songData.tracks.forEach(track => {
+            if (track.audioFile && track.instrument) {
+                uniqueAudioFiles.set(track.audioFile, track.instrument);
+            }
+        });
+
+        // Create a ZIP containing the needed audio files
+        const zip = new AdmZip();
+        const audioBaseDir = path.join(__dirname, '../audio');
+
+        for (const [fileName, instrumentType] of uniqueAudioFiles) {
+            const filePath = path.join(audioBaseDir, instrumentType, fileName);
+            try {
+                await fs.access(filePath);
+                zip.addLocalFile(filePath);
+            } catch (err) {
+                logger.error(`Audio file not found: ${filePath}`);
+                // Continue with other files if one is missing
+            }
+        }
+
+        return zip.toBuffer();
+    } catch (err) {
+        logger.error('Error preparing room audio:', err);
+        throw new Error('Error preparing room audio');
+    }
+}
+
+async function getInstrumentAudio(instrumentName) {
+    try {
+        const zip = new AdmZip();
+        const instrumentDir = path.join(__dirname, '../audio', instrumentName);
+
+        // Check if instrument directory exists
+        try {
+            await fs.access(instrumentDir);
+        } catch (err) {
+            throw new Error(`Instrument "${instrumentName}" not found`);
+        }
+
+        // Read all files in the instrument directory
+        const files = await fs.readdir(instrumentDir);
+        
+        // Add all audio files to zip
+        for (const file of files) {
+            if (file.endsWith('.mp3') || file.endsWith('.wav')) {
+                zip.addLocalFile(path.join(instrumentDir, file));
+            }
+        }
+
+        return zip.toBuffer();
+    } catch (err) {
+        logger.error(`Error preparing ${instrumentName} audio:`, err);
+        throw new Error(`Error preparing ${instrumentName} audio`);
+    }
+}
+
 async function joinRoomByName(roomName, token) {
     logger.info(`Attempting to join room by name: "${roomName}"`);
     return new Promise((resolve, reject) => {
@@ -233,5 +300,7 @@ module.exports = {
     leaveRoom,
     getRoomMessages,
     getRoomSong,
+    getRoomAudio,
+    getInstrumentAudio,
     joinRoomByName
 };

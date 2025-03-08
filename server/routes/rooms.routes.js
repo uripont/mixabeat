@@ -8,7 +8,9 @@ const {
     joinRoomByName,
     leaveRoom,
     getRoomMessages,
-    getRoomSong
+    getRoomSong,
+    getRoomAudio,
+    getInstrumentAudio
 } = require('../services/rooms.service');
 const logger = require('../utils/logger');
 
@@ -84,6 +86,36 @@ router.get('/:roomId/song', authenticateSessionOnHTTPEndpoint, async (req, res) 
         res.json({ song });
     } catch (error) {
         logger.error('Error fetching room song:', error);
+        res.status(error.message.includes('not found') ? 404 : 500)
+           .send(error.message);
+    }
+});
+
+// Get room audio files (used when joining a room)
+router.get('/:roomId/audio', authenticateSessionOnHTTPEndpoint, async (req, res) => {
+    const roomId = parseInt(req.params.roomId);
+    try {
+        const audioZip = await getRoomAudio(roomId);
+        res.setHeader('Content-Type', 'application/zip');
+        res.setHeader('Content-Disposition', 'attachment; filename=room-audio.zip');
+        res.send(audioZip);
+    } catch (error) {
+        logger.error('Error fetching room audio:', error);
+        res.status(error.message.includes('not found') ? 404 : 500)
+           .send(error.message);
+    }
+});
+
+// Get all audio files for an instrument (used in sound picker)
+router.get('/instruments/:instrumentName/audio', authenticateSessionOnHTTPEndpoint, async (req, res) => {
+    const instrumentName = req.params.instrumentName.toLowerCase();
+    try {
+        const audioZip = await getInstrumentAudio(instrumentName);
+        res.setHeader('Content-Type', 'application/zip');
+        res.setHeader('Content-Disposition', `attachment; filename=${instrumentName}-sounds.zip`);
+        res.send(audioZip);
+    } catch (error) {
+        logger.error('Error fetching instrument audio:', error);
         res.status(error.message.includes('not found') ? 404 : 500)
            .send(error.message);
     }
