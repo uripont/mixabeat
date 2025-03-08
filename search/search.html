@@ -19,28 +19,37 @@
             </div>
         </header>
 
-        <!-- Room Creation Widget -->
-        <div class="create-room-widget">
-            <h3>Create New Room</h3>
-            <div class="input-group">
-                <input type="text" id="song-name" placeholder="Enter song name">
-                <button id="create-room-btn">Create Room</button>
+        <!-- Actions Bar -->
+        <div class="actions-bar">
+            <!-- Create Room Widget -->
+            <div class="create-room-widget">
+                <h3>Create New Room</h3>
+                <div class="input-group">
+                    <input type="text" id="song-name" placeholder="Enter song name">
+                    <button id="create-room-btn">Create Room</button>
+                </div>
+            </div>
+
+            <!-- Search and Join Section -->
+            <div class="join-room-widget">
+                <div class="search-section">
+                    <!-- Search By Name -->
+                    <div class="input-group">
+                        <input type="text" id="search-name" placeholder="Search rooms by name">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <input type="text" id="room-id" placeholder="Or join directly by room ID">
+                    <button id="join-room-btn">Join by ID</button>
+                </div>
             </div>
         </div>
 
         <!-- Room List -->
         <div id="rooms-container">
+            <h3>Available Rooms</h3>
             <div id="rooms-grid">
                 <!-- Rooms will be populated here -->
-            </div>
-        </div>
-
-        <!-- Join Room by ID Widget -->
-        <div class="join-room-widget">
-            <h3>Join by Room ID</h3>
-            <div class="input-group">
-                <input type="text" id="room-id" placeholder="Enter room ID">
-                <button id="join-room-btn">Join Room</button>
             </div>
         </div>
     </div>

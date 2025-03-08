@@ -9,8 +9,12 @@ const logoutBtn = document.getElementById('logout-btn');
 const createRoomBtn = document.getElementById('create-room-btn');
 const joinRoomBtn = document.getElementById('join-room-btn');
 const songNameInput = document.getElementById('song-name');
+const searchNameInput = document.getElementById('search-name');
 const roomIdInput = document.getElementById('room-id');
 const roomsGrid = document.getElementById('rooms-grid');
+
+// Store rooms for filtering
+let currentRooms = [];
 
 // Initialize page
 async function initializePage() {
@@ -30,7 +34,7 @@ async function initializePage() {
 
     // Display authToken
     const authToken = localStorage.getItem('authToken');
-    console.log('Room List - authToken:', authToken); // Log authToken
+    console.log('Room List - authToken:', authToken);
     
     if (!authToken) {
         console.error('AuthToken not found in localStorage on room page load!');
@@ -59,32 +63,60 @@ async function loadRooms() {
     try {
         console.log('Fetching room list...');
         const { rooms } = await listRooms();
-        console.log(`Received ${rooms.length} rooms`);
-        displayRooms(rooms);
+        console.log(`Received ${rooms.length} rooms:`, rooms);
+        if (rooms.length > 0) {
+            console.log('Sample room data:', JSON.stringify(rooms[0], null, 2));
+        }
+        currentRooms = rooms;
+        filterAndDisplayRooms();
     } catch (error) {
         console.error('Error loading rooms:', error);
         showError(error.message || 'Failed to load rooms');
     }
 }
 
-function displayRooms(rooms) {
+function filterAndDisplayRooms() {
+    const searchTerm = searchNameInput.value.toLowerCase().trim();
+    const filteredRooms = searchTerm 
+        ? currentRooms.filter(room => {
+            const searchableText = [
+                room.song_name,    // DB column name
+                room.songName,     // Camel case variant
+                room.name          // Fallback
+            ].filter(Boolean).join(' ').toLowerCase();
+            return searchableText.includes(searchTerm);
+        })
+        : currentRooms;
+    
+    console.log(`Filtered ${currentRooms.length} rooms to ${filteredRooms.length} results for term: "${searchTerm}"`);
+    
     roomsGrid.innerHTML = '';
     
-    rooms.forEach(room => {
+    if (filteredRooms.length === 0) {
+        const noRoomsMessage = document.createElement('div');
+        noRoomsMessage.className = 'no-rooms-message';
+        noRoomsMessage.textContent = searchTerm 
+            ? 'No rooms match your search'
+            : 'No rooms available';
+        roomsGrid.appendChild(noRoomsMessage);
+        return;
+    }
+    
+    filteredRooms.forEach(room => {
         const roomCard = document.createElement('div');
         roomCard.className = 'room-card';
         
         const roomName = document.createElement('div');
         roomName.className = 'room-name';
-        roomName.textContent = room.songName;
+        roomName.textContent = room.song_name || room.songName || room.name || 'Unnamed Room';
         
         const roomInfo = document.createElement('div');
         roomInfo.className = 'room-info';
-        roomInfo.textContent = `Created by: ${room.createdBy || 'Unknown'}`;
+        roomInfo.textContent = `Created by: ${room.createdBy || room.created_by || 'Unknown'} (ID: ${room.roomId || room.room_id})`;
         
         const joinButton = document.createElement('button');
         joinButton.textContent = 'Join Room';
-        joinButton.onclick = () => handleJoinRoom(room.roomId);
+        joinButton.onclick = () => handleJoinRoom(room.roomId || room.room_id);
         
         roomCard.appendChild(roomName);
         roomCard.appendChild(roomInfo);
@@ -106,7 +138,7 @@ async function handleCreateRoom() {
         console.log('Creating room:', songName);
         setLoading(createRoomBtn, true);
         const result = await createRoom(songName);
-        console.log('Room created successfully');
+        console.log('Room created successfully:', result);
         console.log('Joining newly created room...');
         await handleJoinRoom(result.roomId);
     } catch (error) {
@@ -119,6 +151,11 @@ async function handleCreateRoom() {
 
 async function handleJoinRoom(roomId) {
     try {
+        roomId = parseInt(roomId);
+        if (isNaN(roomId)) {
+            throw new Error('Invalid room ID');
+        }
+        
         console.log('Joining room:', roomId);
         await joinRoom(roomId);
         console.log('Join successful, redirecting to room layout...');
@@ -130,9 +167,9 @@ async function handleJoinRoom(roomId) {
 }
 
 async function handleJoinById() {
-    const roomId = roomIdInput.value.trim();
-    if (!roomId) {
-        showError('Please enter a room ID');
+    const roomId = parseInt(roomIdInput.value.trim());
+    if (!roomId || isNaN(roomId)) {
+        showError('Please enter a valid room ID');
         return;
     }
     
@@ -164,6 +201,7 @@ async function handleLogout() {
 createRoomBtn.addEventListener('click', handleCreateRoom);
 joinRoomBtn.addEventListener('click', handleJoinById);
 logoutBtn.addEventListener('click', handleLogout);
+searchNameInput.addEventListener('input', filterAndDisplayRooms);
 
 // Auto-refresh rooms list periodically
 setInterval(() => {
