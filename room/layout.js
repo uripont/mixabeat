@@ -1,4 +1,5 @@
-import { initializeWebSocket } from './room-state.js';
+import { initializeRoomState } from './room-state.js';
+import { initializeWebSocket } from './websocket.js';
 import { initializePanelResizing } from './panel-resizer.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -22,13 +23,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     console.log(`Initializing room ${roomId}`);
     
-    // Initialize panel resizing
-    initializePanelResizing();
-
     try {
+        // First initialize room state
+        console.log('Initializing room state...');
+        initializeRoomState();
+        
         // Initialize WebSocket connection and wait for room join
         console.log('Initializing WebSocket connection...');
-        await initializeWebSocket(token, roomId);
+        const ws = await initializeWebSocket(token, roomId);
+        
+        // Store WebSocket connection in room state
+        window.roomState.update({ ws });
+        
+        // Initialize panel resizing
+        initializePanelResizing();
         
         // Load chat component template
         const chatResponse = await fetch('chat/chat.html');
