@@ -1,63 +1,78 @@
 # MixaBeat Frontend Refactor Status
 
-## Completed Refactors
+## Completed ✅
+- [x] Auth module with error handling
+- [x] Room selection and creation
+- [x] Room layout structure
 
-### Auth Module ✅
-- [x] Moved auth API calls to dedicated auth-api.js
-- [x] Implemented shared auth utilities in utils/auth.js
-- [x] Added proper error handling and loading states
-- [x] Fixed token handling to use 'authToken' consistently
-- [x] Added Bearer prefix to all auth headers
+## Next Steps: Room & Chat Implementation
 
-### Room Selection Module ✅
-- [x] Created dedicated room-api.js for API calls
-- [x] Implemented room selection interface
-- [x] Added room creation and joining functionality
-- [x] Fixed room ID vs room name confusion in UI
+### Room Connection Flow
+1. After successful room join:
+   - Connect to websocket server
+   - Join room-specific channel
+   - Load room state (contents/song data)
+   - Load chat history
 
-### Editor Layout 
-- [x] Created basic panel structure
+### Chat Module Implementation
+1. Chat Panel
+   - Load message history from backend
+   - Display messages with sender info
+   - Message input and sending
+   - Real-time updates via websocket
 
+### WebSocket Integration
+1. Connection Management
+   ```javascript
+   // On room join
+   ws = new WebSocket(WS_URL);
+   ws.onopen = () => {
+     sendJoinRoom(roomId);
+   };
+   ```
 
-## In Progress
-- [ ] Chat panel functionality
-- [ ] Canvas/timeline implementation
-- [ ] Sound picker implementation
+2. Message Types
+   ```javascript
+   // Server -> Client
+   {
+     type: 'chat_message',
+     data: { sender, message, timestamp }
+   }
+   {
+     type: 'room_state',
+     data: { contents, users }
+   }
 
-## Pending Issues
-1. "Room not found" error when joining by name
-   - Backend endpoint seems to be returning 404 for existing rooms
-   - Need to check room search logic in rooms.service.js
+   // Client -> Server
+   {
+     type: 'join_room',
+     data: { roomId }
+   }
+   {
+     type: 'chat_message',
+     data: { message }
+   }
+   ```
 
-2. Implement Websockets
-   - Temporarily removed websocket functionality
-   - Will add back once basic room functionality is working
-   - Need to implement real-time updates for:
-     * Chat messages
-     * Room updates
-     * Track changes
-
-## Next Steps
-1. Test and debug room creation flow
-2. Test and debug room joining flow
-3. Implement canvas panel
-4. Implement sound picker panel
-5. Re-implement chat panel with websockets
-6. Add user settings panel
-7. Implement audio upload functionality
-
-## Notes
-- All HTTP requests should include appropriate headers
-- All forms should show loading states during API calls
-- Error messages should auto-dismiss after 5 seconds
-- All redirects should use relative paths
+3. Error Handling
+   - Connection loss detection
+   - Automatic reconnection
+   - Message queue for offline period
 
 ## Testing Checklist
 
-### Room Flow Tests
-- [ ] Can create room with song name
-- [ ] Can join room by ID
-- [ ] Can view room list
-- [ ] Can access editor after joining room
-- [ ] Can return to room list from editor
-- [ ] Auth token is properly passed in headers
+### WebSocket Connection
+- [ ] Connects on room join
+- [ ] Receives initial room state
+- [ ] Handles disconnects properly
+
+### Chat Functionality
+- [ ] Loads chat history
+- [ ] Sends messages successfully
+- [ ] Receives real-time messages
+- [ ] Shows user join/leave updates
+
+### Room State
+- [ ] Receives initial song data
+- [ ] Handles room state updates
+- [ ] Persists state on refresh
