@@ -35,6 +35,27 @@ export async function initializeWebSocket(token, roomId) {
                                 }
                             });
                             window.roomState.updateUsers(uniqueUsers);
+                            
+                            // Extract existing track info if present, or receive assigned instrument
+                            const tracks = (data.song && data.song.tracks) || [];
+                            const userTrack = tracks.find(track => track.ownerId === window.roomState.userId);
+                            
+                            if (userTrack) {
+                                window.roomState.setCurrentInstrument(userTrack.instrument);
+                            } else if (data.assignedInstrument) {
+                                window.roomState.setCurrentInstrument(data.assignedInstrument);
+                            }
+                            break;
+
+                        case 'instrument_assigned':
+                            window.roomState.setCurrentInstrument(data.instrument);
+                            break;
+
+                        case 'track_sound_updated':
+                            // Event will be handled by sound-picker component
+                            window.dispatchEvent(new CustomEvent('ws:track_sound_updated', {
+                                detail: data
+                            }));
                             break;
 
                         case 'user_joined':

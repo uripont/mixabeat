@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="chat/chat.css">
     <link rel="stylesheet" href="sound-editor/sound-editor.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="sound-picker/sound-picker.css">
 </head>
 <body>
     <div class="editor-layout">
@@ -17,7 +18,8 @@
             <div class="left-panel panel">
                 <h3>Sound Picker</h3>
                 <div class="panel-content">
-                    <!-- Will be populated by sound-picker component -->
+                    <!-- Sound Picker Component -->
+                    <div id="soundPickerContainer"></div>
                 </div>
             </div>
 
@@ -77,6 +79,23 @@
     <!-- Script imports will go here -->
     <script type="module" src="layout.js"></script>
     <script type="module">
+        // Load sound picker component
+        fetch('sound-picker/sound-picker.html')
+            .then(response => response.text())
+            .then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const template = doc.querySelector('#sound-picker-template');
+                
+                if (template) {
+                    const soundPickerContainer = document.getElementById('soundPickerContainer');
+                    soundPickerContainer.appendChild(template.content.cloneNode(true));
+                } else {
+                    throw new Error('Sound picker template not found');
+                }
+            })
+            .catch(error => console.error('Error loading sound picker:', error));
+
         // Load sound editor component
         fetch('sound-editor/sound-editor.html')
             .then(response => response.text())

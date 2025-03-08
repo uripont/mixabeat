@@ -1,6 +1,7 @@
 import { initializeRoomState } from './room-state.js';
 import { initializeWebSocket } from './websocket.js';
 import { initializePanelResizing } from './panel-resizer.js';
+import { initializeSoundPicker } from './sound-picker/sound-picker.js';
 
 // Initialize playback controls and bind to shared state
 function initializePlaybackControls() {
@@ -79,9 +80,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log(`Initializing room ${roomId}`);
     
     try {
-        // First initialize shared state
+        // Initialize shared state with user info
         console.log('Initializing room state...');
-        initializeRoomState();
+        const state = initializeRoomState();
+        state.userId = parseInt(localStorage.getItem('userId')); // Keep userId in state to check track ownership
         
         // Initialize WebSocket connection
         console.log('Initializing WebSocket connection...');
@@ -89,6 +91,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         // Store WebSocket reference in room state
         window.roomState.ws = ws;
+
+        // Initialize sound picker
+        initializeSoundPicker(ws);
         
         // Initialize panel layout
         initializePanelResizing();
