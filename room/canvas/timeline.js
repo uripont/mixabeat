@@ -2,10 +2,10 @@ export const TIMELINE_CONFIG = {
     totalDuration: 2.5, // fixed 2.5-second timeline
     totalWidth: 1500,  // pixels - matches viewport width
     canvasWidth: 1500, // visible width
-    trackHeight: 60, // taller tracks for better visibility
-    trackPadding: 15, // reduced padding between tracks
-    gridLines: 10, // one line every 0.25 seconds
-    topMargin: 20 // reduced top margin for first track
+    trackHeight: 40, // reduced track height for more vertical space
+    trackPadding: 10, // further reduced padding
+    gridLines: 10,    // one line every 0.25 seconds
+    topMargin: 10     // slightly reduced top margin
 };
 
 export class Timeline {
@@ -20,11 +20,22 @@ export class Timeline {
     }
 
     resizeCanvas() {
-        // Set canvas size based on container
-        const rect = this.canvas.parentElement.getBoundingClientRect();
-        this.canvas.width = rect.width;
-        this.canvas.height = rect.height;
-        TIMELINE_CONFIG.canvasWidth = rect.width;
+        // Set canvas size based on panel content
+        const panelContent = document.querySelector('.center-panel .panel-content');
+        if (!panelContent) {
+            console.error('Panel content not found');
+            return;
+        }
+        
+        const panelContentRect = panelContent.getBoundingClientRect();
+        this.canvas.width = panelContentRect.width - 30; // Subtract padding
+        this.canvas.height = panelContentRect.height - 30; // Subtract padding
+        TIMELINE_CONFIG.canvasWidth = this.canvas.width;
+
+        console.log('Canvas width:', this.canvas.width);
+        console.log('Canvas height:', this.canvas.height);
+        console.log('Panel Content Width:', panelContentRect.width);
+        console.log('Panel Content Height:', panelContentRect.height);
         
         // Redraw after resize
         this.draw();

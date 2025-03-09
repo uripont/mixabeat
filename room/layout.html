@@ -6,7 +6,6 @@
     <title>MixaBeat - Audio Editor</title>
     <link rel="stylesheet" href="layout.css">
     <link rel="stylesheet" href="chat/chat.css">
-    <link rel="stylesheet" href="sound-editor/sound-editor.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="sound-picker/sound-picker.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎵</text></svg>">
@@ -52,7 +51,7 @@
                 </div>
                 <div class="panel-content">
                     <!-- Will be populated by canvas component -->
-                    <div id="canvasPanelContainer"></div>
+                    <div id="canvasPanelContainer" style="height: 100%;"></div>
                 </div>
             </div>
 
@@ -63,14 +62,6 @@
                 </div>
             </div>
 
-             <!-- Bottom Panel - Sound Editor -->
-            <div class="bottom-panel panel">
-                <h3>Sound Editor</h3>
-                <div class="panel-content">
-                    <!-- Sound Editor Component -->
-                    <div id="soundEditorContainer"></div>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -94,13 +85,6 @@
             })
             .catch(error => console.error('Error loading sound picker:', error));
 
-        // Load sound editor component
-        fetch('sound-editor/sound-editor.html')
-            .then(response => response.text())
-            .then(html => {
-                document.getElementById('soundEditorContainer').innerHTML = html;
-            })
-            .catch(error => console.error('Error loading sound editor:', error));
     </script>
 </body>
 </html>

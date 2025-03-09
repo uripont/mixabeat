@@ -131,6 +131,14 @@ export async function initializeWebSocket(token, roomId) {
                 roomId: parseInt(roomId) // Backend expects roomId as number
             }));
 
+            let hasJoinedRoom = false;
+            let joinRoomTimeout = setTimeout(() => {
+                if (!hasJoinedRoom) {
+                    reject(new Error('Failed to join room: Connection timed out. Please try again.'));
+                    ws.close();
+                }
+            }, 5000);
+
             // Handle WebSocket messages
             ws.addEventListener('message', (event) => {
                 try {
@@ -140,6 +148,8 @@ export async function initializeWebSocket(token, roomId) {
                     switch (data.type) {
                         // Core state updates
                         case 'room_joined':
+                            clearTimeout(joinRoomTimeout);
+                            hasJoinedRoom = true;
                             console.log('Room joined successfully:', data);
                             // Filter uniqueness in the state update
                             const uniqueUsers = [];
@@ -206,6 +216,8 @@ export async function initializeWebSocket(token, roomId) {
                             } else if (data.assignedInstrument) {
                                 window.roomState.setCurrentInstrument(data.assignedInstrument);
                             }
+                            // Resolve the WebSocket connection after room is fully joined
+                            resolve(ws);
                             break;
 
                         case 'instrument_assigned':
@@ -367,22 +379,26 @@ export async function initializeWebSocket(token, roomId) {
                     console.error('Error handling WebSocket message:', error);
                 }
             });
-            
-            resolve(ws);
         };
 
-        ws.onclose = () => {
-            console.log('WebSocket disconnected');
-            // Let components handle reconnection if needed
-            window.dispatchEvent(new CustomEvent('ws:disconnected'));
+        ws.onclose = (event) => {
+            console.log('WebSocket disconnected:', event.code, event.reason);
+            // 1000 is normal closure, anything else is an error
+            if (event.code !== 1000) {
+                reject(new Error(`WebSocket closed unexpectedly: ${event.code} ${event.reason}`));
+            }
+            window.dispatchEvent(new CustomEvent('ws:disconnected', {
+                detail: { code: event.code, reason: event.reason }
+            }));
         };
 
         ws.onerror = (error) => {
+            const errorMessage = 'Failed to establish WebSocket connection. Please check your internet connection and try again.';
             console.error('WebSocket error:', error);
             window.dispatchEvent(new CustomEvent('ws:error', {
-                detail: error
+                detail: { message: errorMessage }
             }));
-            reject(error);
+            reject(new Error(errorMessage));
         };
     });
 }
@@ -391,6 +407,11 @@ export async function initializeWebSocket(token, roomId) {
 export function sendMessage(ws, type, data = {}) {
     if (!ws) {
         console.error('WebSocket not initialized');
+        return;
+    }
+    
+    // Add validation for move_track messages
+    if (type === 'move_track' && !data.trackId) {
         return;
     }
     

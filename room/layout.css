@@ -78,14 +78,13 @@ body {
 .main-content {
     display: grid;
     grid-template-columns: minmax(200px, 20%) minmax(300px, 1fr) clamp(250px, 25%, 30%);
-    grid-template-rows: 1fr 200px;
-    grid-template-areas:
-        "left center right"
-        "bottom bottom right";
+    grid-template-rows: 1fr;
+    grid-template-areas: "left center right";
     gap: 1px;
     background: rgba(255, 255, 255, 0.1);
-    height: 100vh;
+    height: calc(100vh - 80px); /* Subtract top panel height */
     position: relative;
+    min-height: 100%; /* Ensure it takes at least 100% of the available height */
 }
 
 /* Panel Styles */
@@ -98,6 +97,32 @@ body {
     min-width: 0; /* Ensures content can shrink below min-width */
 }
 
+/* Panel resizer styles */
+.panel-resizer {
+    position: absolute;
+    z-index: 10;
+    background: rgba(255, 255, 255, 0.1);
+    transition: background 0.2s;
+}
+
+.panel-resizer:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.left-resizer, .right-resizer {
+    width: 4px;
+    height: 100%;
+    top: 0;
+    cursor: ew-resize;
+}
+
+.left-resizer {
+    right: 0;
+}
+
+.right-resizer {
+    left: 0;
+}
 
 /* Styles for when resizing is active */
 body.resizing {
@@ -126,6 +151,9 @@ body.resizing .panel-content {
     flex: 1;
     overflow: auto;
     padding: 15px;
+    height: 100%; /* Added height: 100% to panel-content */
+    display: flex; /* Added display: flex */
+    flex-direction: column; /* Added flex-direction: column */
 }
 
 /* Panel-specific styles */
@@ -138,6 +166,7 @@ body.resizing .panel-content {
     background: #1a1a1a;
     display: flex;
     flex-direction: column;
+    min-height: 500px; /* Added min-height to center-panel */
 }
 
 .center-panel .panel-content {
@@ -147,10 +176,6 @@ body.resizing .panel-content {
 
 .right-panel {
     grid-area: right;
-}
-
-.bottom-panel {
-    grid-area: bottom;
 }
 
 /* Scrollbar styles */

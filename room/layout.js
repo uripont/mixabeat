@@ -132,8 +132,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const template = doc.querySelector('template');
                 
                 if (template) {
-                    const canvasPanel = document.querySelector('.center-panel .panel-content');
-                    canvasPanel.appendChild(template.content.cloneNode(true));
+            const canvasPanel = document.querySelector('#canvasPanelContainer');
+            canvasPanel.appendChild(template.content.cloneNode(true));
                     
                     // Import and initialize canvas module
                     const canvasModule = await import('./canvas/canvas.js');
@@ -161,8 +161,24 @@ document.addEventListener('DOMContentLoaded', async () => {
             
     } catch (error) {
         console.error('Failed to initialize room:', error);
-        alert('Failed to connect to room. Please try again.');
-        window.location.href = '../search/search.html';
+        
+        // Handle different types of errors
+        let errorMessage = 'An unexpected error occurred.';
+        if (error.message.includes('WebSocket')) {
+            errorMessage = error.message;
+        } else if (error.message.includes('Chat template')) {
+            errorMessage = 'Failed to load chat interface. Please refresh the page.';
+        } else if (error.message.includes('Canvas template')) {
+            errorMessage = 'Failed to load canvas interface. Please refresh the page.';
+        }
+        
+        // Show error to user
+        alert(errorMessage);
+        
+        // Only redirect for connection errors
+        if (error.message.includes('WebSocket')) {
+            window.location.href = '../search/search.html';
+        }
         return;
     }
 });
