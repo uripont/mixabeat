@@ -80,10 +80,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log(`Initializing room ${roomId}`);
     
     try {
-        // Initialize shared state with user info
+        // Initialize shared state with user info and room info
         console.log('Initializing room state...');
         const state = initializeRoomState();
         state.userId = parseInt(localStorage.getItem('userId')); // Keep userId in state to check track ownership
+        state.roomId = parseInt(roomId); // Keep roomId in state for WebSocket messages
         
         // Initialize WebSocket connection
         console.log('Initializing WebSocket connection...');

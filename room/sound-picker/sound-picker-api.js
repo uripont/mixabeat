@@ -6,7 +6,7 @@ export async function fetchAvailableSounds(instrument) {
         const response = await fetch(`${config.API_BASE_URL}/instruments/${instrument}/sounds`, {
             method: 'GET',
             headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
+                'Authorization': `${localStorage.getItem('authToken')}`
             }
         });
 

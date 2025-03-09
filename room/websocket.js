@@ -2,12 +2,16 @@ import { config } from '../config.js';
 
 // Initialize WebSocket connection
 export async function initializeWebSocket(token, roomId) {
-    const WS_URL = `${config.WS_BASE_URL}/ws?token=${token}`;
+    // Add auth headers as query parameters
+    const authToken = localStorage.getItem('authToken');
+    const userId = localStorage.getItem('userId');
+    const WS_URL = `${config.WS_BASE_URL}/ws?token=${authToken}&userId=${userId}`;
     const ws = new WebSocket(WS_URL);
     
     return new Promise((resolve, reject) => {
-        ws.onopen = () => {
-            console.log('WebSocket connected');
+    ws.onopen = () => {
+        console.log('WebSocket connected');
+        console.log('Attempting to join room:', roomId);
             
             // Send join_room message once connected
             ws.send(JSON.stringify({

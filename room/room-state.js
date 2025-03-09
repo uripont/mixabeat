@@ -3,6 +3,7 @@ export function initializeRoomState() {
     window.roomState = {
         // Core state with logical domains (shared between components)
         userId: null,     // Current user's ID
+        roomId: null,     // Current room's ID
         users: [],        // Used by chat (user list) and canvas (cursors)
         tracks: [],       // Used by canvas and sound-editor
         mousePositions: {},  // Used by canvas to show other users
@@ -20,8 +21,7 @@ export function initializeRoomState() {
 
         // Update methods for each domain
         updateUsers(changes) {
-            this.users = [...this.users];
-            Object.assign(this.users, changes);
+            this.users = [...changes]; // Replace array
             window.dispatchEvent(new CustomEvent('state:users', {
                 detail: this.users
             }));

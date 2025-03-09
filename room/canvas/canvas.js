@@ -19,9 +19,9 @@ export function initializeCanvas(roomState, ws) {
     let playbackInterval = null;
     
     // Initialize playback controls
-    const playButton = document.getElementById('playButton');
-    const pauseButton = document.getElementById('pauseButton');
-    const restartButton = document.getElementById('restartButton');
+    const playButton = document.querySelector('.play-btn');
+    const stopButton = document.querySelector('.stop-btn');
+    const restartButton = document.querySelector('.restart-btn');
 
     // Watch for track changes
     roomState.watchTracks(tracks => {
@@ -49,7 +49,7 @@ export function initializeCanvas(roomState, ws) {
         });
     });
 
-    pauseButton.addEventListener('click', () => {
+    stopButton.addEventListener('click', () => {
         roomState.updatePlayback({
             isPlaying: false,
             currentTime: roomState.playback.currentTime
