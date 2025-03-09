@@ -66,7 +66,7 @@ function onSendMessage() {
 
     console.log('sendMessage: Sending message via WebSocket:', message);
     try {
-        sendMessage(window.roomState.ws, 'message', { message });
+        sendMessage(window.roomState.ws, 'chat_message', { message });
         console.log('sendMessage: Message sent successfully');
         
         // Also display the message for the sender immediately

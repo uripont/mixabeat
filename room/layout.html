@@ -6,8 +6,9 @@
     <title>MixaBeat - Audio Editor</title>
     <link rel="stylesheet" href="layout.css">
     <link rel="stylesheet" href="chat/chat.css">
-    <link rel="stylesheet" href="sound-editor/sound-editor.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="sound-picker/sound-picker.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎵</text></svg>">
 </head>
 <body>
     <div class="editor-layout">
@@ -17,7 +18,8 @@
             <div class="left-panel panel">
                 <h3>Sound Picker</h3>
                 <div class="panel-content">
-                    <!-- Will be populated by sound-picker component -->
+                    <!-- Sound Picker Component -->
+                    <div id="soundPickerContainer"></div>
                 </div>
             </div>
 
@@ -45,13 +47,11 @@
                         <button class="action-btn" title="Back to Rooms">
                             <i class="fas fa-arrow-left"></i>
                         </button>
-                        <button class="action-btn" title="Download Song">
-                            <i class="fas fa-download"></i>
-                        </button>
                     </div>
                 </div>
                 <div class="panel-content">
                     <!-- Will be populated by canvas component -->
+                    <div id="canvasPanelContainer" style="height: 100%;"></div>
                 </div>
             </div>
 
@@ -62,27 +62,29 @@
                 </div>
             </div>
 
-            <!-- Bottom Panel - Sound Editor -->
-            <div class="bottom-panel panel">
-                <h3>Sound Editor</h3>
-                <div class="panel-content">
-                    <!-- Sound Editor Component -->
-                    <div id="soundEditorContainer"></div>
-                </div>
-            </div>
         </div>
     </div>
 
     <!-- Script imports will go here -->
     <script type="module" src="layout.js"></script>
     <script type="module">
-        // Load sound editor component
-        fetch('sound-editor/sound-editor.html')
+        // Load sound picker component
+        fetch('sound-picker/sound-picker.html')
             .then(response => response.text())
             .then(html => {
-                document.getElementById('soundEditorContainer').innerHTML = html;
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const template = doc.querySelector('#sound-picker-template');
+                
+                if (template) {
+                    const soundPickerContainer = document.getElementById('soundPickerContainer');
+                    soundPickerContainer.appendChild(template.content.cloneNode(true));
+                } else {
+                    throw new Error('Sound picker template not found');
+                }
             })
-            .catch(error => console.error('Error loading sound editor:', error));
+            .catch(error => console.error('Error loading sound picker:', error));
+
     </script>
 </body>
 </html>

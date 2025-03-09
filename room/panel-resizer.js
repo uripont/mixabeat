@@ -2,7 +2,7 @@
 export function initializePanelResizing() {
     const leftPanel = document.querySelector('.left-panel');
     const rightPanel = document.querySelector('.right-panel');
-    const bottomPanel = document.querySelector('.bottom-panel');
+    const bottomPanel = document.querySelector('.bottom-panel'); // This might be null now
     const mainContent = document.querySelector('.main-content');
     
     // Create and append resize handles
@@ -14,9 +14,12 @@ export function initializePanelResizing() {
     rightPanelResizer.className = 'panel-resizer right-resizer';
     rightPanel.appendChild(rightPanelResizer);
     
-    const bottomPanelResizer = document.createElement('div');
-    bottomPanelResizer.className = 'panel-resizer bottom-resizer';
-    bottomPanel.appendChild(bottomPanelResizer);
+    let bottomPanelResizer = null;
+    if (bottomPanel) { // Only create if bottomPanel exists
+        bottomPanelResizer = document.createElement('div');
+        bottomPanelResizer.className = 'panel-resizer bottom-resizer';
+        bottomPanel.appendChild(bottomPanelResizer);
+    }
     
     // Panel size constraints
     const MIN_WIDTH = 150;
@@ -41,9 +44,7 @@ export function initializePanelResizing() {
         mainContent.style.gridTemplateColumns = 
             `${layout.columns.left}% ${layout.columns.center}% ${layout.columns.right}%`;
         
-        if (typeof layout.rows.bottom === 'number') {
-            mainContent.style.gridTemplateRows = `1fr ${layout.rows.bottom}px`;
-        }
+        mainContent.style.gridTemplateRows = `1fr`;
     }
 
     // Initial layout
@@ -114,28 +115,30 @@ export function initializePanelResizing() {
     });
     
     // Bottom panel resize
-    bottomPanelResizer.addEventListener('mousedown', function(e) {
-        e.preventDefault();
-        
-        const startY = e.clientY;
-        const startHeight = bottomPanel.offsetHeight;
-        
-        function onMouseMove(moveEvent) {
-            const deltaY = startY - moveEvent.clientY;
-            const newHeight = Math.max(MIN_HEIGHT, startHeight + deltaY);
+    if (bottomPanelResizer) {
+        bottomPanelResizer.addEventListener('mousedown', function(e) {
+            e.preventDefault();
             
-            layout.rows.bottom = newHeight;
-            applyLayout();
-        }
-        
-        function onMouseUp() {
-            document.removeEventListener('mousemove', onMouseMove);
-            document.removeEventListener('mouseup', onMouseUp);
-            document.body.classList.remove('resizing');
-        }
-        
-        document.addEventListener('mousemove', onMouseMove);
-        document.addEventListener('mouseup', onMouseUp);
-        document.body.classList.add('resizing');
-    });
+            const startY = e.clientY;
+            const startHeight = bottomPanel.offsetHeight;
+            
+            function onMouseMove(moveEvent) {
+                const deltaY = startY - moveEvent.clientY;
+                const newHeight = Math.max(MIN_HEIGHT, startHeight + deltaY);
+                
+                layout.rows.bottom = newHeight;
+                applyLayout();
+            }
+            
+            function onMouseUp() {
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+                document.body.classList.remove('resizing');
+            }
+            
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+            document.body.classList.add('resizing');
+        });
+    }
 }
