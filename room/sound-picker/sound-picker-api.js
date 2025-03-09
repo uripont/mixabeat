@@ -31,6 +31,7 @@ export async function fetchAvailableSounds(instrument) {
 // Fetch a specific sound file (handles compressed zip files)
 export async function fetchSoundFile(url) {
     try {
+        console.log('Fetching sound file:', url);
         const response = await fetch(`${config.API_BASE_URL}${url}`, {
             method: 'GET',
             headers: {
@@ -44,12 +45,47 @@ export async function fetchSoundFile(url) {
 
         // Get the zip file as an array buffer
         const zipArrayBuffer = await response.arrayBuffer();
-        
+        if (zipArrayBuffer.byteLength === 0) {
+            throw new Error('Received empty zip file');
+        }
+        console.log('Received zip file size:', zipArrayBuffer.byteLength);
+
         // Extract the audio file from the zip
         const audioArrayBuffer = await extractAudioFromZip(zipArrayBuffer);
-        
-        // Decode the audio data using shared context
-        return await decodeAudioData(audioArrayBuffer);
+        if (audioArrayBuffer.byteLength === 0) {
+            throw new Error('Extracted empty audio file from zip');
+        }
+        console.log('Extracted audio file size:', audioArrayBuffer.byteLength);
+
+        // Ensure audio context is in running state
+        const context = getAudioContext();
+        if (context.state !== 'running') {
+            await context.resume();
+        }
+
+        // Decode audio data with retry logic
+        let attempts = 0;
+        const maxAttempts = 3;
+        let lastError;
+
+        while (attempts < maxAttempts) {
+            try {
+                const audioBuffer = await decodeAudioData(audioArrayBuffer.slice());
+                console.log('Successfully decoded audio data on attempt:', attempts + 1);
+                return audioBuffer;
+            } catch (error) {
+                attempts++;
+                lastError = error;
+                console.log(`Decode attempt ${attempts} failed:`, error);
+                
+                if (attempts < maxAttempts) {
+                    // Wait before retrying
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+            }
+        }
+
+        throw new Error(`Failed to decode audio after ${maxAttempts} attempts. Last error: ${lastError.message}`);
     } catch (error) {
         console.error('Error fetching sound file:', error);
         throw error;

@@ -28,6 +28,11 @@ async function fetchRoomAudio(roomId) {
 // Extract audio files from zip and decode them
 async function extractAndDecodeAudio(zipArrayBuffer) {
     try {
+        // Validate zip array buffer
+        if (!zipArrayBuffer || zipArrayBuffer.byteLength === 0) {
+            throw new Error('Invalid or empty zip file received');
+        }
+
         // Use JSZip to extract the files
         const JSZip = await import('https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm');
         const zip = new JSZip.default();
@@ -35,8 +40,11 @@ async function extractAndDecodeAudio(zipArrayBuffer) {
         // Load the zip file
         const zipContents = await zip.loadAsync(zipArrayBuffer);
         
-        // Create audio context for decoding
+        // Ensure audio context is in running state
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioContext.state !== 'running') {
+            await audioContext.resume();
+        }
         
         // Process each file in the zip
         const audioBuffers = {};
@@ -47,9 +55,12 @@ async function extractAndDecodeAudio(zipArrayBuffer) {
             
             // Extract file data
             const fileData = await zipContents.files[filename].async('arraybuffer');
+            if (fileData.byteLength === 0) {
+                console.warn(`Skipping empty file: ${filename}`);
+                continue;
+            }
             
             // Determine instrument type from filename or metadata
-            // This assumes files are named with a pattern that indicates the instrument
             let instrument = 'unknown';
             if (filename.includes('drums')) instrument = 'drums';
             else if (filename.includes('guitar')) instrument = 'guitar';
@@ -58,21 +69,44 @@ async function extractAndDecodeAudio(zipArrayBuffer) {
             else if (filename.includes('synth')) instrument = 'synth';
             else if (filename.includes('violin')) instrument = 'violin';
             else if (filename.includes('trumpet')) instrument = 'trumpet';
-            
-            // Decode audio data
-            const decodePromise = audioContext.decodeAudioData(fileData).then(audioBuffer => {
-                const key = `${instrument}/${filename}`;
-                audioBuffers[key] = audioBuffer;
-                console.log(`Decoded audio file: ${key}`);
-            }).catch(error => {
-                console.error(`Error decoding audio file ${filename}:`, error);
-            });
+
+            // Decode audio data with retry logic
+            const decodePromise = (async () => {
+                let attempts = 0;
+                const maxAttempts = 3;
+                let lastError;
+
+                while (attempts < maxAttempts) {
+                    try {
+                        const audioBuffer = await audioContext.decodeAudioData(fileData.slice());
+                        const key = `${instrument}/${filename}`;
+                        audioBuffers[key] = audioBuffer;
+                        console.log(`Successfully decoded audio file: ${key} on attempt ${attempts + 1}`);
+                        return;
+                    } catch (error) {
+                        attempts++;
+                        lastError = error;
+                        console.log(`Decode attempt ${attempts} failed for ${filename}:`, error);
+                        
+                        if (attempts < maxAttempts) {
+                            await new Promise(resolve => setTimeout(resolve, 500));
+                        } else {
+                            console.error(`Failed to decode ${filename} after ${maxAttempts} attempts:`, lastError);
+                        }
+                    }
+                }
+            })();
             
             decodePromises.push(decodePromise);
         }
         
         // Wait for all decoding to complete
         await Promise.all(decodePromises);
+        
+        // Check if we decoded any files
+        if (Object.keys(audioBuffers).length === 0) {
+            throw new Error('No audio files were successfully decoded');
+        }
         
         return audioBuffers;
     } catch (error) {
@@ -225,6 +259,21 @@ export async function initializeWebSocket(token, roomId) {
                                 // Handle track update with sound URL
                                 const processTrackUpdate = async () => {
                                     try {
+                                        console.log('Processing track update for:', data.soundUrl);
+
+                                        // Get the existing buffer if available
+                                        const key = `${data.trackData.instrument}/${data.trackData.audioFile}`;
+                                        let existingBuffer = window.roomState.audio.loadedSounds.get(key);
+                                        
+                                        if (existingBuffer) {
+                                            console.log('Using existing audio buffer for:', data.trackData.audioFile);
+                                            window.roomState.updateTracks(data.trackData.id, {
+                                                ...data.trackData,
+                                                audioBuffer: existingBuffer
+                                            });
+                                            return;
+                                        }
+
                                         // Fetch the sound file
                                         const response = await fetch(`${config.API_BASE_URL}${data.soundUrl}`, {
                                             headers: {
@@ -236,25 +285,61 @@ export async function initializeWebSocket(token, roomId) {
                                             throw new Error(`Failed to fetch sound: ${response.status}`);
                                         }
                                         
-                                        // Convert to AudioBuffer
+                                        // Get array buffer and validate
                                         const arrayBuffer = await response.arrayBuffer();
+                                        if (arrayBuffer.byteLength === 0) {
+                                            throw new Error('Received empty audio data');
+                                        }
+                                        console.log('Received array buffer size:', arrayBuffer.byteLength);
+
+                                        // Ensure audio context is in running state
                                         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                                        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-                                        
-                                        // Add sound to loaded sounds cache
-                                        window.roomState.addLoadedSound(
-                                            data.trackData.instrument,
-                                            data.trackData.audioFile,
-                                            audioBuffer
-                                        );
-                                        
-                                        // Update track with audio buffer
-                                        window.roomState.updateTracks(data.trackData.id, {
-                                            ...data.trackData,
-                                            audioBuffer
-                                        });
+                                        if (audioContext.state !== 'running') {
+                                            await audioContext.resume();
+                                        }
+
+                                        // Decode audio data with retry logic
+                                        let attempts = 0;
+                                        const maxAttempts = 3;
+                                        let lastError;
+
+                                        while (attempts < maxAttempts) {
+                                            try {
+                                                const audioBuffer = await audioContext.decodeAudioData(arrayBuffer.slice());
+                                                console.log('Successfully decoded audio on attempt:', attempts + 1);
+                                                
+                                                // Add sound to loaded sounds cache
+                                                window.roomState.addLoadedSound(
+                                                    data.trackData.instrument,
+                                                    data.trackData.audioFile,
+                                                    audioBuffer
+                                                );
+                                                
+                                                // Update track with audio buffer
+                                                window.roomState.updateTracks(data.trackData.id, {
+                                                    ...data.trackData,
+                                                    audioBuffer
+                                                });
+                                                return;
+                                            } catch (error) {
+                                                attempts++;
+                                                lastError = error;
+                                                console.log(`Decode attempt ${attempts} failed:`, error);
+                                                
+                                                if (attempts < maxAttempts) {
+                                                    // Wait before retrying
+                                                    await new Promise(resolve => setTimeout(resolve, 500));
+                                                }
+                                            }
+                                        }
+
+                                        throw new Error(`Failed to decode audio after ${maxAttempts} attempts. Last error: ${lastError.message}`);
                                     } catch (error) {
                                         console.error('Error processing track update:', error);
+                                        // Remove the track since we couldn't process it
+                                        if (data.trackData.id) {
+                                            window.roomState.removeTrack(data.trackData.id);
+                                        }
                                     }
                                 };
                                 processTrackUpdate();

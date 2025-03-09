@@ -215,6 +215,19 @@ export function initializeSoundPicker(ws) {
 
         console.log('selectSound called for:', sound.name);
         
+        // Find the selected item once and use it for all operations
+        const selectedItem = Array.from(soundsListEl.children)
+            .find(item => item.dataset.soundName === sound.name);
+            
+        // Show loading state
+        if (selectedItem) {
+            selectedItem.classList.add('loading');
+            const loadingSpinner = document.createElement('div');
+            loadingSpinner.className = 'sound-item__loading';
+            loadingSpinner.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            selectedItem.appendChild(loadingSpinner);
+        }
+        
         // Remove previous selection
         const previousSelected = soundsListEl.querySelector('.sound-item.selected');
         if (previousSelected) {
@@ -223,8 +236,6 @@ export function initializeSoundPicker(ws) {
         }
 
         // Add new selection
-        const selectedItem = Array.from(soundsListEl.children)
-            .find(item => item.dataset.soundName === sound.name);
         if (selectedItem) {
             selectedItem.classList.add('selected');
         }
@@ -280,8 +291,42 @@ export function initializeSoundPicker(ws) {
                     buffer
                 );
                 window.roomState.updateTracks(trackId, { audioBuffer: buffer });
+                
+                // Remove loading state
+                if (selectedItem) {
+                    selectedItem.classList.remove('loading');
+                    const loadingSpinner = selectedItem.querySelector('.sound-item__loading');
+                    if (loadingSpinner) {
+                        loadingSpinner.remove();
+                    }
+                }
             }).catch(error => {
                 console.error('Failed to fetch audio buffer for:', sound.name, error);
+                
+                // Show error state and remove loading state
+                if (selectedItem) {
+                    selectedItem.classList.remove('loading');
+                    selectedItem.classList.add('error');
+                    const loadingSpinner = selectedItem.querySelector('.sound-item__loading');
+                    if (loadingSpinner) {
+                        loadingSpinner.remove();
+                    }
+                    
+                    // Show error message
+                    const errorMsg = document.createElement('div');
+                    errorMsg.className = 'sound-item__error';
+                    errorMsg.innerHTML = `<i class="fas fa-exclamation-circle"></i> Failed to load sound`;
+                    selectedItem.appendChild(errorMsg);
+                    
+                    // Remove error message after 3 seconds
+                    setTimeout(() => {
+                        selectedItem.classList.remove('error');
+                        errorMsg.remove();
+                    }, 3000);
+                }
+                
+                // Remove the track since we couldn't load its audio
+                window.roomState.removeTrack(trackId);
             });
         } else {
             console.error('Cannot load sound: no audio buffer and no URL provided');

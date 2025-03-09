@@ -85,6 +85,8 @@
     border-radius: 12px;
     background: #333;
     cursor: pointer;
+    position: relative;
+    transition: background 0.2s ease;
 }
 
 .sound-item:hover {
@@ -94,6 +96,50 @@
 .sound-item.selected {
     background: #2962ff;
     color: #fff;
+}
+
+.sound-item.loading::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 12px;
+    z-index: 1;
+}
+
+.sound-item__loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+    color: #2962ff;
+    animation: spin 1s linear infinite;
+}
+
+.sound-item.error {
+    border: 1px solid #ff4444;
+    animation: shake 0.5s ease-in-out;
+}
+
+.sound-item__error {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+    color: #ff4444;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    white-space: nowrap;
 }
 
 .sound-item__name {
@@ -120,6 +166,7 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    z-index: 3;
 }
 
 .sound-item__preview i {
@@ -137,4 +184,25 @@
 
 .sound-item.selected .sound-item__preview:hover {
     background: #2255bb;
+}
+
+@keyframes spin {
+    from {
+        transform: translate(-50%, -50%) rotate(0deg);
+    }
+    to {
+        transform: translate(-50%, -50%) rotate(360deg);
+    }
+}
+
+@keyframes shake {
+    0%, 100% {
+        transform: translateX(0);
+    }
+    25% {
+        transform: translateX(-4px);
+    }
+    75% {
+        transform: translateX(4px);
+    }
 }
