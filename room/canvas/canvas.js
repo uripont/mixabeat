@@ -17,6 +17,8 @@ import {
 // Initialize canvas component
 export function initializeCanvas(roomState, ws) {
     const canvas = document.getElementById('timelineCanvas');
+    if (!canvas) throw new Error('Canvas element not found');
+    
     const timeline = new Timeline(canvas);
     
     // Track state
@@ -28,22 +30,70 @@ export function initializeCanvas(roomState, ws) {
     let dragStartX = 0;
     let dragStartY = 0;
     let originalTrackPosition = 0;
-    
+    let lastUpdateTime = 0;
+    const UPDATE_INTERVAL = 100; // Minimum time (ms) between position updates
+
     // Initialize playback controls
-    const playButton = document.querySelector('.play-btn');
-    const stopButton = document.querySelector('.stop-btn');
-    const restartButton = document.querySelector('.restart-btn');
+    const initializePlaybackControls = () => {
+        const playButton = document.querySelector('.play-btn');
+        const stopButton = document.querySelector('.stop-btn');
+        const restartButton = document.querySelector('.restart-btn');
+
+        if (!playButton || !stopButton || !restartButton) {
+            console.error('Playback controls not found');
+            return;
+        }
+
+        playButton.addEventListener('click', () => {
+            roomState.updatePlayback({
+                isPlaying: true,
+                currentTime: roomState.playback.currentTime,
+                isLooping: true
+            });
+        });
+
+        stopButton.addEventListener('click', () => {
+            roomState.updatePlayback({
+                isPlaying: false,
+                currentTime: roomState.playback.currentTime,
+                isLooping: true
+            });
+        });
+
+        restartButton.addEventListener('click', () => {
+            roomState.updatePlayback({
+                isPlaying: false,
+                currentTime: 0,
+                isLooping: true
+            });
+            timeline.draw(roomState.tracks, 0);
+            stopAllAudio();
+        });
+    };
 
     // Watch for track changes
     roomState.watchTracks(tracks => {
-        timeline.draw(tracks, roomState.playback.currentTime);
-        syncAudioElements(tracks);
+        // Don't respond to external updates for tracks we're dragging
+        if (isDragging) {
+            const nonDraggedTracks = tracks.map(track => {
+                if (track.id === selectedTrackId) {
+                    // Keep our local version of the dragged track
+                    return roomState.tracks.find(t => t.id === selectedTrackId);
+                }
+                return track;
+            });
+            timeline.draw(nonDraggedTracks, roomState.playback.currentTime);
+            syncAudioElements(nonDraggedTracks);
+        } else {
+            timeline.draw(tracks, roomState.playback.currentTime);
+            syncAudioElements(tracks);
+        }
     });
     
     // Mouse event handlers for track interaction
     canvas.addEventListener('mousedown', (event) => {
         const rect = canvas.getBoundingClientRect();
-        const mouseX = event.clientX - rect.left + timeline.scrollOffset;
+        const mouseX = event.clientX - rect.left;
         const mouseY = event.clientY - rect.top;
         
         // Check if a track was clicked
@@ -68,12 +118,41 @@ export function initializeCanvas(roomState, ws) {
         if (isDragging && selectedTrackId) {
             const deltaX = event.clientX - dragStartX;
             
-            // Find the selected track
+            // Find the selected track and preserve all its data
             const track = roomState.tracks.find(t => t.id === selectedTrackId);
             if (track) {
-                // Update track position locally
-                const newPosition = Math.max(0, originalTrackPosition + deltaX);
-                roomState.updateTracks(selectedTrackId, { position: newPosition });
+                // Calculate new position within timeline bounds
+                const newPosition = Math.max(0, Math.min(
+                    originalTrackPosition + deltaX,
+                    TIMELINE_CONFIG.totalWidth - 100 // Ensure track ends within timeline
+                ));
+
+                // Preserve all track data while updating position
+                const updatedTrack = {
+                    ...track,
+                    position: newPosition
+                };
+                
+                // Update track locally
+                roomState.updateTracks(selectedTrackId, updatedTrack);
+                
+                // Force immediate redraw
+                const tracks = roomState.tracks.map(t => 
+                    t.id === selectedTrackId ? updatedTrack : t
+                );
+                timeline.draw(tracks, roomState.playback.currentTime);
+                
+                // Send updates to other users with rate limiting
+                const now = Date.now();
+                if (now - lastUpdateTime >= UPDATE_INTERVAL) {
+                    import('../websocket.js').then(({ sendMessage }) => {
+                        sendMessage(ws, 'move_track', {
+                            trackId: selectedTrackId,
+                            position: newPosition
+                        });
+                    });
+                    lastUpdateTime = now;
+                }
             }
         }
     });
@@ -107,16 +186,14 @@ export function initializeCanvas(roomState, ws) {
     });
     
     // Helper function to find a track at a given position
-    function findTrackAtPosition(x, y, tracks) {
-        const trackHeight = 30;
-        const trackPadding = 10;
-        
+    function findTrackAtPosition(x, y, tracks) {        
         for (let i = 0; i < tracks.length; i++) {
             const track = tracks[i];
-            const trackY = i * (trackHeight + trackPadding) + trackPadding + 40;
+            const trackY = i * (TIMELINE_CONFIG.trackHeight + TIMELINE_CONFIG.trackPadding) + 
+                          TIMELINE_CONFIG.topMargin;
             
             if (x >= track.position && x <= track.position + 100 && 
-                y >= trackY && y <= trackY + trackHeight) {
+                y >= trackY && y <= trackY + TIMELINE_CONFIG.trackHeight) {
                 return track;
             }
         }
@@ -134,30 +211,6 @@ export function initializeCanvas(roomState, ws) {
                 pausePlayback();
             }
         }
-    });
-
-    // Playback controls
-    playButton.addEventListener('click', () => {
-        roomState.updatePlayback({
-            isPlaying: true,
-            currentTime: roomState.playback.currentTime
-        });
-    });
-
-    stopButton.addEventListener('click', () => {
-        roomState.updatePlayback({
-            isPlaying: false,
-            currentTime: roomState.playback.currentTime
-        });
-    });
-
-    restartButton.addEventListener('click', () => {
-        roomState.updatePlayback({
-            isPlaying: false,
-            currentTime: 0
-        });
-        timeline.draw(roomState.tracks, 0);
-        stopAllAudio();
     });
 
     // Stop all playing audio
@@ -182,49 +235,109 @@ export function initializeCanvas(roomState, ws) {
                     audio.scheduledSource.stop();
                 }
                 audioMap.delete(id);
+                roomState.resetLoadRetry(id);
             }
         });
 
         // Add new audio elements
         for (const track of tracks) {
             if (!audioMap.has(track.id)) {
-                try {
-                    if (track.audioBuffer) {
-                        const audio = {
-                            buffer: track.audioBuffer,
-                            scheduledSource: null,
-                            isPlaying: false,
-                            element: {
-                                play: () => {
-                                    const context = getAudioContext();
-                                    if (audio.scheduledSource) {
-                                        audio.scheduledSource.stop();
-                                    }
-                                    const currentTime = context.currentTime;
-                                    audio.scheduledSource = createScheduledSource(audio.buffer, currentTime);
-                                    audio.isPlaying = true;
-                                },
-                                pause: () => {
-                                    if (audio.scheduledSource) {
-                                        audio.scheduledSource.stop();
-                                        audio.isPlaying = false;
-                                    }
-                                }
-                            }
-                        };
-                        audioMap.set(track.id, audio);
-                    } else if (track.audioUrl) {
-                        // Fallback to URL if needed
-                        const response = await fetch(track.audioUrl);
-                        const blob = await response.blob();
-                        const audio = await createTrackAudio(blob);
-                        audioMap.set(track.id, audio);
-                    }
-                } catch (error) {
-                    console.error('Error loading audio for track:', track.id, error);
-                }
+                await loadTrackAudio(track);
             }
         }
+    }
+
+    async function loadTrackAudio(track) {
+        try {
+            roomState.updateTrackLoadingState(track.id, 'loading');
+            
+            if (track.audioBuffer) {
+                const audio = {
+                    buffer: track.audioBuffer,
+                    scheduledSource: null,
+                    isPlaying: false,
+                    element: {
+                        play: () => {
+                            const context = getAudioContext();
+                            if (audio.scheduledSource) {
+                                audio.scheduledSource.stop();
+                            }
+                            const currentTime = context.currentTime;
+                            audio.scheduledSource = createScheduledSource(audio.buffer, currentTime);
+                            audio.isPlaying = true;
+                        },
+                        pause: () => {
+                            if (audio.scheduledSource) {
+                                audio.scheduledSource.stop();
+                                audio.isPlaying = false;
+                            }
+                        }
+                    }
+                };
+                audioMap.set(track.id, audio);
+                roomState.updateTrackLoadingState(track.id, 'loaded');
+                roomState.resetLoadRetry(track.id);
+            } else if (track.audioUrl) {
+                const response = await fetch(track.audioUrl);
+                const blob = await response.blob();
+                const audio = await createTrackAudio(blob);
+                audioMap.set(track.id, audio);
+                roomState.updateTrackLoadingState(track.id, 'loaded');
+                roomState.resetLoadRetry(track.id);
+            }
+        } catch (error) {
+            console.error('Error loading audio for track:', track.id, error);
+            roomState.updateTrackLoadingState(track.id, 'error', error.message);
+            
+            // Implement retry mechanism
+            if (roomState.canRetryLoad(track.id)) {
+                const retryCount = roomState.incrementLoadRetry(track.id);
+                console.log(`Retrying audio load for track ${track.id}, attempt ${retryCount}`);
+                setTimeout(() => loadTrackAudio(track), 1000 * retryCount); // Exponential backoff
+            }
+        }
+    }
+
+    // Update drawTracks to show loading state
+    function drawTracks(tracks) {
+        tracks.forEach((track, index) => {
+            const y = index * (TIMELINE_CONFIG.trackHeight + TIMELINE_CONFIG.trackPadding) + 
+                      TIMELINE_CONFIG.topMargin;
+            const x = track.position;
+
+            // Get loading state
+            const loadingState = roomState.trackLoadingState.get(track.id);
+            let trackColor = track.color;
+            let statusText = '';
+
+            if (loadingState) {
+                switch (loadingState.status) {
+                    case 'loading':
+                        trackColor = '#cccccc';
+                        statusText = 'Loading...';
+                        break;
+                    case 'error':
+                        trackColor = '#ffcccc';
+                        statusText = 'Error - Retrying...';
+                        break;
+                }
+            }
+
+            // Draw track
+            ctx.fillStyle = trackColor;
+            ctx.fillRect(x, y, 100, TIMELINE_CONFIG.trackHeight);
+            ctx.strokeStyle = '#666';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x, y, 100, TIMELINE_CONFIG.trackHeight);
+
+            // Draw track name and status
+            ctx.fillStyle = '#000';
+            ctx.font = '12px Montserrat, sans-serif';
+            ctx.fillText(track.name, x + 5, y + (TIMELINE_CONFIG.trackHeight / 2));
+            if (statusText) {
+                ctx.fillText(statusText, x + 5, y + (TIMELINE_CONFIG.trackHeight * 0.8));
+            }
+        });
     }
 
     // Playback control functions
@@ -237,9 +350,11 @@ export function initializeCanvas(roomState, ws) {
                 const currentTime = (performance.now() - startTime) / 1000;
                 
                 if (currentTime >= TIMELINE_CONFIG.totalDuration) {
+                    // Loop back to start instead of stopping
                     roomState.updatePlayback({
-                        isPlaying: false,
-                        currentTime: 0
+                        isPlaying: true,
+                        currentTime: 0,
+                        isLooping: true
                     });
                     return;
                 }
@@ -301,6 +416,9 @@ export function initializeCanvas(roomState, ws) {
             stopAllAudio();
         }
     }
+
+    // Initialize playback controls after ensuring DOM is ready
+    initializePlaybackControls();
 
     // Clean up on destroy
     return function destroy() {

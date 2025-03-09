@@ -150,7 +150,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const backButton = document.querySelector('.action-btn[title="Back to Rooms"]');
         if (backButton) {
             backButton.addEventListener('click', () => {
-                window.location.href = '../index.html';
+                window.location.href = '../search/search.html';
             });
         }
 
@@ -162,7 +162,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (error) {
         console.error('Failed to initialize room:', error);
         alert('Failed to connect to room. Please try again.');
-        window.location.href = '../index.html';
+        window.location.href = '../search/search.html';
         return;
     }
 });

@@ -1,10 +1,11 @@
 export const TIMELINE_CONFIG = {
-    totalDuration: 30, // seconds
-    totalWidth: 9000,  // pixels
+    totalDuration: 2.5, // fixed 2.5-second timeline
+    totalWidth: 1500,  // pixels - matches viewport width
     canvasWidth: 1500, // visible width
-    trackHeight: 30,
-    trackPadding: 10,
-    gridLines: 90
+    trackHeight: 60, // taller tracks for better visibility
+    trackPadding: 15, // reduced padding between tracks
+    gridLines: 10, // one line every 0.25 seconds
+    topMargin: 20 // reduced top margin for first track
 };
 
 export class Timeline {
@@ -12,12 +13,6 @@ export class Timeline {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
         this.scrollOffset = 0;
-        
-        // Bind event handlers
-        this.handleWheel = this.handleWheel.bind(this);
-        
-        // Add event listeners
-        this.canvas.addEventListener('wheel', this.handleWheel);
         
         // Initial setup
         this.resizeCanvas();
@@ -32,16 +27,6 @@ export class Timeline {
         TIMELINE_CONFIG.canvasWidth = rect.width;
         
         // Redraw after resize
-        this.draw();
-    }
-
-    handleWheel(event) {
-        event.preventDefault();
-        this.scrollOffset += event.deltaY * 0.5;
-        this.scrollOffset = Math.max(0, Math.min(
-            this.scrollOffset,
-            TIMELINE_CONFIG.totalWidth - TIMELINE_CONFIG.canvasWidth
-        ));
         this.draw();
     }
 
@@ -67,18 +52,20 @@ export class Timeline {
         const { ctx } = this;
         
         tracks.forEach((track, index) => {
-            const y = index * (TIMELINE_CONFIG.trackHeight + TIMELINE_CONFIG.trackPadding) + TIMELINE_CONFIG.trackPadding + 40;
-            const x = track.position - this.scrollOffset;
-
-            // Skip if track is outside visible area
-            if (x + 100 < 0 || x > TIMELINE_CONFIG.canvasWidth) return;
+            const y = index * (TIMELINE_CONFIG.trackHeight + TIMELINE_CONFIG.trackPadding) + 
+                     TIMELINE_CONFIG.trackPadding + TIMELINE_CONFIG.topMargin;
+            const x = track.position;
 
             // Draw track background
+            // Draw track background with border
             ctx.fillStyle = track.color;
             ctx.fillRect(x, y, 100, TIMELINE_CONFIG.trackHeight);
+            ctx.strokeStyle = '#666';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x, y, 100, TIMELINE_CONFIG.trackHeight);
 
-            // Draw track name
-            ctx.fillStyle = '#333';
+            // Draw track name with better contrast
+            ctx.fillStyle = '#000';
             ctx.font = '12px Montserrat, sans-serif';
             ctx.fillText(track.name, x + 5, y + (TIMELINE_CONFIG.trackHeight / 1.5));
         });
@@ -86,9 +73,9 @@ export class Timeline {
 
     drawPlayhead(currentTime) {
         const { ctx } = this;
-        const playheadX = (currentTime / TIMELINE_CONFIG.totalDuration) * TIMELINE_CONFIG.totalWidth - this.scrollOffset;
+        const playheadX = (currentTime / TIMELINE_CONFIG.totalDuration) * TIMELINE_CONFIG.totalWidth;
 
-        if (playheadX >= 0 && playheadX <= TIMELINE_CONFIG.canvasWidth) {
+        if (playheadX <= TIMELINE_CONFIG.canvasWidth) {
             ctx.strokeStyle = 'red';
             ctx.lineWidth = 2;
             ctx.beginPath();
@@ -122,7 +109,6 @@ export class Timeline {
 
     // Cleanup
     destroy() {
-        this.canvas.removeEventListener('wheel', this.handleWheel);
         window.removeEventListener('resize', this.resizeCanvas);
     }
 }

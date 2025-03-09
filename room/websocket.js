@@ -103,15 +103,12 @@ async function extractAndDecodeAudio(zipArrayBuffer) {
         // Wait for all decoding to complete
         await Promise.all(decodePromises);
         
-        // Check if we decoded any files
-        if (Object.keys(audioBuffers).length === 0) {
-            throw new Error('No audio files were successfully decoded');
-        }
-        
+        // Return audio buffers even if some failed to decode
         return audioBuffers;
     } catch (error) {
         console.error('Error extracting audio files:', error);
-        throw error;
+        // Return empty buffers object rather than throwing
+        return {};
     }
 }
 
@@ -162,50 +159,42 @@ export async function initializeWebSocket(token, roomId) {
                             if (tracks.length > 0) {
                                 console.log('Loading existing tracks:', tracks);
                                 
-                                // First, fetch all audio files for the room
+                                // Add tracks first so they're visible
+                                tracks.forEach(track => {
+                                    window.roomState.addTrack(track);
+                                    window.roomState.updateTrackLoadingState(track.id, 'loading');
+                                });
+                                
+                                // Then try to load audio
                                 fetchRoomAudio(window.roomState.roomId).then(audioBuffers => {
                                     console.log('Loaded audio buffers for room:', Object.keys(audioBuffers));
                                     
                                     // Process each track
                                     tracks.forEach(track => {
-                                        // Add track to room state first
-                                        const trackWithAudio = { ...track };
-                                        
-                                        // If we have the audio buffer for this track, add it
                                         const key = `${track.instrument}/${track.audioFile}`;
                                         if (audioBuffers[key]) {
-                                            trackWithAudio.audioBuffer = audioBuffers[key];
-                                            
-                                            // Also add to loaded sounds cache
+                                            // Add to loaded sounds cache
                                             window.roomState.addLoadedSound(
                                                 track.instrument,
                                                 track.audioFile,
                                                 audioBuffers[key]
                                             );
+                                            
+                                            // Update track with audio buffer
+                                            window.roomState.updateTracks(track.id, {
+                                                ...track,
+                                                audioBuffer: audioBuffers[key]
+                                            });
+                                            window.roomState.updateTrackLoadingState(track.id, 'loaded');
+                                        } else {
+                                            window.roomState.updateTrackLoadingState(track.id, 'error', 'Failed to load audio');
                                         }
-                                        
-                                        // Add track to room state
-                                        window.roomState.addTrack(trackWithAudio);
                                     });
                                 }).catch(error => {
                                     console.error('Error loading room audio:', error);
-                                    
-                                    // Fallback: Add tracks without audio and request them individually
+                                    // Mark all tracks as error but keep them visible
                                     tracks.forEach(track => {
-                                        // Add track to room state first (without audio buffer)
-                                        window.roomState.addTrack(track);
-                                        
-                                        // If track has an audioFile, load it
-                                        if (track.audioFile) {
-                                            // This will trigger loading the audio file
-                                            sendMessage(ws, 'use_sound', {
-                                                trackId: track.id,
-                                                instrument: track.instrument,
-                                                soundName: track.audioFile,
-                                                position: track.position,
-                                                currentTime: 0
-                                            });
-                                        }
+                                        window.roomState.updateTrackLoadingState(track.id, 'error', error.message);
                                     });
                                 });
                             }
@@ -260,6 +249,10 @@ export async function initializeWebSocket(token, roomId) {
                                 const processTrackUpdate = async () => {
                                     try {
                                         console.log('Processing track update for:', data.soundUrl);
+                                        
+                                        // Update track data first
+                                        window.roomState.updateTracks(data.trackData.id, data.trackData);
+                                        window.roomState.updateTrackLoadingState(data.trackData.id, 'loading');
 
                                         // Get the existing buffer if available
                                         const key = `${data.trackData.instrument}/${data.trackData.audioFile}`;
@@ -271,6 +264,7 @@ export async function initializeWebSocket(token, roomId) {
                                                 ...data.trackData,
                                                 audioBuffer: existingBuffer
                                             });
+                                            window.roomState.updateTrackLoadingState(data.trackData.id, 'loaded');
                                             return;
                                         }
 
@@ -320,6 +314,7 @@ export async function initializeWebSocket(token, roomId) {
                                                     ...data.trackData,
                                                     audioBuffer
                                                 });
+                                                window.roomState.updateTrackLoadingState(data.trackData.id, 'loaded');
                                                 return;
                                             } catch (error) {
                                                 attempts++;
@@ -336,10 +331,8 @@ export async function initializeWebSocket(token, roomId) {
                                         throw new Error(`Failed to decode audio after ${maxAttempts} attempts. Last error: ${lastError.message}`);
                                     } catch (error) {
                                         console.error('Error processing track update:', error);
-                                        // Remove the track since we couldn't process it
-                                        if (data.trackData.id) {
-                                            window.roomState.removeTrack(data.trackData.id);
-                                        }
+                                        // Keep track but mark as error
+                                        window.roomState.updateTrackLoadingState(data.trackData.id, 'error', error.message);
                                     }
                                 };
                                 processTrackUpdate();
@@ -350,10 +343,13 @@ export async function initializeWebSocket(token, roomId) {
                             break;
                             
                         case 'track_moved':
-                            // Handle track movement
-                            window.roomState.updateTracks(data.trackId, {
-                                position: data.position
-                            });
+                            // Only handle track movement if it's not our own track
+                            const track = window.roomState.tracks.find(t => t.id === data.trackId);
+                            if (track && track.ownerId !== window.roomState.userId) {
+                                window.roomState.updateTracks(data.trackId, {
+                                    position: data.position
+                                });
+                            }
                             break;
 
                         case 'track_removed':
