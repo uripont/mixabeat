@@ -23,8 +23,8 @@ function initializeUIElements() {
 }
 
 // Message handling
-function appendMessage(message, username, isSent = false, isSystem = false) {
-    console.log('Chat appendMessage:', { message, username, isSent, isSystem });
+function appendMessage(message, username, isSent = false, isSystem = false, isHistory = false) {
+    console.log('Chat appendMessage:', { message, username, isSent, isSystem, isHistory });
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${isSent ? 'sent' : 'received'} ${isSystem ? 'system' : ''}`;
 
@@ -38,10 +38,27 @@ function appendMessage(message, username, isSent = false, isSystem = false) {
 
     messageDiv.appendChild(senderDiv);
     messageDiv.appendChild(bubbleDiv);
-    chatMessages.appendChild(messageDiv);
     
-    // Auto scroll to bottom
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+    // Handle message insertion based on type
+    if (isHistory) {
+        // History messages are added to the top
+        if (chatMessages.firstChild) {
+            chatMessages.insertBefore(messageDiv, chatMessages.firstChild);
+        } else {
+            chatMessages.appendChild(messageDiv);
+        }
+    } else if (isSystem) {
+        // System messages always at the top
+        chatMessages.insertBefore(messageDiv, chatMessages.firstChild);
+    } else {
+        // New messages always at the bottom
+        chatMessages.appendChild(messageDiv);
+    }
+    
+    // Auto scroll to bottom for new messages (not history)
+    if (!isHistory) {
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
 }
 
 // System message helper
@@ -165,20 +182,23 @@ async function initialize() {
         // Load message history
         try {
             const { messages } = await getRoomMessages(roomId);
-            if (messages) {
+            if (messages && Array.isArray(messages)) {
                 console.log('initialize: Loaded message history:', messages);
-                messages.forEach(msg => {
+                // Sort messages by ID to ensure chronological order
+                messages.sort((a, b) => a.id - b.id).forEach(msg => {
                     appendMessage(
                         msg.message_text, 
                         msg.username, 
-                        parseInt(msg.userId) === parseInt(window.roomState.userId)
+                        parseInt(msg.userId) === parseInt(window.roomState.userId),
+                        false,
+                        true // Mark as history message
                     );
                 });
+                // Auto scroll to bottom after loading all history
+                chatMessages.scrollTop = chatMessages.scrollHeight;
             } else {
                 console.warn('initialize: No message history loaded (empty response).');
             }
-            // Auto scroll to bottom after loading history
-            chatMessages.scrollTop = chatMessages.scrollHeight;
         } catch (error) {
             console.error('initialize: Error loading message history:', error);
         }

@@ -100,6 +100,19 @@ export function initializeRoomState() {
         },
 
         setCurrentInstrument(instrument) {
+            if (!instrument) {
+                // Assign random instrument if none provided
+                const availableInstruments = ['drums', 'guitar', 'piano', 'bass', 'synth', 'violin', 'trumpet'];
+                const existingInstruments = new Set(this.tracks
+                    .filter(t => t.ownerId === this.userId)
+                    .map(t => t.instrument));
+                const unusedInstruments = availableInstruments.filter(i => !existingInstruments.has(i));
+                instrument = unusedInstruments.length > 0 ? 
+                    unusedInstruments[Math.floor(Math.random() * unusedInstruments.length)] :
+                    availableInstruments[Math.floor(Math.random() * availableInstruments.length)];
+                console.log('Assigned random instrument:', instrument);
+            }
+
             this.audio.currentInstrument = instrument;
             window.dispatchEvent(new CustomEvent('state:audio', {
                 detail: this.audio

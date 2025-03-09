@@ -24,7 +24,38 @@ export function initializeSoundPicker(ws) {
         }
     }
 
-    // Update displayed instrument when assigned
+    // Initialize with current instrument if exists
+    async function initializeWithCurrentInstrument() {
+        const currentInstrument = window.roomState.audio.currentInstrument;
+        if (currentInstrument) {
+            try {
+                // First update the UI to show the instrument
+                const iconClass = getInstrumentIcon(currentInstrument);
+                currentInstrumentEl.innerHTML = `
+                    <i class="fas ${iconClass}"></i>
+                    <span>${currentInstrument.charAt(0).toUpperCase() + currentInstrument.slice(1)}</span>
+                `;
+
+                // Show loading state while fetching sounds
+                soundsLoadingEl.style.display = 'block';
+                soundsListEl.style.display = 'none';
+
+                // Load available sounds
+                await loadAvailableSounds(currentInstrument);
+            } catch (error) {
+                console.error('Error initializing with current instrument:', error);
+                soundsLoadingEl.innerHTML = `
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span>Error loading sounds. Please refresh.</span>
+                `;
+            }
+        }
+    }
+
+    // Initialize immediately if instrument exists
+    initializeWithCurrentInstrument();
+
+    // Update displayed instrument when it changes
     window.roomState.watchAudio(async ({ currentInstrument }) => {
         if (currentInstrument) {
             try {
@@ -288,6 +319,41 @@ export function initializeSoundPicker(ws) {
         const key = `${window.roomState.audio.currentInstrument}/${sound.name}`;
         const audioBuffer = window.roomState.audio.loadedSounds.get(key);
         
+        // Send track creation with position first
+        sendMessage(ws, 'use_sound', {
+            trackId: trackId,
+            instrument: window.roomState.audio.currentInstrument,
+            soundName: sound.name,
+            position: position,
+            currentTime: window.roomState.playback ? window.roomState.playback.currentTime : 0,
+            track: newTrack // Include full track data
+        });
+
+        // Send multiple move_track messages with delays to ensure position sync
+        const sendPositionUpdates = () => {
+            let updatesSent = 0;
+            const maxUpdates = 5;
+            const updateInterval = 200; // 200ms between updates
+
+            const sendUpdate = () => {
+                if (updatesSent < maxUpdates) {
+                    sendMessage(ws, 'move_track', {
+                        trackId: trackId,
+                        position: position
+                    });
+                    updatesSent++;
+                    setTimeout(sendUpdate, updateInterval);
+                }
+            };
+
+            // Start sending updates after initial delay
+            setTimeout(sendUpdate, 100);
+        };
+
+        // Start position update sequence
+        sendPositionUpdates();
+
+        // Then add track locally
         if (audioBuffer) {
             console.log('Found existing audio buffer for:', sound.name);
             newTrack.audioBuffer = audioBuffer;
@@ -296,7 +362,7 @@ export function initializeSoundPicker(ws) {
             console.log('No audio buffer found for:', sound.name, 'attempting to fetch...');
             // First add track to state so it appears
             window.roomState.addTrack(newTrack);
-            
+
             // Then fetch audio buffer
             fetchSoundFile(sound.url).then(buffer => {
                 console.log('Successfully fetched audio buffer for:', sound.name);
@@ -347,15 +413,6 @@ export function initializeSoundPicker(ws) {
             console.error('Cannot load sound: no audio buffer and no URL provided');
             return;
         }
-        
-        // Send WebSocket message
-        sendMessage(ws, 'use_sound', {
-            trackId: trackId,
-            instrument: window.roomState.audio.currentInstrument,
-            soundName: sound.name,
-            position: position,
-            currentTime: window.roomState.playback ? window.roomState.playback.currentTime : 0
-        });
     }
 
     // Handle incoming WebSocket messages

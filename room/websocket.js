@@ -257,7 +257,20 @@ export async function initializeWebSocket(token, roomId) {
                             break;
 
                         case 'track_added':
-                            window.roomState.addTrack(data.track);
+                            console.log('Track added message received:', data.track);
+                            if (data.track) {
+                                // Ensure position is included
+                                const trackWithPosition = {
+                                    ...data.track,
+                                    position: data.track.position ?? 0
+                                };
+                                window.roomState.addTrack(trackWithPosition);
+                                
+                                // Also apply position update immediately
+                                window.roomState.updateTracks(data.track.id, {
+                                    position: trackWithPosition.position
+                                });
+                            }
                             break;
 
                         case 'track_updated':
@@ -265,10 +278,30 @@ export async function initializeWebSocket(token, roomId) {
                                 // Handle track update with sound URL
                                 const processTrackUpdate = async () => {
                                     try {
-                                        console.log('Processing track update for:', data.soundUrl);
+                                        if (!window.roomState) {
+                                            throw new Error('Room state not initialized');
+                                        }
+
+                                        console.log('Processing track update for:', data.soundUrl, 'with position:', data.trackData.position);
+
+                                        // Create or update track with all data including position
+                                        const fullTrackData = {
+                                            ...data.trackData,
+                                            position: data.trackData.position || 0,
+                                            audioFile: data.trackData.audioFile,
+                                            instrument: data.trackData.instrument
+                                        };
                                         
-                                        // Update track data first
-                                        window.roomState.updateTracks(data.trackData.id, data.trackData);
+                                        // First check if track exists, if not add it with full data
+                                        const existingTrack = window.roomState.tracks.find(t => t.id === data.trackData.id);
+                                        if (!existingTrack) {
+                                            console.log('Track not found, adding new track:', fullTrackData);
+                                            window.roomState.addTrack(fullTrackData);
+                                        } else {
+                                            console.log('Updating existing track with full data');
+                                            window.roomState.updateTracks(data.trackData.id, fullTrackData);
+                                        }
+                                        
                                         window.roomState.updateTrackLoadingState(data.trackData.id, 'loading');
 
                                         // Get the existing buffer if available
@@ -296,19 +329,39 @@ export async function initializeWebSocket(token, roomId) {
                                             throw new Error(`Failed to fetch sound: ${response.status}`);
                                         }
                                         
-                                        // Get array buffer and validate
-                                        const arrayBuffer = await response.arrayBuffer();
-                                        if (arrayBuffer.byteLength === 0) {
-                                            throw new Error('Received empty audio data');
+                                        // Get zip file as array buffer
+                                        const zipArrayBuffer = await response.arrayBuffer();
+                                        if (zipArrayBuffer.byteLength === 0) {
+                                            throw new Error('Received empty zip file');
                                         }
-                                        console.log('Received array buffer size:', arrayBuffer.byteLength);
+                                        console.log('Received zip file size:', zipArrayBuffer.byteLength);
 
-                                        // Ensure audio context is in running state
+                                        // Ensure audio context is created and resumed first
                                         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                                        if (audioContext.state !== 'running') {
-                                            await audioContext.resume();
-                                        }
+                                        await audioContext.resume();
+                                        console.log('Audio context state:', audioContext.state);
 
+                                        // Extract audio from zip
+                                        const JSZip = await import('https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm');
+                                        const zip = new JSZip.default();
+                                        const zipContents = await zip.loadAsync(zipArrayBuffer);
+                                        
+                                        // Get the first file in the zip
+                                        const files = Object.keys(zipContents.files);
+                                        if (files.length === 0) {
+                                            throw new Error('No files found in the zip');
+                                        }
+                                        
+                                        // Get the audio data
+                                        const audioData = await zipContents.files[files[0]].async('arraybuffer');
+                                        if (audioData.byteLength === 0) {
+                                            throw new Error('Extracted empty audio data');
+                                        }
+                                        console.log('Extracted audio data size:', audioData.byteLength);
+
+                                        // Add a small delay before decoding to ensure audio context is fully ready
+                                        await new Promise(resolve => setTimeout(resolve, 100));
+                                        
                                         // Decode audio data with retry logic
                                         let attempts = 0;
                                         const maxAttempts = 3;
@@ -316,7 +369,7 @@ export async function initializeWebSocket(token, roomId) {
 
                                         while (attempts < maxAttempts) {
                                             try {
-                                                const audioBuffer = await audioContext.decodeAudioData(arrayBuffer.slice());
+                                                const audioBuffer = await audioContext.decodeAudioData(audioData.slice());
                                                 console.log('Successfully decoded audio on attempt:', attempts + 1);
                                                 
                                                 // Add sound to loaded sounds cache

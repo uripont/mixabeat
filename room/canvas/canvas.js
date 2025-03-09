@@ -121,10 +121,12 @@ export function initializeCanvas(roomState, ws) {
             // Find the selected track and preserve all its data
             const track = roomState.tracks.find(t => t.id === selectedTrackId);
             if (track) {
-                // Calculate new position within timeline bounds
+                // Calculate new position ensuring track doesn't go beyond yellow line (3s boundary)
+                const maxAllowedPosition = (TIMELINE_CONFIG.loopPoint / TIMELINE_CONFIG.totalDuration) * 
+                                        TIMELINE_CONFIG.totalWidth - 100; // Subtract track width
                 const newPosition = Math.max(0, Math.min(
                     originalTrackPosition + deltaX,
-                    TIMELINE_CONFIG.totalWidth - 100 // Ensure track ends within timeline
+                    maxAllowedPosition
                 ));
 
                 // Preserve all track data while updating position

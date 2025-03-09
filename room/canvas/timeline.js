@@ -6,7 +6,9 @@ export const TIMELINE_CONFIG = {
     trackPadding: 10, // further reduced padding
     gridLines: 16,    // 4 lines per second (16 total for 4 seconds)
     topMargin: 10,     // slightly reduced top margin
-    loopPoint: 3      // point at which playback should loop (in seconds)
+    loopPoint: 3,     // point at which playback should loop (in seconds)
+    minTracks: 10,    // minimum number of tracks to show
+    minHeight: null   // will be calculated based on minTracks
 };
 
 export class Timeline {
@@ -14,6 +16,21 @@ export class Timeline {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
         this.scrollOffset = 0;
+        this.contentHeight = 0;
+        
+        // Calculate minimum height
+        TIMELINE_CONFIG.minHeight = TIMELINE_CONFIG.minTracks * 
+            (TIMELINE_CONFIG.trackHeight + TIMELINE_CONFIG.trackPadding) + 
+            TIMELINE_CONFIG.topMargin;
+            
+        // Setup scroll handling
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const delta = e.deltaY;
+            const maxScroll = Math.max(0, this.contentHeight - this.canvas.height);
+            this.scrollOffset = Math.max(0, Math.min(this.scrollOffset + delta, maxScroll));
+            this.draw(window.roomState.tracks, window.roomState.playback.currentTime, window.roomState);
+        });
         
         // Initial setup
         this.resizeCanvas();
@@ -30,21 +47,38 @@ export class Timeline {
         
         const panelContentRect = panelContent.getBoundingClientRect();
         this.canvas.width = panelContentRect.width - 30; // Subtract padding
-        this.canvas.height = panelContentRect.height - 30; // Subtract padding
+        
+        // Calculate content height based on number of tracks
+        const tracks = window.roomState?.tracks || [];
+        this.contentHeight = Math.max(
+            TIMELINE_CONFIG.minHeight,
+            tracks.length * (TIMELINE_CONFIG.trackHeight + TIMELINE_CONFIG.trackPadding) + 
+            TIMELINE_CONFIG.topMargin
+        );
+        
+        // Set canvas height to available space
+        this.canvas.height = panelContentRect.height - 30;
         TIMELINE_CONFIG.canvasWidth = this.canvas.width;
-
-        console.log('Canvas width:', this.canvas.width);
-        console.log('Canvas height:', this.canvas.height);
-        console.log('Panel Content Width:', panelContentRect.width);
-        console.log('Panel Content Height:', panelContentRect.height);
+        
+        // Adjust scroll offset if content height changed
+        const maxScroll = Math.max(0, this.contentHeight - this.canvas.height);
+        this.scrollOffset = Math.min(this.scrollOffset, maxScroll);
         
         // Redraw after resize
-        this.draw();
+        this.draw(window.roomState?.tracks || [], window.roomState?.playback?.currentTime || 0, window.roomState);
     }
 
     drawGrid() {
         const { ctx } = this;
+        
+        // Save context state
+        ctx.save();
+        
+        // Apply scroll transformation
+        ctx.translate(0, -this.scrollOffset);
+        
         const divisionWidth = TIMELINE_CONFIG.totalWidth / TIMELINE_CONFIG.gridLines;
+        const totalHeight = Math.max(this.contentHeight, this.canvas.height + this.scrollOffset);
 
         ctx.strokeStyle = '#ccc';
         ctx.lineWidth = 1;
@@ -55,11 +89,15 @@ export class Timeline {
             
             ctx.beginPath();
             ctx.moveTo(xPos, 0);
-            ctx.lineTo(xPos, this.canvas.height);
+            ctx.lineTo(xPos, totalHeight);
             ctx.stroke();
-            
-            // Draw time labels at each second (every 4 grid lines)
+        }
+
+        // Draw time labels (these stay fixed at the top)
+        ctx.restore();
+        for (let i = 0; i <= TIMELINE_CONFIG.gridLines; i++) {
             if (i % 4 === 0) {
+                const xPos = i * divisionWidth;
                 const seconds = i / 4;
                 ctx.fillStyle = '#fff';
                 ctx.font = '10px Montserrat, sans-serif';
@@ -67,38 +105,60 @@ export class Timeline {
             }
         }
         
-        // Draw loop point indicator (yellow line only, no text)
+        // Draw loop point indicator
         const loopPointX = (TIMELINE_CONFIG.loopPoint / TIMELINE_CONFIG.totalDuration) * TIMELINE_CONFIG.totalWidth;
         ctx.strokeStyle = 'yellow';
         ctx.lineWidth = 2;
-        ctx.setLineDash([5, 5]); // Dashed line
+        ctx.setLineDash([5, 5]);
         ctx.beginPath();
         ctx.moveTo(loopPointX, 0);
-        ctx.lineTo(loopPointX, this.canvas.height);
+        ctx.lineTo(loopPointX, this.canvas.height + this.scrollOffset);
         ctx.stroke();
-        ctx.setLineDash([]); // Reset to solid line
+        ctx.setLineDash([]);
     }
 
-    drawTracks(tracks) {
+    drawTracks(tracks, roomState) {
         const { ctx } = this;
+        
+        // Save context state
+        ctx.save();
+        
+        // Apply scroll transformation
+        ctx.translate(0, -this.scrollOffset);
         
         tracks.forEach((track, index) => {
             const y = index * (TIMELINE_CONFIG.trackHeight + TIMELINE_CONFIG.trackPadding) + 
                      TIMELINE_CONFIG.trackPadding + TIMELINE_CONFIG.topMargin;
+            
+            // Skip tracks that are not visible
+            if (y + TIMELINE_CONFIG.trackHeight < this.scrollOffset || 
+                y > this.scrollOffset + this.canvas.height) {
+                return;
+            }
+            
             const x = track.position;
 
+            // Check if track is owned by current user
+            const isOwnedTrack = track.ownerId === roomState.userId;
+
             // Draw track background with border
-            ctx.fillStyle = track.color;
+            ctx.fillStyle = isOwnedTrack ? track.color : '#999999';
+            ctx.globalAlpha = isOwnedTrack ? 1.0 : 0.6;
             ctx.fillRect(x, y, 100, TIMELINE_CONFIG.trackHeight);
+            ctx.globalAlpha = 1.0;
+
             ctx.strokeStyle = '#666';
             ctx.lineWidth = 2;
             ctx.strokeRect(x, y, 100, TIMELINE_CONFIG.trackHeight);
 
             // Draw track name with better contrast
-            ctx.fillStyle = '#000';
+            ctx.fillStyle = isOwnedTrack ? '#000' : '#555';
             ctx.font = '12px Montserrat, sans-serif';
             ctx.fillText(track.name, x + 5, y + (TIMELINE_CONFIG.trackHeight / 1.5));
         });
+        
+        // Restore context state
+        ctx.restore();
     }
 
     drawPlayhead(currentTime) {
@@ -112,13 +172,13 @@ export class Timeline {
         ctx.lineTo(playheadX, this.canvas.height);
         ctx.stroke();
         
-        // Draw current time
+        // Draw current time (stays fixed at top)
         ctx.fillStyle = 'red';
         ctx.font = '12px Montserrat, sans-serif';
         ctx.fillText(`${currentTime.toFixed(2)}s`, playheadX + 5, 20);
     }
 
-    draw(tracks = [], currentTime = 0) {
+    draw(tracks = [], currentTime = 0, roomState = window.roomState) {
         const { ctx } = this;
 
         // Clear canvas
@@ -126,7 +186,7 @@ export class Timeline {
 
         // Draw components
         this.drawGrid();
-        this.drawTracks(tracks);
+        this.drawTracks(tracks, roomState);
         this.drawPlayhead(currentTime);
     }
 
@@ -142,6 +202,7 @@ export class Timeline {
 
     // Cleanup
     destroy() {
+        this.canvas.removeEventListener('wheel', this.handleWheel);
         window.removeEventListener('resize', this.resizeCanvas);
     }
 }
