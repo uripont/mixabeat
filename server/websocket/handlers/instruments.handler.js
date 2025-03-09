@@ -6,6 +6,7 @@ const instrumentsService = require('../../services/instruments.service');
 const roomInstruments = new Map(); // { roomId -> { availableInstruments, assignedInstruments } }
 
 // Initialize room instruments if not already set
+// Initialize room instruments if not already set
 function getOrInitRoomInstruments(roomId) {
     if (!roomInstruments.has(roomId)) {
         roomInstruments.set(roomId, {
@@ -17,27 +18,43 @@ function getOrInitRoomInstruments(roomId) {
 }
 
 // Get a random available instrument for a user
-function assignInstrumentToUser(roomId, userId) {
+function assignInstrumentToUser(roomId, userId, forceInstrument = null) {
     const room = getOrInitRoomInstruments(roomId);
-    
-    // If user already has an instrument assigned, return it
-    if (room.assignedInstruments.has(userId)) {
-        return room.assignedInstruments.get(userId);
+    logger.info(`Assigning instrument for user ${userId} in room ${roomId}`);
+
+    // If a specific instrument is forced (e.g., for room creator)
+    if (forceInstrument) {
+        logger.info(`Forcing instrument ${forceInstrument} for user ${userId}`);
+        room.assignedInstruments.set(userId, forceInstrument);
+        return forceInstrument;
     }
     
     // Get available instruments (not yet assigned)
     const assignedSet = new Set(room.assignedInstruments.values());
     const available = room.availableInstruments.filter(i => !assignedSet.has(i));
+    logger.info(`Available instruments: ${available.join(', ')}`);
     
-    if (available.length === 0) {
-        // If no instruments available, assign a random one from all instruments
-        const instrument = room.availableInstruments[Math.floor(Math.random() * room.availableInstruments.length)];
-        room.assignedInstruments.set(userId, instrument);
-        return instrument;
+    // If user already has an instrument, keep it if no others are available
+    if (room.assignedInstruments.has(userId)) {
+        const currentInstrument = room.assignedInstruments.get(userId);
+        if (available.length === 0) {
+            logger.info(`Keeping current instrument ${currentInstrument} for user ${userId}`);
+            return currentInstrument;
+        }
     }
     
-    // Assign random available instrument
-    const instrument = available[Math.floor(Math.random() * available.length)];
+    let instrument;
+    if (available.length === 0) {
+        // If no instruments available, assign a random one from all instruments
+        instrument = room.availableInstruments[Math.floor(Math.random() * room.availableInstruments.length)];
+        logger.info(`No available instruments, randomly assigned ${instrument} to user ${userId}`);
+    } else {
+        // Assign random available instrument
+        instrument = available[Math.floor(Math.random() * available.length)];
+        logger.info(`Assigned available instrument ${instrument} to user ${userId}`);
+    }
+    
+    // Set the assignment and return
     room.assignedInstruments.set(userId, instrument);
     return instrument;
 }
@@ -92,8 +109,7 @@ const handleUseSound = async (socket, message, pool) => {
 
             let track;
             let isNewTrack = false;
-            const currentTime = message.currentTime || 0; // Get current time from message or default to 0
-            const position = message.position || 150 * (roomContents.tracks.length + 1); // Use provided position or calculate
+            const position = 0; // Always start at position 0 for new tracks
 
             // If trackId is provided, find and update existing track
             if (trackId) {

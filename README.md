@@ -107,6 +107,38 @@ graph TB
     class DBC,DBQ,DB database
 ```
 
+## WebSocket Message Types
+
+### Room Management
+- **join_room**: Join a specific room
+  - Parameters: `{ roomId: string }`
+  - Response: `{ type: 'room_joined', roomData: object }`
+
+### Chat
+- **chat_message**: Send a chat message
+  - Parameters: `{ message: string }`
+  - Response: `{ type: 'chat_message', userId: string, message: string }`
+
+### Track Management
+- **use_sound**: Create or update a track with a sound
+  - Parameters: `{ trackId?: string, instrument: string, soundName: string, position?: number }`
+  - Response: `{ type: 'sound_updated', trackId: string, success: boolean, isNewTrack: boolean }`
+
+- **move_track**: Update track position in real-time
+  - Parameters: `{ trackId: string, position: number }`
+  - Response: `{ type: 'track_moved', trackId: string, position: number }`
+  - Broadcast: Sends position updates to all users in the room
+  - Note: Used for real-time track movement synchronization
+
+- **track_status**: Update track editing status
+  - Parameters: `{ trackId: string, status: string }`
+  - Response: `{ type: 'track_status', trackId: string, status: string }`
+
+### Real-time Collaboration
+- **mouse_position**: Share cursor position
+  - Parameters: `{ x: number, y: number }`
+  - Broadcast: Sends position to other users in room
+
 ## Server Deployment Guide
 
 ### VM Setup
@@ -180,6 +212,7 @@ For song management:
 For real-time editing experience:
 - [x] Websocket message to send mouse position on the canvas over time
 - [x] Websocket messages to send track status changes (connected but not editing, editing, marked as finished)
+- [x] Real-time track movement synchronization between users
 
 For auth:
 - [x] Better auth validation on endpoint (no repeated usernames, valid emails, minimum password length)

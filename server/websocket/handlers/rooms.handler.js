@@ -2,9 +2,10 @@ const WebSocket = require('ws');
 const logger = require('../../utils/logger');
 const { getUserById, getUserSession } = require('../../database/db-common-queries');
 const { broadcastToRoom, clients } = require('./utils.handler');
-const { assignInstrumentToUser } = require('./instruments.handler');
+const { assignInstrumentToUser, getAvailableInstruments } = require('./instruments.handler');
 
 const handleJoinRoom = async (socket, message, pool) => {
+    let userInstrument;
     try {
         const session = await getUserSession(socket._token);
         if (!session || !session.room_id || session.room_id !== message.roomId) {
@@ -40,12 +41,11 @@ const handleJoinRoom = async (socket, message, pool) => {
 
             logger.info(`User ${socket.userId} (${user.username}) joined room ${message.roomId}`);
 
-            // Get all connected users in this room (excluding the joining user)
-            const connectedUsers = Array.from(global.wss.clients)
+            // Check if this is a new room by looking for other users
+            const allUsers = Array.from(global.wss.clients)
                 .filter(client => 
                     client.readyState === WebSocket.OPEN && 
-                    client.roomId === message.roomId && 
-                    client.userId !== socket.userId
+                    client.roomId === message.roomId
                 )
                 .map(client => {
                     const clientInfo = clients.get(client);
@@ -55,8 +55,21 @@ const handleJoinRoom = async (socket, message, pool) => {
                     };
                 });
 
-            // Assign an instrument to the user
-            const assignedInstrument = assignInstrumentToUser(message.roomId, socket.userId);
+            // Filter connected users for the joining user (exclude self)
+            const connectedUsers = allUsers.filter(u => u.userId !== socket.userId);
+
+            // Get available instruments if it's a new room
+            if (connectedUsers.length === 0) {
+                userInstrument = 'piano'; // Default to piano for room creator
+            } else {
+                userInstrument = assignInstrumentToUser(message.roomId, socket.userId);
+            }
+
+            // Current user's info to be added to other users' lists
+            const currentUser = {
+                userId: socket.userId,
+                username: user.username
+            };
 
             // Get room data to check for existing tracks
             const [[roomResult]] = await pool.promise().query(
@@ -76,7 +89,7 @@ const handleJoinRoom = async (socket, message, pool) => {
                 type: 'room_joined',
                 roomId: message.roomId,
                 connectedUsers,
-                assignedInstrument,
+                assignedInstrument: userInstrument,
                 song: roomContents
             };
 
@@ -89,14 +102,15 @@ const handleJoinRoom = async (socket, message, pool) => {
                 throw err;
             }
 
-            // Broadcast to others that a new user joined
+            // Update existing users' lists first
             try {
                 logger.info(`Broadcasting user_joined for user ${socket.userId} to room ${message.roomId}`);
                 broadcastToRoom(message.roomId, {
                     type: 'user_joined',
                     userId: socket.userId,
                     username: user.username,
-                    timestamp: new Date().toISOString()
+                    timestamp: new Date().toISOString(),
+                    connectedUsers: allUsers // Send complete user list to existing users
                 }, socket);
             } catch (err) {
                 logger.error('Error broadcasting user_joined message:', err);
