@@ -35,6 +35,7 @@ const authenticateSessionOnHTTPEndpoint = async (req, res, next) => {
 const authenticateWSConnection = async (socket, request) => {
     const { query } = url.parse(request.url, true);
     const token = query.token;
+    const userId = query.userId;
     const clientIp = request.socket.remoteAddress;
 
     if (!token) {
@@ -47,9 +48,9 @@ const authenticateWSConnection = async (socket, request) => {
 
     try {
         const session = await db.getUserSession(token);
-        if (!session) {
-            logger.warn(`WebSocket authentication failed: Invalid token from ${clientIp}`);
-            socket.close(4001, 'Invalid or expired token');
+        if (!session || session.user_id !== parseInt(userId)) {
+            logger.warn(`WebSocket authentication failed: Invalid token or mismatched user ID from ${clientIp}`);
+            socket.close(4001, 'Invalid credentials');
             return false;
         }
 
