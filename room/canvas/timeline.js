@@ -1,11 +1,12 @@
 export const TIMELINE_CONFIG = {
-    totalDuration: 2.5, // fixed 2.5-second timeline
-    totalWidth: 1500,  // pixels - matches viewport width
+    totalDuration: 8, // 8-second timeline
+    totalWidth: 1500,  // pixels - fixed width
     canvasWidth: 1500, // visible width
     trackHeight: 40, // reduced track height for more vertical space
     trackPadding: 10, // further reduced padding
-    gridLines: 10,    // one line every 0.25 seconds
-    topMargin: 10     // slightly reduced top margin
+    gridLines: 16,    // 4 lines per second (16 total for 4 seconds)
+    topMargin: 10,     // slightly reduced top margin
+    loopPoint: 3      // point at which playback should loop (in seconds)
 };
 
 export class Timeline {
@@ -48,15 +49,34 @@ export class Timeline {
         ctx.strokeStyle = '#ccc';
         ctx.lineWidth = 1;
 
-        for (let i = 1; i < TIMELINE_CONFIG.gridLines; i++) {
-            const xPos = i * divisionWidth - this.scrollOffset;
-            if (xPos < 0 || xPos > TIMELINE_CONFIG.canvasWidth) continue;
+        // Draw grid lines
+        for (let i = 0; i <= TIMELINE_CONFIG.gridLines; i++) {
+            const xPos = i * divisionWidth;
             
             ctx.beginPath();
             ctx.moveTo(xPos, 0);
             ctx.lineTo(xPos, this.canvas.height);
             ctx.stroke();
+            
+            // Draw time labels at each second (every 4 grid lines)
+            if (i % 4 === 0) {
+                const seconds = i / 4;
+                ctx.fillStyle = '#fff';
+                ctx.font = '10px Montserrat, sans-serif';
+                ctx.fillText(`${seconds}s`, xPos + 2, 10);
+            }
         }
+        
+        // Draw loop point indicator (yellow line only, no text)
+        const loopPointX = (TIMELINE_CONFIG.loopPoint / TIMELINE_CONFIG.totalDuration) * TIMELINE_CONFIG.totalWidth;
+        ctx.strokeStyle = 'yellow';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]); // Dashed line
+        ctx.beginPath();
+        ctx.moveTo(loopPointX, 0);
+        ctx.lineTo(loopPointX, this.canvas.height);
+        ctx.stroke();
+        ctx.setLineDash([]); // Reset to solid line
     }
 
     drawTracks(tracks) {
@@ -67,7 +87,6 @@ export class Timeline {
                      TIMELINE_CONFIG.trackPadding + TIMELINE_CONFIG.topMargin;
             const x = track.position;
 
-            // Draw track background
             // Draw track background with border
             ctx.fillStyle = track.color;
             ctx.fillRect(x, y, 100, TIMELINE_CONFIG.trackHeight);
@@ -86,14 +105,17 @@ export class Timeline {
         const { ctx } = this;
         const playheadX = (currentTime / TIMELINE_CONFIG.totalDuration) * TIMELINE_CONFIG.totalWidth;
 
-        if (playheadX <= TIMELINE_CONFIG.canvasWidth) {
-            ctx.strokeStyle = 'red';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(playheadX, 0);
-            ctx.lineTo(playheadX, this.canvas.height);
-            ctx.stroke();
-        }
+        ctx.strokeStyle = 'red';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(playheadX, 0);
+        ctx.lineTo(playheadX, this.canvas.height);
+        ctx.stroke();
+        
+        // Draw current time
+        ctx.fillStyle = 'red';
+        ctx.font = '12px Montserrat, sans-serif';
+        ctx.fillText(`${currentTime.toFixed(2)}s`, playheadX + 5, 20);
     }
 
     draw(tracks = [], currentTime = 0) {
@@ -110,12 +132,12 @@ export class Timeline {
 
     // Get time position from x coordinate
     getTimeFromX(x) {
-        return ((x + this.scrollOffset) / TIMELINE_CONFIG.totalWidth) * TIMELINE_CONFIG.totalDuration;
+        return (x / TIMELINE_CONFIG.totalWidth) * TIMELINE_CONFIG.totalDuration;
     }
 
     // Get x coordinate from time
     getXFromTime(time) {
-        return (time / TIMELINE_CONFIG.totalDuration) * TIMELINE_CONFIG.totalWidth - this.scrollOffset;
+        return (time / TIMELINE_CONFIG.totalDuration) * TIMELINE_CONFIG.totalWidth;
     }
 
     // Cleanup

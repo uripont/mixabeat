@@ -349,8 +349,8 @@ export function initializeCanvas(roomState, ws) {
             playbackInterval = setInterval(() => {
                 const currentTime = (performance.now() - startTime) / 1000;
                 
-                if (currentTime >= TIMELINE_CONFIG.totalDuration) {
-                    // Loop back to start instead of stopping
+                if (currentTime >= TIMELINE_CONFIG.loopPoint) {
+                    // Loop back to start when reaching the loop point (2.5s)
                     roomState.updatePlayback({
                         isPlaying: true,
                         currentTime: 0,
