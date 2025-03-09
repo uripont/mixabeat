@@ -121,9 +121,8 @@ export function initializeCanvas(roomState, ws) {
             // Find the selected track and preserve all its data
             const track = roomState.tracks.find(t => t.id === selectedTrackId);
             if (track) {
-                // Calculate new position ensuring track doesn't go beyond yellow line (3s boundary)
-                const maxAllowedPosition = (TIMELINE_CONFIG.loopPoint / TIMELINE_CONFIG.totalDuration) * 
-                                        TIMELINE_CONFIG.totalWidth - 100; // Subtract track width
+                // Calculate 3s boundary based on canvas width
+                const maxAllowedPosition = timeline.getMaxAllowedPosition() - 100; // Subtract track width
                 const newPosition = Math.max(0, Math.min(
                     originalTrackPosition + deltaX,
                     maxAllowedPosition
@@ -390,7 +389,7 @@ export function initializeCanvas(roomState, ws) {
                     if (!audioMap.has(track.id)) return;
                     
                     const audio = audioMap.get(track.id);
-                    const delay = (track.position / TIMELINE_CONFIG.totalWidth) * TIMELINE_CONFIG.totalDuration;
+                    const delay = (track.position / timeline.getMaxAllowedPosition()) * TIMELINE_CONFIG.loopPoint;
                     
                     // If we've reached the track's start time and it's not already playing
                     if (currentTime >= delay && !audio.isPlaying) {
@@ -411,7 +410,7 @@ export function initializeCanvas(roomState, ws) {
             audioMap.forEach((audio, trackId) => {
                 const track = roomState.tracks.find(t => t.id === trackId);
                 if (track) {
-                    const delay = (track.position / TIMELINE_CONFIG.totalWidth) * TIMELINE_CONFIG.totalDuration;
+                    const delay = (track.position / timeline.getMaxAllowedPosition()) * TIMELINE_CONFIG.loopPoint;
                     if (roomState.playback.currentTime >= delay) {
                         try {
                             if (!audio.isPlaying) {

@@ -1,6 +1,7 @@
 import { fetchAvailableSounds, fetchSoundFile, base64ToAudioBuffer, previewSound, cleanupAudio } from './sound-picker-api.js';
 import { sendMessage } from '../websocket.js';
 import { getRandomColor, calculateTrackPosition } from '../canvas/track-state.js';
+import { TIMELINE_CONFIG } from '../canvas/timeline.js';
 
 export function initializeSoundPicker(ws) {
     // Clean up audio context when page unloads
@@ -291,19 +292,23 @@ export function initializeSoundPicker(ws) {
         
         // Calculate position based on current playhead time
         let position;
-        const totalWidth = 9000; // Same as in timeline.js
-        const totalDuration = 30; // Same as in timeline.js
         
+        // Calculate 3s boundary position (yellow line)
+        const maxPosition = (TIMELINE_CONFIG.loopPoint / TIMELINE_CONFIG.totalDuration) * 
+                          TIMELINE_CONFIG.totalWidth - 100; // Subtract track width
+        
+        // Get position based on playhead or default position
+        let rawPosition;
         if (window.roomState.playback && window.roomState.playback.currentTime > 0) {
-            // Convert current time to position (same logic as timeline.getXFromTime)
-            position = (window.roomState.playback.currentTime / totalDuration) * totalWidth;
-            position = Math.max(0, position);
-            console.log('Adding sound at playhead position:', position, 'for time:', window.roomState.playback.currentTime);
+            rawPosition = (window.roomState.playback.currentTime / TIMELINE_CONFIG.totalDuration) * 
+                         TIMELINE_CONFIG.totalWidth;
         } else {
-            // Default position if playhead is at the beginning
-            position = calculateTrackPosition(window.roomState.tracks);
-            console.log('Adding sound at calculated position:', position);
+            rawPosition = calculateTrackPosition(window.roomState.tracks);
         }
+        
+        // Ensure position is within bounds
+        position = Math.min(Math.max(0, rawPosition), maxPosition);
+        console.log('Adding sound at position:', position, '(max allowed:', maxPosition, ')');
         
         const newTrack = {
             id: trackId,

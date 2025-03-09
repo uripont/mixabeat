@@ -4,9 +4,9 @@ export const TIMELINE_CONFIG = {
     canvasWidth: 1500, // visible width
     trackHeight: 40, // reduced track height for more vertical space
     trackPadding: 10, // further reduced padding
-    gridLines: 16,    // 4 lines per second (16 total for 4 seconds)
+    gridLines: 32,    // 2 lines per half-second (32 total for 8 seconds)
     topMargin: 10,     // slightly reduced top margin
-    loopPoint: 3,     // point at which playback should loop (in seconds)
+    loopPoint: 8,     // point at which playback should loop (in seconds)
     minTracks: 10,    // minimum number of tracks to show
     minHeight: null   // will be calculated based on minTracks
 };
@@ -80,7 +80,7 @@ export class Timeline {
         const divisionWidth = TIMELINE_CONFIG.totalWidth / TIMELINE_CONFIG.gridLines;
         const totalHeight = Math.max(this.contentHeight, this.canvas.height + this.scrollOffset);
 
-        ctx.strokeStyle = '#ccc';
+        ctx.strokeStyle = '#333'; // Darker gray for grid lines
         ctx.lineWidth = 1;
 
         // Draw grid lines
@@ -92,21 +92,11 @@ export class Timeline {
             ctx.lineTo(xPos, totalHeight);
             ctx.stroke();
         }
-
-        // Draw time labels (these stay fixed at the top)
-        ctx.restore();
-        for (let i = 0; i <= TIMELINE_CONFIG.gridLines; i++) {
-            if (i % 4 === 0) {
-                const xPos = i * divisionWidth;
-                const seconds = i / 4;
-                ctx.fillStyle = '#fff';
-                ctx.font = '10px Montserrat, sans-serif';
-                ctx.fillText(`${seconds}s`, xPos + 2, 10);
-            }
-        }
         
-        // Draw loop point indicator
-        const loopPointX = (TIMELINE_CONFIG.loopPoint / TIMELINE_CONFIG.totalDuration) * TIMELINE_CONFIG.totalWidth;
+        ctx.restore();
+        
+        // Draw loop point indicator (yellow line at loop point)
+        const loopPointX = (TIMELINE_CONFIG.loopPoint / TIMELINE_CONFIG.totalDuration) * TIMELINE_CONFIG.canvasWidth;
         ctx.strokeStyle = 'yellow';
         ctx.lineWidth = 2;
         ctx.setLineDash([5, 5]);
@@ -163,7 +153,7 @@ export class Timeline {
 
     drawPlayhead(currentTime) {
         const { ctx } = this;
-        const playheadX = (currentTime / TIMELINE_CONFIG.totalDuration) * TIMELINE_CONFIG.totalWidth;
+        const playheadX = (currentTime / TIMELINE_CONFIG.totalDuration) * TIMELINE_CONFIG.canvasWidth;
 
         ctx.strokeStyle = 'red';
         ctx.lineWidth = 2;
@@ -192,12 +182,17 @@ export class Timeline {
 
     // Get time position from x coordinate
     getTimeFromX(x) {
-        return (x / TIMELINE_CONFIG.totalWidth) * TIMELINE_CONFIG.totalDuration;
+        return (x / TIMELINE_CONFIG.canvasWidth) * TIMELINE_CONFIG.totalDuration;
     }
 
     // Get x coordinate from time
     getXFromTime(time) {
-        return (time / TIMELINE_CONFIG.totalDuration) * TIMELINE_CONFIG.totalWidth;
+        return (time / TIMELINE_CONFIG.totalDuration) * TIMELINE_CONFIG.canvasWidth;
+    }
+
+    // Get max allowed position for tracks (loop point boundary)
+    getMaxAllowedPosition() {
+        return (TIMELINE_CONFIG.loopPoint / TIMELINE_CONFIG.totalDuration) * TIMELINE_CONFIG.canvasWidth;
     }
 
     // Cleanup
