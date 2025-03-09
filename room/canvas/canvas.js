@@ -350,12 +350,29 @@ export function initializeCanvas(roomState, ws) {
                 const currentTime = (performance.now() - startTime) / 1000;
                 
                 if (currentTime >= TIMELINE_CONFIG.loopPoint) {
-                    // Loop back to start when reaching the loop point (2.5s)
+                    // Stop all audio
+                    stopAllAudio();
+                    
+                    // Reset playback to beginning (like restart button)
                     roomState.updatePlayback({
-                        isPlaying: true,
+                        isPlaying: false,
                         currentTime: 0,
                         isLooping: true
                     });
+                    
+                    // Redraw timeline with cursor at beginning
+                    timeline.draw(roomState.tracks, 0);
+                    
+                    // Small delay to ensure UI updates before restarting
+                    setTimeout(() => {
+                        // Restart playback (like play button)
+                        roomState.updatePlayback({
+                            isPlaying: true,
+                            currentTime: 0,
+                            isLooping: true
+                        });
+                    }, 50);
+                    
                     return;
                 }
 
