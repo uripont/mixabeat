@@ -1,64 +1,23 @@
-const WebSocket = require('ws'); // npm install ws
-
+const WebSocket = require('ws');
 const logger = require('../utils/logger');
 const { authenticateWSConnection } = require('../middleware/auth.middleware');
-const { 
-    clients, 
-    handleChatMessage, 
-    handleJoinRoom, 
-    handleDisconnect, 
-    handleUpdateTrack,
-    handleMousePosition,
-    handleTrackStatus,
-    handleUseSound
-} = require('./handlers');
+const { initializeWebSocket } = require('./handlers/index');
 
 const setupWebSocketServer = (httpServer) => {
     const wss = new WebSocket.Server({ server: httpServer });
+
+    // Store WebSocket server instance
+    global.wss = wss;
 
     wss.on('connection', async (socket, request) => {
         const authResult = await authenticateWSConnection(socket, request);
         if (!authResult) return;
 
-        clients.set(socket, {
-            userId: socket.userId,
-            roomId: socket.roomId
-        });
+        // Attach server instance to socket for broadcasting
+        socket.server = wss;
 
-        socket.on('message', async (data) => {
-            try {
-                const message = JSON.parse(data.toString());
-                logger.info('Received message: ' + data.toString());
-                
-                switch (message.type) {
-                    case 'message':
-                        await handleChatMessage(socket, message);
-                        break;
-                    case 'join_room':
-                        await handleJoinRoom(socket, message);
-                        break;
-                    case 'update_track':
-                        await handleUpdateTrack(socket, message);
-                        break;
-                    case 'mouse_position':
-                        handleMousePosition(socket, message); // No need for await as it's synchronous
-                        break;
-                    case 'track_status':
-                        handleTrackStatus(socket, message); // No need for await as it's synchronous
-                        break;
-                    case 'use_sound':
-                        await handleUseSound(socket, message);
-                        break;
-                    default:
-                        logger.warn(`Unhandled message type received: ${message.type}`);
-                }
-            } catch (err) {
-                logger.error('WebSocket message error:', err);
-            }
-        });
-
-        // Handle client disconnect
-        socket.on('close', () => handleDisconnect(socket));
+        // Initialize WebSocket with authentication data
+        await initializeWebSocket(socket, socket._token, socket.userId);
     });
 
     return wss;

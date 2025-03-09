@@ -14,6 +14,7 @@ graph TB
             AR[auth.routes.js]
             UR[users.routes.js]
             RR[rooms.routes.js]
+            IR[instruments.routes.js]
         end
         
         subgraph Services
@@ -21,11 +22,19 @@ graph TB
             AS[auth.service.js]
             US[users.service.js]
             RS[rooms.service.js]
+            IS[instruments.service.js]
         end
         
         subgraph WebSocket
             WS[ws-server.js]
-            WH[handlers.js]
+            WSH[handlers/index.js]
+            subgraph Handlers
+                direction LR
+                CH[chat.handler.js]
+                IH[instruments.handler.js]
+                RH[rooms.handler.js]
+                UH[utils.handler.js]
+            end
         end
         
         subgraph Utils
@@ -52,19 +61,21 @@ graph TB
     Client <-.-> WS
     
     %% Routes Flow
-    Server --> AR
-    Server --> UR
-    Server --> RR
-    AR & UR & RR --> Auth
+    Server --> AR & UR & RR & IR
+    AR & UR & RR & IR --> Auth
 
     %% Service Flow
     AR --> AS
     UR --> US
     RR --> RS
+    IR --> IS
     
     %% WebSocket Flow
-    WS --> WH
-    WH --> DBQ
+    WS --> WSH
+    WSH --> CH & IH & RH
+    CH & IH & RH --> UH
+    IH --> IS
+    RH --> RS
     
     %% Database Access
     Services --> DBC
@@ -73,18 +84,26 @@ graph TB
     Auth --> DBQ
     
     %% Utils Usage
-    AS & US & RS & DBQ --> Logger
+    AS & US & RS & IS & DBQ --> Logger
     AS --> Crypto
     
     %% Style definitions and classes
     classDef primary fill:#2374e1,stroke:#fff,stroke-width:2px,color:#fff
-    classDef secondary fill:#164e87,stroke:#fff,stroke-width:2px,color:#fff
+    classDef auth fill:#006064,stroke:#fff,stroke-width:2px,color:#fff
+    classDef users fill:#ad1457,stroke:#fff,stroke-width:2px,color:#fff
+    classDef rooms fill:#ef6c00,stroke:#fff,stroke-width:2px,color:#fff
+    classDef instruments fill:#2e7d32,stroke:#fff,stroke-width:2px,color:#fff
+    classDef chat fill:#6a1b9a,stroke:#fff,stroke-width:2px,color:#fff
     classDef utility fill:#37474f,stroke:#fff,stroke-width:2px,color:#fff
     classDef database fill:#1b5e20,stroke:#fff,stroke-width:2px,color:#fff
     
-    class Server,Client primary
-    class AR,UR,RR,AS,US,RS,WS secondary
-    class Logger,Crypto,Auth,WH utility
+    class Server,Client,WS,WSH primary
+    class AR,AS,Auth auth
+    class UR,US users
+    class RR,RS,RH rooms
+    class IR,IS,IH instruments
+    class CH chat
+    class Logger,Crypto,UH utility
     class DBC,DBQ,DB database
 ```
 

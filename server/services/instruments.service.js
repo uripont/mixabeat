@@ -13,8 +13,8 @@ async function getSoundsForInstrument(instrument) {
         }
 
         // Get the instrument directory path
-        const instrumentDir = path.join(__dirname, '..', '..', '..', 'sounds', instrument);
-        
+        const soundsBasePath = process.env.SOUNDS_PATH;
+        const instrumentDir = path.join(soundsBasePath, instrument);
         // Read the directory contents
         const files = await fs.readdir(instrumentDir);
         
