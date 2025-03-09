@@ -53,7 +53,7 @@ const handleUseSound = async (socket, message, pool) => {
     }
 
     const { trackId, instrument, soundName } = message;
-    if (!trackId || !instrument || !soundName) {
+    if (!instrument || !soundName) {
         socket.send(JSON.stringify({
             type: 'error',
             message: 'Missing required parameters'
@@ -62,7 +62,7 @@ const handleUseSound = async (socket, message, pool) => {
     }
 
     try {
-        // Get room contents to verify track ownership
+        // Get room contents
         const [[roomResult]] = await pool.promise().query(
             'SELECT contents FROM rooms WHERE room_id = ?',
             [socket.roomId]
@@ -77,53 +77,176 @@ const handleUseSound = async (socket, message, pool) => {
             roomContents = JSON.parse(roomContents);
         }
 
-        // Find the track and verify ownership
-        const track = roomContents.tracks.find(t => t.id === trackId);
-        if (!track) {
-            throw new Error('Track not found');
-        }
-        if (track.ownerId !== socket.userId) {
-            throw new Error('You do not own this track');
+        // Initialize tracks array if it doesn't exist
+        if (!roomContents.tracks) {
+            roomContents.tracks = [];
         }
 
-        // Get sound from instruments service
+        // Verify sound exists (without loading the entire audio data)
         try {
-            const sounds = await instrumentsService.getSoundsForInstrument(instrument);
+            const sounds = await instrumentsService.getSoundNamesForInstrument(instrument);
             const sound = sounds.find(s => s.name === soundName);
             if (!sound) {
                 throw new Error('Sound not found');
             }
-            const base64Audio = sound.audioData;
 
-            // Update track in database
-            track.audioFile = soundName;
-            track.instrument = instrument;
+            let track;
+            let isNewTrack = false;
+            const currentTime = message.currentTime || 0; // Get current time from message or default to 0
+            const position = message.position || 150 * (roomContents.tracks.length + 1); // Use provided position or calculate
+
+            // If trackId is provided, find and update existing track
+            if (trackId) {
+                track = roomContents.tracks.find(t => t.id === trackId);
+                
+                // Verify ownership if track exists
+                if (track) {
+                    if (track.ownerId !== socket.userId) {
+                        throw new Error('You do not own this track');
+                    }
+                    
+                    // Update existing track
+                    track.audioFile = soundName;
+                    track.instrument = instrument;
+                    if (message.position) {
+                        track.position = position;
+                    }
+                } else {
+                    // Create new track with provided ID
+                    isNewTrack = true;
+                    track = {
+                        id: trackId,
+                        name: soundName,
+                        instrument: instrument,
+                        audioFile: soundName,
+                        ownerId: socket.userId,
+                        position: position,
+                        color: message.color || `#${Math.floor(Math.random()*16777215).toString(16)}`
+                    };
+                    roomContents.tracks.push(track);
+                }
+            } else {
+                // Create new track with generated ID
+                isNewTrack = true;
+                track = {
+                    id: Date.now(), // Simple unique ID
+                    name: soundName,
+                    instrument: instrument,
+                    audioFile: soundName,
+                    ownerId: socket.userId,
+                    position: position,
+                    color: message.color || `#${Math.floor(Math.random()*16777215).toString(16)}`
+                };
+                roomContents.tracks.push(track);
+            }
+
+            // Update database
             await pool.promise().query(
                 'UPDATE rooms SET contents = ? WHERE room_id = ?',
                 [JSON.stringify(roomContents), socket.roomId]
             );
 
-            // Broadcast to all clients in room except sender
+            // Broadcast to all clients in room (without audio data)
             broadcastToRoom(socket.roomId, {
                 type: 'track_updated',
                 trackData: track,
-                audioBuffer: base64Audio
-            }, socket);
+                soundUrl: sound.url
+            }, null); // Send to all clients including sender
 
             // Send success response to sender
             socket.send(JSON.stringify({
                 type: 'sound_updated',
-                trackId,
-                success: true
+                trackId: track.id,
+                success: true,
+                isNewTrack
             }));
 
         } catch (err) {
-            logger.error('Error loading audio file:', err);
-            throw new Error('Audio file not found');
+            logger.error('Error handling sound:', err);
+            throw new Error('Sound not found or invalid');
         }
 
     } catch (err) {
         logger.error('Error handling use_sound:', err);
+        socket.send(JSON.stringify({
+            type: 'error',
+            message: err.message
+        }));
+    }
+};
+
+// Handle track movement
+const handleMoveTrack = async (socket, message, pool) => {
+    if (!socket.roomId) {
+        logger.error('Attempt to move track without room context');
+        socket.send(JSON.stringify({
+            type: 'error',
+            message: 'You must join a room first'
+        }));
+        return;
+    }
+
+    const { trackId, position } = message;
+    if (!trackId || position === undefined) {
+        socket.send(JSON.stringify({
+            type: 'error',
+            message: 'Missing required parameters'
+        }));
+        return;
+    }
+
+    try {
+        // Get room contents
+        const [[roomResult]] = await pool.promise().query(
+            'SELECT contents FROM rooms WHERE room_id = ?',
+            [socket.roomId]
+        );
+
+        if (!roomResult) {
+            throw new Error('Room not found');
+        }
+
+        let roomContents = roomResult.contents;
+        if (typeof roomContents === 'string') {
+            roomContents = JSON.parse(roomContents);
+        }
+
+        // Find the track
+        const track = roomContents.tracks?.find(t => t.id === trackId);
+        if (!track) {
+            throw new Error('Track not found');
+        }
+
+        // Verify ownership
+        if (track.ownerId !== socket.userId) {
+            throw new Error('You do not own this track');
+        }
+
+        // Update track position
+        track.position = position;
+
+        // Update database
+        await pool.promise().query(
+            'UPDATE rooms SET contents = ? WHERE room_id = ?',
+            [JSON.stringify(roomContents), socket.roomId]
+        );
+
+        // Broadcast to all clients in room
+        broadcastToRoom(socket.roomId, {
+            type: 'track_moved',
+            trackId,
+            position
+        }, null); // Send to all clients including sender
+
+        // Send success response to sender
+        socket.send(JSON.stringify({
+            type: 'track_moved',
+            trackId,
+            success: true
+        }));
+
+    } catch (err) {
+        logger.error('Error handling move_track:', err);
         socket.send(JSON.stringify({
             type: 'error',
             message: err.message
@@ -141,5 +264,6 @@ const removeInstrumentAssignment = (roomId, userId) => {
 module.exports = {
     assignInstrumentToUser,
     handleUseSound,
+    handleMoveTrack,
     removeInstrumentAssignment
 };
