@@ -5,6 +5,7 @@ const pool = require('./database/db-connection');
 const authRoutes = require('./routes/auth.routes');
 const usersRoutes = require('./routes/users.routes');
 const roomsRoutes = require('./routes/rooms.routes');
+const instrumentsRoutes = require('./routes/instruments.routes');
 const { authenticateSessionOnHTTPEndpoint } = require('./middleware/auth.middleware');
 const { updateClientsRoomId } = require('./websocket/handlers');
 
@@ -41,6 +42,7 @@ app.get('/', (req, res) => {
 app.use('/auth', authRoutes);
 app.use('/users', usersRoutes);
 app.use('/rooms', roomsRoutes);
+app.use('/instruments', instrumentsRoutes);
 
 // Create HTTP server
 const httpServer = app.listen(3000, () => {

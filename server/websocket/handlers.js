@@ -8,6 +8,48 @@ const { getUserById, getUserSession } = require('../database/db-common-queries')
 // WebSocket client tracking, to know which clients are in which rooms
 const clients = new Map();
 
+const instrumentsService = require('../services/instruments.service');
+
+// Available instruments and their assignments per room
+const roomInstruments = new Map(); // { roomId -> { availableInstruments, assignedInstruments } }
+
+// Initialize room instruments if not already set
+function getOrInitRoomInstruments(roomId) {
+    if (!roomInstruments.has(roomId)) {
+        roomInstruments.set(roomId, {
+            availableInstruments: instrumentsService.getAvailableInstruments(),
+            assignedInstruments: new Map() // userId -> instrument
+        });
+    }
+    return roomInstruments.get(roomId);
+}
+
+// Get a random available instrument for a user
+function assignInstrumentToUser(roomId, userId) {
+    const room = getOrInitRoomInstruments(roomId);
+    
+    // If user already has an instrument assigned, return it
+    if (room.assignedInstruments.has(userId)) {
+        return room.assignedInstruments.get(userId);
+    }
+    
+    // Get available instruments (not yet assigned)
+    const assignedSet = new Set(room.assignedInstruments.values());
+    const available = room.availableInstruments.filter(i => !assignedSet.has(i));
+    
+    if (available.length === 0) {
+        // If no instruments available, assign a random one from all instruments
+        const instrument = room.availableInstruments[Math.floor(Math.random() * room.availableInstruments.length)];
+        room.assignedInstruments.set(userId, instrument);
+        return instrument;
+    }
+    
+    // Assign random available instrument
+    const instrument = available[Math.floor(Math.random() * available.length)];
+    room.assignedInstruments.set(userId, instrument);
+    return instrument;
+}
+
 // Mouse position and track status handlers
 const handleMousePosition = (socket, message) => {
     if (!socket.roomId) {
@@ -161,12 +203,14 @@ const handleUseSound = async (socket, message) => {
             throw new Error('You do not own this track');
         }
 
-        // Load the audio file
-        const audioPath = path.join(__dirname, '../audio', instrument, soundName);
+        // Get sound from instruments service
         try {
-            const audioBuffer = await fs.readFile(audioPath);
-            const base64Audio = audioBuffer.toString('base64');
-
+            const sounds = await instrumentsService.getSoundsForInstrument(instrument);
+            const sound = sounds.find(s => s.name === soundName);
+            if (!sound) {
+                throw new Error('Sound not found');
+            }
+            const base64Audio = sound.audioData;
             // Update track in database
             track.audioFile = soundName;
             track.instrument = instrument;
@@ -241,11 +285,29 @@ const handleJoinRoom = async (socket, message) => {
             }
         }
 
-        // Send connected users list to the joining user
+        // Assign an instrument to the user
+        const assignedInstrument = assignInstrumentToUser(message.roomId, socket.userId);
+
+        // Get room data to check for existing tracks
+        const [[roomResult]] = await pool.promise().query(
+            'SELECT contents FROM rooms WHERE room_id = ?',
+            [message.roomId]
+        );
+
+        let roomContents = null;
+        if (roomResult && roomResult.contents) {
+            roomContents = typeof roomResult.contents === 'string' 
+                ? JSON.parse(roomResult.contents)
+                : roomResult.contents;
+        }
+
+        // Send connected users list and instrument assignment to the joining user
         socket.send(JSON.stringify({
             type: 'room_joined',
             roomId: message.roomId,
-            connectedUsers
+            connectedUsers,
+            assignedInstrument,
+            song: roomContents
         }));
 
         broadcastToRoom(message.roomId, {
@@ -277,6 +339,12 @@ const handleDisconnect = async (socket) => {
             const user = await getUserById(clientInfo.userId);
 
             if (user) {
+                // Free up the assigned instrument when user leaves
+                const room = roomInstruments.get(clientInfo.roomId);
+                if (room && room.assignedInstruments.has(clientInfo.userId)) {
+                    room.assignedInstruments.delete(clientInfo.userId);
+                }
+
                 broadcastToRoom(clientInfo.roomId, {
                     type: 'user_left',
                     userId: clientInfo.userId,
