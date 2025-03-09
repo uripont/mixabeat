@@ -209,12 +209,17 @@ export async function initializeWebSocket(token, roomId) {
                                 });
                             }
                             
-                            // Set current instrument based on user's track or assigned instrument
+                            // Set assigned instrument immediately
+                            if (data.assignedInstrument) {
+                                console.log('Setting assigned instrument:', data.assignedInstrument);
+                                window.roomState.setCurrentInstrument(data.assignedInstrument);
+                            }
+                            
+                            // If user has an existing track, use that instrument instead
                             const userTrack = tracks.find(track => track.ownerId === window.roomState.userId);
                             if (userTrack) {
+                                console.log('User has existing track, using instrument:', userTrack.instrument);
                                 window.roomState.setCurrentInstrument(userTrack.instrument);
-                            } else if (data.assignedInstrument) {
-                                window.roomState.setCurrentInstrument(data.assignedInstrument);
                             }
                             // Resolve the WebSocket connection after room is fully joined
                             resolve(ws);

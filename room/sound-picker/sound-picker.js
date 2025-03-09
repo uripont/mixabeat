@@ -25,14 +25,29 @@ export function initializeSoundPicker(ws) {
     }
 
     // Update displayed instrument when assigned
-    window.roomState.watchAudio(({ currentInstrument }) => {
+    window.roomState.watchAudio(async ({ currentInstrument }) => {
         if (currentInstrument) {
-            const iconClass = getInstrumentIcon(currentInstrument);
-            currentInstrumentEl.innerHTML = `
-                <i class="fas ${iconClass}"></i>
-                <span>${currentInstrument.charAt(0).toUpperCase() + currentInstrument.slice(1)}</span>
-            `;
-            loadAvailableSounds(currentInstrument);
+            try {
+                // First update the UI to show the instrument
+                const iconClass = getInstrumentIcon(currentInstrument);
+                currentInstrumentEl.innerHTML = `
+                    <i class="fas ${iconClass}"></i>
+                    <span>${currentInstrument.charAt(0).toUpperCase() + currentInstrument.slice(1)}</span>
+                `;
+
+                // Show loading state while fetching sounds
+                soundsLoadingEl.style.display = 'block';
+                soundsListEl.style.display = 'none';
+
+                // Load available sounds
+                await loadAvailableSounds(currentInstrument);
+            } catch (error) {
+                console.error('Error in watchAudio:', error);
+                soundsLoadingEl.innerHTML = `
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span>Error loading sounds. Please refresh.</span>
+                `;
+            }
         }
     });
 
