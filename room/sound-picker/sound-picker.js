@@ -1,5 +1,6 @@
-import { fetchAvailableSounds, base64ToAudioBuffer, previewSound } from './sound-picker-api.js';
+import { fetchAvailableSounds, fetchSoundFile, base64ToAudioBuffer, previewSound } from './sound-picker-api.js';
 import { sendMessage } from '../websocket.js';
+import { getRandomColor, calculateTrackPosition } from '../canvas/track-state.js';
 
 export function initializeSoundPicker(ws) {
     const currentInstrumentEl = document.getElementById('current-instrument');
@@ -56,15 +57,23 @@ export function initializeSoundPicker(ws) {
     function togglePreview(button, sound) {
         if (isPlaying) {
             if (currentPreviewSource) {
-                currentPreviewSource.stop();
+                try {
+                    currentPreviewSource.stop();
+                } catch (error) {
+                    console.error('Error stopping preview:', error);
+                }
                 currentPreviewSource = null;
             }
             button.innerHTML = '<i class="fas fa-play"></i> Preview';
             isPlaying = false;
         } else {
-            previewSoundItem(sound).then(() => {
+            previewSoundItem(sound, button).then(() => {
                 button.innerHTML = '<i class="fas fa-stop"></i> Stop';
                 isPlaying = true;
+            }).catch(error => {
+                console.error('Error starting preview:', error);
+                button.innerHTML = '<i class="fas fa-play"></i> Preview';
+                isPlaying = false;
             });
         }
     }
@@ -107,18 +116,25 @@ export function initializeSoundPicker(ws) {
     }
 
     // Preview a sound
-    async function previewSoundItem(sound) {
+    async function previewSoundItem(sound, button) {
         try {
+            // Stop any currently playing preview
             if (currentPreviewSource) {
-                currentPreviewSource.stop();
+                try {
+                    currentPreviewSource.stop();
+                } catch (error) {
+                    console.error('Error stopping previous preview:', error);
+                }
                 currentPreviewSource = null;
             }
 
+            // Get or load the audio buffer
             const key = `${window.roomState.audio.currentInstrument}/${sound.name}`;
             let audioBuffer = window.roomState.audio.loadedSounds.get(key);
 
             if (!audioBuffer) {
-                audioBuffer = await base64ToAudioBuffer(sound.audioData);
+                console.log('Loading sound file for preview:', sound.name);
+                audioBuffer = await fetchSoundFile(sound.url);
                 window.roomState.addLoadedSound(
                     window.roomState.audio.currentInstrument, 
                     sound.name, 
@@ -126,17 +142,27 @@ export function initializeSoundPicker(ws) {
                 );
             }
 
+            // Create and play the preview
             currentPreviewSource = previewSound(audioBuffer);
+            
+            // Set up the onended event handler
             currentPreviewSource.onended = () => {
+                console.log('Preview playback ended');
                 isPlaying = false;
-                const button = soundsListEl.querySelector('.sound-item__preview');
+                currentPreviewSource = null;
+                
+                // Find the specific button that triggered this preview
                 if (button) {
                     button.innerHTML = '<i class="fas fa-play"></i> Preview';
                 }
             };
+            
+            return currentPreviewSource;
         } catch (error) {
             console.error('Error previewing sound:', error);
             isPlaying = false;
+            currentPreviewSource = null;
+            throw error;
         }
     }
 
@@ -155,10 +181,56 @@ export function initializeSoundPicker(ws) {
             selectedItem.classList.add('selected');
         }
 
+        // Create a new track with the selected sound
+        const trackId = Date.now(); // Simple unique ID
+        
+        // Calculate position based on current playhead time
+        let position;
+        const totalWidth = 9000; // Same as in timeline.js
+        const totalDuration = 30; // Same as in timeline.js
+        
+        if (window.roomState.playback && window.roomState.playback.currentTime > 0) {
+            // Convert current time to position (same logic as timeline.getXFromTime)
+            position = (window.roomState.playback.currentTime / totalDuration) * totalWidth;
+            
+            // Ensure position is not negative
+            position = Math.max(0, position);
+            
+            console.log('Adding sound at playhead position:', position, 'for time:', window.roomState.playback.currentTime);
+        } else {
+            // Default position if playhead is at the beginning
+            position = calculateTrackPosition(window.roomState.tracks);
+            console.log('Adding sound at calculated position:', position);
+        }
+        
+        const newTrack = {
+            id: trackId,
+            name: sound.name,
+            instrument: window.roomState.audio.currentInstrument,
+            soundName: sound.name,
+            position: position,
+            color: getRandomColor(),
+            ownerId: window.roomState.userId
+        };
+        
+        // Get the audio buffer
+        const key = `${window.roomState.audio.currentInstrument}/${sound.name}`;
+        const audioBuffer = window.roomState.audio.loadedSounds.get(key);
+        
+        if (audioBuffer) {
+            newTrack.audioBuffer = audioBuffer;
+        }
+        
+        // Add to room state
+        window.roomState.addTrack(newTrack);
+        
         // Send WebSocket message to use this sound
         sendMessage(ws, 'use_sound', {
+            trackId: trackId,
             instrument: window.roomState.audio.currentInstrument,
-            soundName: sound.name
+            soundName: sound.name,
+            position: position,
+            currentTime: window.roomState.playback ? window.roomState.playback.currentTime : 0
         });
     }
 

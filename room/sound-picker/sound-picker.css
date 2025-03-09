@@ -85,7 +85,6 @@
     border-radius: 12px;
     background: #333;
     cursor: pointer;
-    transition: all 0.2s ease;
 }
 
 .sound-item:hover {
@@ -106,7 +105,7 @@
 }
 
 .sound-item__name i {
-    color: var(--text-secondary);
+    color: #888;
     font-size: 0.9rem;
 }
 
@@ -118,7 +117,6 @@
     border-radius: 20px;
     cursor: pointer;
     font-size: 0.85rem;
-    transition: background 0.2s ease;
     display: flex;
     align-items: center;
     gap: 0.5rem;
