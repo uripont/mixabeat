@@ -1,5 +1,86 @@
 import { config } from '../config.js';
 
+// Fetch all audio files for a room
+async function fetchRoomAudio(roomId) {
+    try {
+        console.log(`Fetching audio files for room ${roomId}`);
+        const response = await fetch(`${config.API_BASE_URL}/rooms/${roomId}/audio`, {
+            headers: {
+                'Authorization': `${localStorage.getItem('authToken')}`
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Failed to fetch room audio: ${response.status}`);
+        }
+        
+        // Get the zip file as an array buffer
+        const zipArrayBuffer = await response.arrayBuffer();
+        
+        // Extract and decode audio files
+        return extractAndDecodeAudio(zipArrayBuffer);
+    } catch (error) {
+        console.error('Error fetching room audio:', error);
+        throw error;
+    }
+}
+
+// Extract audio files from zip and decode them
+async function extractAndDecodeAudio(zipArrayBuffer) {
+    try {
+        // Use JSZip to extract the files
+        const JSZip = await import('https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm');
+        const zip = new JSZip.default();
+        
+        // Load the zip file
+        const zipContents = await zip.loadAsync(zipArrayBuffer);
+        
+        // Create audio context for decoding
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Process each file in the zip
+        const audioBuffers = {};
+        const decodePromises = [];
+        
+        for (const filename in zipContents.files) {
+            if (zipContents.files[filename].dir) continue;
+            
+            // Extract file data
+            const fileData = await zipContents.files[filename].async('arraybuffer');
+            
+            // Determine instrument type from filename or metadata
+            // This assumes files are named with a pattern that indicates the instrument
+            let instrument = 'unknown';
+            if (filename.includes('drums')) instrument = 'drums';
+            else if (filename.includes('guitar')) instrument = 'guitar';
+            else if (filename.includes('piano')) instrument = 'piano';
+            else if (filename.includes('bass')) instrument = 'bass';
+            else if (filename.includes('synth')) instrument = 'synth';
+            else if (filename.includes('violin')) instrument = 'violin';
+            else if (filename.includes('trumpet')) instrument = 'trumpet';
+            
+            // Decode audio data
+            const decodePromise = audioContext.decodeAudioData(fileData).then(audioBuffer => {
+                const key = `${instrument}/${filename}`;
+                audioBuffers[key] = audioBuffer;
+                console.log(`Decoded audio file: ${key}`);
+            }).catch(error => {
+                console.error(`Error decoding audio file ${filename}:`, error);
+            });
+            
+            decodePromises.push(decodePromise);
+        }
+        
+        // Wait for all decoding to complete
+        await Promise.all(decodePromises);
+        
+        return audioBuffers;
+    } catch (error) {
+        console.error('Error extracting audio files:', error);
+        throw error;
+    }
+}
+
 // Initialize WebSocket connection
 export async function initializeWebSocket(token, roomId) {
     // Add auth headers as query parameters
@@ -42,8 +123,61 @@ export async function initializeWebSocket(token, roomId) {
                             
                             // Extract existing track info if present, or receive assigned instrument
                             const tracks = (data.song && data.song.tracks) || [];
-                            const userTrack = tracks.find(track => track.ownerId === window.roomState.userId);
                             
+                            // Load existing tracks into room state
+                            if (tracks.length > 0) {
+                                console.log('Loading existing tracks:', tracks);
+                                
+                                // First, fetch all audio files for the room
+                                fetchRoomAudio(window.roomState.roomId).then(audioBuffers => {
+                                    console.log('Loaded audio buffers for room:', Object.keys(audioBuffers));
+                                    
+                                    // Process each track
+                                    tracks.forEach(track => {
+                                        // Add track to room state first
+                                        const trackWithAudio = { ...track };
+                                        
+                                        // If we have the audio buffer for this track, add it
+                                        const key = `${track.instrument}/${track.audioFile}`;
+                                        if (audioBuffers[key]) {
+                                            trackWithAudio.audioBuffer = audioBuffers[key];
+                                            
+                                            // Also add to loaded sounds cache
+                                            window.roomState.addLoadedSound(
+                                                track.instrument,
+                                                track.audioFile,
+                                                audioBuffers[key]
+                                            );
+                                        }
+                                        
+                                        // Add track to room state
+                                        window.roomState.addTrack(trackWithAudio);
+                                    });
+                                }).catch(error => {
+                                    console.error('Error loading room audio:', error);
+                                    
+                                    // Fallback: Add tracks without audio and request them individually
+                                    tracks.forEach(track => {
+                                        // Add track to room state first (without audio buffer)
+                                        window.roomState.addTrack(track);
+                                        
+                                        // If track has an audioFile, load it
+                                        if (track.audioFile) {
+                                            // This will trigger loading the audio file
+                                            sendMessage(ws, 'use_sound', {
+                                                trackId: track.id,
+                                                instrument: track.instrument,
+                                                soundName: track.audioFile,
+                                                position: track.position,
+                                                currentTime: 0
+                                            });
+                                        }
+                                    });
+                                });
+                            }
+                            
+                            // Set current instrument based on user's track or assigned instrument
+                            const userTrack = tracks.find(track => track.ownerId === window.roomState.userId);
                             if (userTrack) {
                                 window.roomState.setCurrentInstrument(userTrack.instrument);
                             } else if (data.assignedInstrument) {
@@ -87,7 +221,54 @@ export async function initializeWebSocket(token, roomId) {
                             break;
 
                         case 'track_updated':
-                            window.roomState.updateTracks(data.trackId, data.changes);
+                            if (data.trackData && data.soundUrl) {
+                                // Handle track update with sound URL
+                                const processTrackUpdate = async () => {
+                                    try {
+                                        // Fetch the sound file
+                                        const response = await fetch(`${config.API_BASE_URL}${data.soundUrl}`, {
+                                            headers: {
+                                                'Authorization': `${localStorage.getItem('authToken')}`
+                                            }
+                                        });
+                                        
+                                        if (!response.ok) {
+                                            throw new Error(`Failed to fetch sound: ${response.status}`);
+                                        }
+                                        
+                                        // Convert to AudioBuffer
+                                        const arrayBuffer = await response.arrayBuffer();
+                                        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                                        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                                        
+                                        // Add sound to loaded sounds cache
+                                        window.roomState.addLoadedSound(
+                                            data.trackData.instrument,
+                                            data.trackData.audioFile,
+                                            audioBuffer
+                                        );
+                                        
+                                        // Update track with audio buffer
+                                        window.roomState.updateTracks(data.trackData.id, {
+                                            ...data.trackData,
+                                            audioBuffer
+                                        });
+                                    } catch (error) {
+                                        console.error('Error processing track update:', error);
+                                    }
+                                };
+                                processTrackUpdate();
+                            } else {
+                                // Handle simple track update
+                                window.roomState.updateTracks(data.trackId, data.changes);
+                            }
+                            break;
+                            
+                        case 'track_moved':
+                            // Handle track movement
+                            window.roomState.updateTracks(data.trackId, {
+                                position: data.position
+                            });
                             break;
 
                         case 'track_removed':

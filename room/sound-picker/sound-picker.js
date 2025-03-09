@@ -1,8 +1,13 @@
-import { fetchAvailableSounds, fetchSoundFile, base64ToAudioBuffer, previewSound } from './sound-picker-api.js';
+import { fetchAvailableSounds, fetchSoundFile, base64ToAudioBuffer, previewSound, cleanupAudio } from './sound-picker-api.js';
 import { sendMessage } from '../websocket.js';
 import { getRandomColor, calculateTrackPosition } from '../canvas/track-state.js';
 
 export function initializeSoundPicker(ws) {
+    // Clean up audio context when page unloads
+    window.addEventListener('unload', () => {
+        cleanupAudio();
+    });
+
     const currentInstrumentEl = document.getElementById('current-instrument');
     const soundsLoadingEl = document.getElementById('sounds-loading');
     const soundsListEl = document.getElementById('sounds-list');
@@ -78,6 +83,34 @@ export function initializeSoundPicker(ws) {
         }
     }
 
+    // Handler for preview button click
+    function handlePreviewClick(e, button, sound) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        console.log('Preview click handler:', { sound });
+        if (!sound || !sound.url) {
+            console.error('Invalid sound object:', sound);
+            return;
+        }
+        
+        togglePreview(button, sound);
+    }
+
+    // Handler for sound selection
+    function handleSoundSelect(e, sound) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        console.log('Sound select handler:', { sound });
+        if (!sound || !sound.name) {
+            console.error('Invalid sound object:', sound);
+            return;
+        }
+        
+        selectSound(sound);
+    }
+
     // Render sounds list
     function renderSoundsList(sounds) {
         soundsListEl.innerHTML = '';
@@ -85,6 +118,7 @@ export function initializeSoundPicker(ws) {
         sounds.forEach(sound => {
             const soundItem = document.createElement('div');
             soundItem.className = 'sound-item';
+            soundItem.dataset.soundName = sound.name; // Store sound name for reference
             soundItem.innerHTML = `
                 <div class="sound-item__name">
                     <i class="fas fa-file-audio"></i>
@@ -98,16 +132,19 @@ export function initializeSoundPicker(ws) {
 
             const previewButton = soundItem.querySelector('.sound-item__preview');
 
-            // Handle preview button click
-            previewButton.addEventListener('click', (e) => {
-                e.stopPropagation();
-                togglePreview(previewButton, sound);
+            // Bind preview button event
+            previewButton.addEventListener('mousedown', (e) => {
+                if (e.button === 0) { // Left click only
+                    handlePreviewClick(e, previewButton, sound);
+                }
             });
 
-            // Handle sound selection (clicking anywhere else on the item)
-            soundItem.addEventListener('click', (e) => {
-                if (!e.target.classList.contains('sound-item__preview')) {
-                    selectSound(sound);
+            // Bind sound selection event
+            soundItem.addEventListener('mousedown', (e) => {
+                if (e.button === 0 && // Left click only
+                    !e.target.classList.contains('sound-item__preview') && 
+                    !e.target.closest('.sound-item__preview')) {
+                    handleSoundSelect(e, sound);
                 }
             });
 
@@ -126,6 +163,10 @@ export function initializeSoundPicker(ws) {
                     console.error('Error stopping previous preview:', error);
                 }
                 currentPreviewSource = null;
+            }
+
+            if (!sound || !sound.url) {
+                throw new Error('Invalid sound object or missing URL');
             }
 
             // Get or load the audio buffer
@@ -151,7 +192,6 @@ export function initializeSoundPicker(ws) {
                 isPlaying = false;
                 currentPreviewSource = null;
                 
-                // Find the specific button that triggered this preview
                 if (button) {
                     button.innerHTML = '<i class="fas fa-play"></i> Preview';
                 }
@@ -168,15 +208,23 @@ export function initializeSoundPicker(ws) {
 
     // Select a sound for use
     function selectSound(sound) {
+        if (!sound || !sound.name) {
+            console.error('Invalid sound object:', sound);
+            return;
+        }
+
+        console.log('selectSound called for:', sound.name);
+        
         // Remove previous selection
         const previousSelected = soundsListEl.querySelector('.sound-item.selected');
         if (previousSelected) {
             previousSelected.classList.remove('selected');
+            console.log('Removed previous selection');
         }
 
         // Add new selection
         const selectedItem = Array.from(soundsListEl.children)
-            .find(item => item.querySelector('.sound-item__name span').textContent === sound.name);
+            .find(item => item.dataset.soundName === sound.name);
         if (selectedItem) {
             selectedItem.classList.add('selected');
         }
@@ -192,10 +240,7 @@ export function initializeSoundPicker(ws) {
         if (window.roomState.playback && window.roomState.playback.currentTime > 0) {
             // Convert current time to position (same logic as timeline.getXFromTime)
             position = (window.roomState.playback.currentTime / totalDuration) * totalWidth;
-            
-            // Ensure position is not negative
             position = Math.max(0, position);
-            
             console.log('Adding sound at playhead position:', position, 'for time:', window.roomState.playback.currentTime);
         } else {
             // Default position if playhead is at the beginning
@@ -213,18 +258,37 @@ export function initializeSoundPicker(ws) {
             ownerId: window.roomState.userId
         };
         
-        // Get the audio buffer
+        // Get or fetch the audio buffer
         const key = `${window.roomState.audio.currentInstrument}/${sound.name}`;
         const audioBuffer = window.roomState.audio.loadedSounds.get(key);
         
         if (audioBuffer) {
+            console.log('Found existing audio buffer for:', sound.name);
             newTrack.audioBuffer = audioBuffer;
+            window.roomState.addTrack(newTrack);
+        } else if (sound.url) {
+            console.log('No audio buffer found for:', sound.name, 'attempting to fetch...');
+            // First add track to state so it appears
+            window.roomState.addTrack(newTrack);
+            
+            // Then fetch audio buffer
+            fetchSoundFile(sound.url).then(buffer => {
+                console.log('Successfully fetched audio buffer for:', sound.name);
+                window.roomState.addLoadedSound(
+                    window.roomState.audio.currentInstrument,
+                    sound.name,
+                    buffer
+                );
+                window.roomState.updateTracks(trackId, { audioBuffer: buffer });
+            }).catch(error => {
+                console.error('Failed to fetch audio buffer for:', sound.name, error);
+            });
+        } else {
+            console.error('Cannot load sound: no audio buffer and no URL provided');
+            return;
         }
         
-        // Add to room state
-        window.roomState.addTrack(newTrack);
-        
-        // Send WebSocket message to use this sound
+        // Send WebSocket message
         sendMessage(ws, 'use_sound', {
             trackId: trackId,
             instrument: window.roomState.audio.currentInstrument,

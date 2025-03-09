@@ -1,4 +1,10 @@
 import { config } from '../../config.js';
+import { 
+    getAudioContext,
+    decodeAudioData,
+    createAudioSource,
+    cleanupAudio 
+} from '../audio-context.js';
 
 // Fetch available sounds for a specific instrument (metadata only)
 export async function fetchAvailableSounds(instrument) {
@@ -42,10 +48,8 @@ export async function fetchSoundFile(url) {
         // Extract the audio file from the zip
         const audioArrayBuffer = await extractAudioFromZip(zipArrayBuffer);
         
-        // Decode the audio data
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const audioBuffer = await audioContext.decodeAudioData(audioArrayBuffer);
-        return audioBuffer;
+        // Decode the audio data using shared context
+        return await decodeAudioData(audioArrayBuffer);
     } catch (error) {
         console.error('Error fetching sound file:', error);
         throw error;
@@ -54,22 +58,27 @@ export async function fetchSoundFile(url) {
 
 // Extract audio file from zip
 async function extractAudioFromZip(zipArrayBuffer) {
-    // Use JSZip to extract the file
-    const JSZip = await import('https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm');
-    const zip = new JSZip.default();
-    
-    // Load the zip file
-    const zipContents = await zip.loadAsync(zipArrayBuffer);
-    
-    // Get the first file in the zip (there should only be one)
-    const files = Object.keys(zipContents.files);
-    if (files.length === 0) {
-        throw new Error('No files found in the zip');
+    try {
+        // Use JSZip to extract the file
+        const JSZip = await import('https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm');
+        const zip = new JSZip.default();
+        
+        // Load the zip file
+        const zipContents = await zip.loadAsync(zipArrayBuffer);
+        
+        // Get the first file in the zip (there should only be one)
+        const files = Object.keys(zipContents.files);
+        if (files.length === 0) {
+            throw new Error('No files found in the zip');
+        }
+        
+        // Get the audio file as an array buffer
+        const audioFile = zipContents.files[files[0]];
+        return await audioFile.async('arraybuffer');
+    } catch (error) {
+        console.error('Error extracting audio from zip:', error);
+        throw error;
     }
-    
-    // Get the audio file as an array buffer
-    const audioFile = zipContents.files[files[0]];
-    return await audioFile.async('arraybuffer');
 }
 
 // Convert base64 audio data to AudioBuffer
@@ -83,9 +92,7 @@ export async function base64ToAudioBuffer(base64String) {
             bytes[i] = binaryString.charCodeAt(i);
         }
 
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const audioBuffer = await audioContext.decodeAudioData(bytes.buffer);
-        return audioBuffer;
+        return await decodeAudioData(bytes.buffer);
     } catch (error) {
         console.error('Error converting base64 to AudioBuffer:', error);
         throw error;
@@ -94,10 +101,19 @@ export async function base64ToAudioBuffer(base64String) {
 
 // Preview a sound from AudioBuffer
 export function previewSound(audioBuffer) {
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    const source = audioContext.createBufferSource();
-    source.buffer = audioBuffer;
-    source.connect(audioContext.destination);
-    source.start();
+    const source = createAudioSource(audioBuffer);
+    
+    // Start playback
+    try {
+        source.start(0);
+        console.log('Started audio playback');
+    } catch (error) {
+        console.error('Error starting audio playback:', error);
+        throw error;
+    }
+    
     return source;
 }
+
+// Clean up when needed (export shared cleanupAudio)
+export { cleanupAudio };

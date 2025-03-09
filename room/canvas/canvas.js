@@ -1,4 +1,4 @@
-import { Timeline } from './timeline.js';
+import { Timeline, TIMELINE_CONFIG } from './timeline.js';
 import { 
     TrackStatus, 
     createTrackAudio, 
@@ -7,6 +7,12 @@ import {
     calculateTrackPosition,
     updateTrackStatus 
 } from './track-state.js';
+import { 
+    getAudioContext,
+    createScheduledSource,
+    cleanupAudio,
+    createAudioSource
+} from '../audio-context.js';
 
 // Initialize canvas component
 export function initializeCanvas(roomState, ws) {
@@ -151,10 +157,18 @@ export function initializeCanvas(roomState, ws) {
             currentTime: 0
         });
         timeline.draw(roomState.tracks, 0);
-        audioMap.forEach(audio => {
-            audio.element.currentTime = 0;
-        });
+        stopAllAudio();
     });
+
+    // Stop all playing audio
+    function stopAllAudio() {
+        audioMap.forEach(audio => {
+            if (audio.scheduledSource) {
+                audio.scheduledSource.stop();
+            }
+            audio.isPlaying = false;
+        });
+    }
 
     // Handle track audio synchronization
     async function syncAudioElements(tracks) {
@@ -164,7 +178,9 @@ export function initializeCanvas(roomState, ws) {
         currentAudioIds.forEach(id => {
             if (!tracks.find(t => t.id === id)) {
                 const audio = audioMap.get(id);
-                audio.source.disconnect();
+                if (audio.scheduledSource) {
+                    audio.scheduledSource.stop();
+                }
                 audioMap.delete(id);
             }
         });
@@ -174,21 +190,28 @@ export function initializeCanvas(roomState, ws) {
             if (!audioMap.has(track.id)) {
                 try {
                     if (track.audioBuffer) {
-                        // Create audio from AudioBuffer directly
-                        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                        const source = audioContext.createBufferSource();
-                        source.buffer = track.audioBuffer;
-                        source.connect(audioContext.destination);
-                        
                         const audio = {
+                            buffer: track.audioBuffer,
+                            scheduledSource: null,
+                            isPlaying: false,
                             element: {
-                                play: () => source.start(),
-                                pause: () => source.stop(),
-                                currentTime: 0
-                            },
-                            source: source
+                                play: () => {
+                                    const context = getAudioContext();
+                                    if (audio.scheduledSource) {
+                                        audio.scheduledSource.stop();
+                                    }
+                                    const currentTime = context.currentTime;
+                                    audio.scheduledSource = createScheduledSource(audio.buffer, currentTime);
+                                    audio.isPlaying = true;
+                                },
+                                pause: () => {
+                                    if (audio.scheduledSource) {
+                                        audio.scheduledSource.stop();
+                                        audio.isPlaying = false;
+                                    }
+                                }
+                            }
                         };
-                        
                         audioMap.set(track.id, audio);
                     } else if (track.audioUrl) {
                         // Fallback to URL if needed
@@ -208,11 +231,12 @@ export function initializeCanvas(roomState, ws) {
     function startPlayback() {
         if (!playbackInterval) {
             const startTime = performance.now() - (roomState.playback.currentTime * 1000);
+            const audioContext = getAudioContext();
             
             playbackInterval = setInterval(() => {
                 const currentTime = (performance.now() - startTime) / 1000;
                 
-                if (currentTime >= 30) { // End of timeline
+                if (currentTime >= TIMELINE_CONFIG.totalDuration) {
                     roomState.updatePlayback({
                         isPlaying: false,
                         currentTime: 0
@@ -227,18 +251,20 @@ export function initializeCanvas(roomState, ws) {
 
                 timeline.draw(roomState.tracks, currentTime);
                 
-                // Check if any tracks should start playing at this time
+                // Schedule audio playback
                 roomState.tracks.forEach(track => {
                     if (!audioMap.has(track.id)) return;
                     
                     const audio = audioMap.get(track.id);
-                    const delay = (track.position / timeline.TIMELINE_CONFIG.totalWidth) * 30;
+                    const delay = (track.position / TIMELINE_CONFIG.totalWidth) * TIMELINE_CONFIG.totalDuration;
                     
                     // If we've reached the track's start time and it's not already playing
                     if (currentTime >= delay && !audio.isPlaying) {
                         try {
-                            audio.element.play();
-                            audio.isPlaying = true;
+                            if (!audio.isPlaying) {
+                                audio.element.play();
+                                console.log('Started playing track:', track.id, 'at time:', currentTime, 'with delay:', delay);
+                            }
                         } catch (error) {
                             console.error('Error playing audio for track:', track.id, error);
                         }
@@ -247,17 +273,18 @@ export function initializeCanvas(roomState, ws) {
             }, 1000 / 60); // 60fps update
 
             // Start audio playback for tracks that should already be playing
+            const currentAudioTime = audioContext.currentTime;
             audioMap.forEach((audio, trackId) => {
                 const track = roomState.tracks.find(t => t.id === trackId);
                 if (track) {
-                    const delay = (track.position / timeline.TIMELINE_CONFIG.totalWidth) * 30;
+                    const delay = (track.position / TIMELINE_CONFIG.totalWidth) * TIMELINE_CONFIG.totalDuration;
                     if (roomState.playback.currentTime >= delay) {
                         try {
-                            if (audio.element.currentTime !== undefined) {
-                                audio.element.currentTime = roomState.playback.currentTime - delay;
+                            if (!audio.isPlaying) {
+                                const offset = roomState.playback.currentTime - delay;
+                                audio.scheduledSource = createScheduledSource(audio.buffer, currentAudioTime, offset);
+                                audio.isPlaying = true;
                             }
-                            audio.element.play();
-                            audio.isPlaying = true;
                         } catch (error) {
                             console.error('Error starting audio playback:', error);
                         }
@@ -271,16 +298,7 @@ export function initializeCanvas(roomState, ws) {
         if (playbackInterval) {
             clearInterval(playbackInterval);
             playbackInterval = null;
-            
-            // Pause all audio
-            audioMap.forEach(audio => {
-                try {
-                    audio.element.pause();
-                    audio.isPlaying = false;
-                } catch (error) {
-                    console.error('Error pausing audio:', error);
-                }
-            });
+            stopAllAudio();
         }
     }
 
@@ -289,10 +307,9 @@ export function initializeCanvas(roomState, ws) {
         if (playbackInterval) {
             clearInterval(playbackInterval);
         }
-        audioMap.forEach(audio => {
-            audio.source.disconnect();
-        });
+        stopAllAudio();
         audioMap.clear();
         timeline.destroy();
+        cleanupAudio();
     };
 }

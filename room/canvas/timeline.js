@@ -1,4 +1,4 @@
-const TIMELINE_CONFIG = {
+export const TIMELINE_CONFIG = {
     totalDuration: 30, // seconds
     totalWidth: 9000,  // pixels
     canvasWidth: 1500, // visible width
