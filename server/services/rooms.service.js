@@ -193,15 +193,19 @@ async function getRoomAudio(roomId) {
         
         // Get unique audio files needed with their instrument types
         const uniqueAudioFiles = new Map(); // Map<filename, instrumentType>
+        let totalTracks = 0;
         songData.tracks.forEach(track => {
             if (track.audioFile && track.instrument) {
                 uniqueAudioFiles.set(track.audioFile, track.instrument);
+                totalTracks++;
             }
         });
+        
+        logger.info(`Processing ${totalTracks} tracks with ${uniqueAudioFiles.size} unique audio files`);
 
         // Create a ZIP containing the needed audio files
         const zip = new AdmZip();
-        const audioBaseDir = path.join(__dirname, '../audio');
+        const audioBaseDir = path.join(__dirname, '../sounds');
 
         for (const [fileName, instrumentType] of uniqueAudioFiles) {
             const filePath = path.join(audioBaseDir, instrumentType, fileName);
@@ -214,7 +218,9 @@ async function getRoomAudio(roomId) {
             }
         }
 
-        return zip.toBuffer();
+        const buffer = zip.toBuffer();
+        logger.info(`Generated ZIP with size: ${buffer.byteLength} bytes`);
+        return buffer;
     } catch (err) {
         logger.error('Error preparing room audio:', err);
         throw new Error('Error preparing room audio');
@@ -224,7 +230,7 @@ async function getRoomAudio(roomId) {
 async function getInstrumentAudio(instrumentName) {
     try {
         const zip = new AdmZip();
-        const instrumentDir = path.join(__dirname, '../audio', instrumentName);
+        const instrumentDir = path.join(__dirname, '../sounds', instrumentName);
 
         // Check if instrument directory exists
         try {
