@@ -4,7 +4,7 @@ const pool = require('../../database/db-connection');
 
 // Import handlers
 const { handleChatMessage } = require('./chat.handler');
-const { handleUseSound } = require('./instruments.handler');
+const { handleUseSound, handleMoveTrack } = require('./instruments.handler');
 const { 
     handleJoinRoom, 
     handleTrackStatus, 
@@ -20,7 +20,8 @@ const messageHandlers = {
     'use_sound': handleUseSound,
     'track_status': handleTrackStatus,
     'update_track': handleUpdateTrack,
-    'mouse_position': handleMousePosition
+    'mouse_position': handleMousePosition,
+    'move_track': handleMoveTrack
 };
 
 // Initialize WebSocket connection for a client

@@ -146,12 +146,12 @@ const handleUseSound = async (socket, message, pool) => {
                 [JSON.stringify(roomContents), socket.roomId]
             );
 
-            // Broadcast to all clients in room (without audio data)
+            // Broadcast to all clients in room except sender (without audio data)
             broadcastToRoom(socket.roomId, {
                 type: 'track_updated',
                 trackData: track,
                 soundUrl: sound.url
-            }, null); // Send to all clients including sender
+            }, socket); // Exclude sender from broadcast
 
             // Send success response to sender
             socket.send(JSON.stringify({
@@ -231,19 +231,12 @@ const handleMoveTrack = async (socket, message, pool) => {
             [JSON.stringify(roomContents), socket.roomId]
         );
 
-        // Broadcast to all clients in room
+        // Only broadcast to other clients in room, no response to sender needed
         broadcastToRoom(socket.roomId, {
             type: 'track_moved',
             trackId,
             position
-        }, null); // Send to all clients including sender
-
-        // Send success response to sender
-        socket.send(JSON.stringify({
-            type: 'track_moved',
-            trackId,
-            success: true
-        }));
+        }, socket); // Exclude sender from broadcast
 
     } catch (err) {
         logger.error('Error handling move_track:', err);
