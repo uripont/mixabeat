@@ -35,21 +35,53 @@ export function initializeCanvas(roomState, ws) {
 
     // Initialize playback controls
     const initializePlaybackControls = () => {
-        const playButton = document.querySelector('.play-btn');
-        const stopButton = document.querySelector('.stop-btn');
-        const restartButton = document.querySelector('.restart-btn');
+        const controlsContainer = document.querySelector('.control-group');
+        if (!controlsContainer) {
+            console.error('Controls container not found');
+            return;
+        }
 
+        const playButton = controlsContainer.querySelector('.play-btn');
+        const stopButton = controlsContainer.querySelector('.stop-btn');
+        const restartButton = controlsContainer.querySelector('.restart-btn');
+        
         if (!playButton || !stopButton || !restartButton) {
             console.error('Playback controls not found');
             return;
         }
 
+        // Mute others button
+        const muteOthersButton = document.createElement('button');
+        muteOthersButton.className = 'mute-others-btn';
+        muteOthersButton.innerHTML = roomState.playback.muteOthers ? '🔇' : '🔈';
+        muteOthersButton.title = 'Mute Others\' Tracks';
+        muteOthersButton.dataset.active = roomState.playback.muteOthers;
+        controlsContainer.appendChild(muteOthersButton);
+
         playButton.addEventListener('click', () => {
             roomState.updatePlayback({
+                ...roomState.playback,
                 isPlaying: true,
                 currentTime: roomState.playback.currentTime,
                 isLooping: true
             });
+        });
+
+        // Toggle mute others state
+        muteOthersButton.addEventListener('click', () => {
+            const newMuteState = !roomState.playback.muteOthers;
+            roomState.updatePlayback({
+                ...roomState.playback,
+                muteOthers: newMuteState
+            });
+            muteOthersButton.innerHTML = newMuteState ? '🔇' : '🔈';
+            muteOthersButton.dataset.active = newMuteState;
+            
+            // Stop all audio and restart playback to apply new mute state
+            if (isPlaying) {
+                stopAllAudio();
+                startPlayback();
+            }
         });
 
         stopButton.addEventListener('click', () => {
@@ -257,6 +289,7 @@ export function initializeCanvas(roomState, ws) {
                     buffer: track.audioBuffer,
                     scheduledSource: null,
                     isPlaying: false,
+                    trackId: track.id,  // Store trackId in the audio object
                     element: {
                         play: () => {
                             const context = getAudioContext();
@@ -264,7 +297,8 @@ export function initializeCanvas(roomState, ws) {
                                 audio.scheduledSource.stop();
                             }
                             const currentTime = context.currentTime;
-                            audio.scheduledSource = createScheduledSource(audio.buffer, currentTime);
+                            const source = createScheduledSource(audio.buffer, currentTime, 0);
+                            audio.scheduledSource = source;
                             audio.isPlaying = true;
                         },
                         pause: () => {
@@ -282,6 +316,7 @@ export function initializeCanvas(roomState, ws) {
                 const response = await fetch(track.audioUrl);
                 const blob = await response.blob();
                 const audio = await createTrackAudio(blob);
+                audio.trackId = track.id;  // Store trackId in the audio object
                 audioMap.set(track.id, audio);
                 roomState.updateTrackLoadingState(track.id, 'loaded');
                 roomState.resetLoadRetry(track.id);
@@ -393,8 +428,10 @@ export function initializeCanvas(roomState, ws) {
                     
                     // If we've reached the track's start time and it's not already playing
                     if (currentTime >= delay && !audio.isPlaying) {
+                        // Only play if it's your track or mute others is off
+                        const shouldPlay = !roomState.playback.muteOthers || track.ownerId === roomState.userId;
                         try {
-                            if (!audio.isPlaying) {
+                            if (!audio.isPlaying && shouldPlay) {
                                 audio.element.play();
                                 console.log('Started playing track:', track.id, 'at time:', currentTime, 'with delay:', delay);
                             }
@@ -412,10 +449,13 @@ export function initializeCanvas(roomState, ws) {
                 if (track) {
                     const delay = (track.position / timeline.getMaxAllowedPosition()) * TIMELINE_CONFIG.loopPoint;
                     if (roomState.playback.currentTime >= delay) {
+                        // Only start if it's your track or mute others is off
+                        const shouldPlay = !roomState.playback.muteOthers || track.ownerId === roomState.userId;
                         try {
-                            if (!audio.isPlaying) {
+                            if (!audio.isPlaying && shouldPlay) {
                                 const offset = roomState.playback.currentTime - delay;
-                                audio.scheduledSource = createScheduledSource(audio.buffer, currentAudioTime, offset);
+                                const source = createScheduledSource(audio.buffer, currentAudioTime, offset);
+                                audio.scheduledSource = source;
                                 audio.isPlaying = true;
                             }
                         } catch (error) {

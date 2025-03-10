@@ -10,7 +10,8 @@ export function initializeRoomState() {
         mousePositions: {},  // Used by canvas to show other users
         playback: {       // Used by all audio-related components
             isPlaying: false,
-            currentTime: 0
+            currentTime: 0,
+            muteOthers: false
         },
 
         // Audio state management

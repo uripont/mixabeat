@@ -6,26 +6,24 @@ export const TrackStatus = {
 };
 
 // Initialize audio context only when needed
-let audioContext = null;
-function getAudioContext() {
-    if (!audioContext) {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    return audioContext;
-}
+import { getAudioContext } from '../audio-context.js';
 
 // Create audio element and source for a track
-export async function createTrackAudio(audioBlob) {
+export async function createTrackAudio(audioBlob, trackId) {
     const audioElement = new Audio();
     audioElement.src = URL.createObjectURL(audioBlob);
     
     // Connect to audio context for precise timing
     const source = getAudioContext().createMediaElementSource(audioElement);
-    source.connect(getAudioContext().destination);
+    const gainNode = getAudioContext().createGain();
+    source.connect(gainNode);
+    gainNode.connect(getAudioContext().destination);
     
     return {
         element: audioElement,
-        source: source
+        source: source,
+        gainNode: gainNode,
+        trackId: trackId
     };
 }
 

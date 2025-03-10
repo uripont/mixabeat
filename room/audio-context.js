@@ -1,13 +1,13 @@
 // Shared audio context singleton
 let sharedAudioContext;
-let gainNode;
+let masterGainNode;
 
 // Get or create the shared audio context
 export function getAudioContext() {
     if (!sharedAudioContext) {
         sharedAudioContext = new (window.AudioContext || window.webkitAudioContext)();
-        gainNode = sharedAudioContext.createGain();
-        gainNode.connect(sharedAudioContext.destination);
+        masterGainNode = sharedAudioContext.createGain();
+        masterGainNode.connect(sharedAudioContext.destination);
     }
 
     // Resume context if it was suspended (browsers require user interaction)
@@ -18,22 +18,12 @@ export function getAudioContext() {
     return sharedAudioContext;
 }
 
-// Get the main gain node
-export function getGainNode() {
-    if (!gainNode) {
-        getAudioContext(); // This will create both the context and gain node
-    }
-    return gainNode;
-}
-
 // Create an audio source for playback
 export function createAudioSource(audioBuffer, options = {}) {
     const context = getAudioContext();
     const source = context.createBufferSource();
     source.buffer = audioBuffer;
-
-    // Connect through gain node for volume control
-    source.connect(getGainNode());
+    source.connect(masterGainNode);
     
     // Set optional parameters
     if (options.loop !== undefined) source.loop = options.loop;
@@ -47,7 +37,7 @@ export function cleanupAudio() {
     if (sharedAudioContext) {
         sharedAudioContext.close().then(() => {
             sharedAudioContext = null;
-            gainNode = null;
+            masterGainNode = null;
             console.log('Audio context closed');
         }).catch(error => {
             console.error('Error closing audio context:', error);
@@ -69,7 +59,6 @@ export async function decodeAudioData(arrayBuffer) {
 // Create a scheduled playback source
 export function createScheduledSource(audioBuffer, startTime, offset = 0) {
     const source = createAudioSource(audioBuffer);
-    const context = getAudioContext();
     
     if (startTime !== undefined) {
         source.start(startTime, offset);

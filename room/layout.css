@@ -71,6 +71,31 @@ body {
     background: rgba(255, 255, 255, 0.2);
 }
 
+/* Mute others button styles */
+.mute-others-btn {
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: #2a2a2a;
+    color: #fff;
+    font-size: 1.2rem;
+    margin-left: 10px;
+}
+
+.mute-others-btn:hover {
+    background: #404040;
+}
+
+.mute-others-btn[data-active="true"] {
+    background: #66b3ff;
+}
+
 .control-btn i, .action-btn i {
     font-size: 1.2rem;
 }
