@@ -208,11 +208,9 @@ const handleMousePosition = (socket, message) => {
     }
     
     broadcastToRoom(socket.roomId, {
-        type: 'broadcast_mouse_position',
+        type: 'mouse_position',
         userId: socket.userId,
-        x: message.x,
-        y: message.y,
-        timestamp: message.timestamp
+        position: { x: message.x, y: message.y }
     }, socket);
 };
 
