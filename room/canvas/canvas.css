@@ -15,6 +15,25 @@
 }
 
 
+.room-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    background: #1a1a1a;
+    border-bottom: 1px solid #3a3a3a;
+    height: 32px;
+}
+
+.room-name {
+    font-weight: 500;
+}
+
+.room-id {
+    color: #888;
+    font-size: 0.9em;
+}
+
 #timelineCanvas {
     flex: 1;
     background: rgb(251, 222, 226);

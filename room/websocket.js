@@ -221,6 +221,12 @@ export async function initializeWebSocket(token, roomId) {
                                 console.log('User has existing track, using instrument:', userTrack.instrument);
                                 window.roomState.setCurrentInstrument(userTrack.instrument);
                             }
+                            // Update room info
+                            window.roomState.updateRoomInfo({
+                                roomId: data.roomId,
+                                roomName: data.roomName
+                            });
+                            
                             // Resolve the WebSocket connection after room is fully joined
                             resolve(ws);
                             break;

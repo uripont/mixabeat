@@ -44,10 +44,25 @@ body {
 .control-group.center {
     flex-grow: 1;
     justify-content: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.room-info {
+    display: flex;
+    gap: 10px;
+    font-size: 1rem;
+    color: #fff;
+}
+
+.room-id {
+    color: #888;
 }
 
 .timer {
-    font-size: 2.5rem;
+    font-size: 1.8rem;
     color: #fff;
     font-weight: 300;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);

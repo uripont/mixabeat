@@ -119,8 +119,26 @@ document.addEventListener('DOMContentLoaded', async () => {
             throw new Error('Chat template not found');
         }
 
-        // Initialize shared playback controls
-        const cleanupPlayback = initializePlaybackControls();
+    // Initialize room info display
+    function updateRoomInfo(roomInfo) {
+        const roomInfoEl = document.querySelector('.room-info');
+        
+        if (roomInfoEl) {
+            roomInfoEl.textContent = `Room #${roomInfo.roomId}`;
+        }
+    }
+
+    // Watch for room info changes
+    window.addEventListener('state:room', (e) => updateRoomInfo(e.detail));
+
+    // Initial room info update
+    updateRoomInfo({
+        roomId: window.roomState.roomId,
+        roomName: window.roomState.roomName
+    });
+
+    // Initialize shared playback controls
+    const cleanupPlayback = initializePlaybackControls();
 
         // Load canvas panel
         fetch('canvas/canvas.html')

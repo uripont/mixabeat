@@ -4,7 +4,17 @@ export function initializeRoomState() {
         // Core state with logical domains (shared between components)
         userId: null,     // Current user's ID
         roomId: null,     // Current room's ID
+        roomName: null,   // Current room's name
         users: [],        // Used by chat (user list) and canvas (cursors)
+
+        // Update methods for room info
+        updateRoomInfo(changes) {
+            if (changes.roomId !== undefined) this.roomId = changes.roomId;
+            if (changes.roomName !== undefined) this.roomName = changes.roomName;
+            window.dispatchEvent(new CustomEvent('state:room', {
+                detail: { roomId: this.roomId, roomName: this.roomName }
+            }));
+        },
         tracks: [],       // Used by canvas and sound-editor
         trackLoadingState: new Map(), // Track audio loading states
         mousePositions: {},  // Used by canvas to show other users

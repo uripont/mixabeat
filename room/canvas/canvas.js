@@ -20,6 +20,34 @@ export function initializeCanvas(roomState, ws) {
     if (!canvas) throw new Error('Canvas element not found');
     
     const timeline = new Timeline(canvas);
+
+    // Room info update handler
+    function updateRoomInfo(roomInfo) {
+        const roomNameEl = document.querySelector('.room-name');
+        const roomIdEl = document.querySelector('.room-id');
+        
+        if (roomNameEl && roomIdEl) {
+            // If no room name, use "Room" + ID
+            roomNameEl.textContent = roomInfo.roomName || `Room ${roomInfo.roomId}`;
+            roomIdEl.textContent = `#${roomInfo.roomId}`;
+        }
+    }
+
+    // Initial room info update
+    updateRoomInfo({
+        roomId: roomState.roomId,
+        roomName: roomState.roomName
+    });
+
+    // Watch for room info changes
+    window.addEventListener('state:room', (e) => updateRoomInfo(e.detail));
+
+    // Store user colors map
+    const userColors = new Map();
+    
+    // Throttle helper
+    let lastMouseUpdate = 0;
+    const MOUSE_UPDATE_INTERVAL = 50; // Send updates every 50ms
     
     // Track state
     let audioMap = new Map(); // Maps trackId to audio elements
@@ -147,11 +175,17 @@ export function initializeCanvas(roomState, ws) {
     });
     
     canvas.addEventListener('mousemove', (event) => {
+        const rect = canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+
+        // Handle track dragging
         if (isDragging && selectedTrackId) {
             const deltaX = event.clientX - dragStartX;
             
             // Find the selected track and preserve all its data
             const track = roomState.tracks.find(t => t.id === selectedTrackId);
+
             if (track) {
                 // Calculate 3s boundary based on canvas width
                 const maxAllowedPosition = timeline.getMaxAllowedPosition() - 100; // Subtract track width
@@ -188,6 +222,52 @@ export function initializeCanvas(roomState, ws) {
                 }
             }
         }
+
+        // Send cursor position to other users with throttling
+        const now = Date.now();
+        if (now - lastMouseUpdate >= MOUSE_UPDATE_INTERVAL) {
+            import('../websocket.js').then(({ sendMessage }) => {
+                sendMessage(ws, 'mouse_position', { x, y });
+            });
+            lastMouseUpdate = now;
+        }
+    });
+
+    // Watch for mouse position updates from other users
+    roomState.watchMousePositions((positions) => {
+        // Get user colors or generate new ones
+        Object.keys(positions).forEach(userId => {
+            if (!userColors.has(userId)) {
+                userColors.set(userId, getRandomColor());
+            }
+        });
+
+        // Force redraw with cursor positions
+        timeline.draw(roomState.tracks, roomState.playback.currentTime);
+
+        // Draw cursors on top
+        const ctx = canvas.getContext('2d');
+        Object.entries(positions).forEach(([userId, pos]) => {
+            if (userId === roomState.userId) return; // Skip own cursor
+
+            // Draw cursor
+            ctx.fillStyle = userColors.get(userId);
+            ctx.beginPath();
+            ctx.moveTo(pos.x, pos.y);
+            ctx.lineTo(pos.x + 10, pos.y + 10);
+            ctx.lineTo(pos.x + 4, pos.y + 10);
+            ctx.lineTo(pos.x, pos.y + 16);
+            ctx.closePath();
+            ctx.fill();
+
+            // Draw username if available
+            const user = roomState.users.find(u => u.userId === userId);
+            if (user) {
+                ctx.font = '12px Arial';
+                ctx.fillStyle = userColors.get(userId);
+                ctx.fillText(user.username, pos.x + 12, pos.y + 12);
+            }
+        });
     });
     
     canvas.addEventListener('mouseup', () => {
