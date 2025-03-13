@@ -2,7 +2,7 @@ const fs = require('fs').promises;
 const path = require('path');
 const logger = require('../utils/logger');
 
-const validInstruments = ['drums', 'guitar', 'piano', 'trumpet', 'violin'];
+const validInstruments = ['bases', 'drums', 'guitar', 'piano', 'trumpet', 'violin'];
 
 // Get sound names for a specific instrument (metadata only)
 async function getSoundNamesForInstrument(instrument) {
