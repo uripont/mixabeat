@@ -65,8 +65,7 @@ async function extractAndDecodeAudio(zipArrayBuffer) {
             if (filename.includes('drums')) instrument = 'drums';
             else if (filename.includes('guitar')) instrument = 'guitar';
             else if (filename.includes('piano')) instrument = 'piano';
-            else if (filename.includes('bass')) instrument = 'bass';
-            else if (filename.includes('synth')) instrument = 'synth';
+            else if (filename.includes('bases')) instrument = 'bases';
             else if (filename.includes('violin')) instrument = 'violin';
             else if (filename.includes('trumpet')) instrument = 'trumpet';
 
