@@ -3,15 +3,54 @@ import { sendMessage } from '../websocket.js';
 import { getRandomColor } from '../canvas/track-state.js';
 import { TIMELINE_CONFIG } from '../canvas/timeline.js';
 
-export function initializeSoundPicker(ws) {
+async function waitForElements() {
+    return new Promise((resolve, reject) => {
+        // First check if elements already exist
+        let currentInstrumentEl = document.getElementById('current-instrument');
+        let soundsLoadingEl = document.getElementById('sounds-loading');
+        let soundsListEl = document.getElementById('sounds-list');
+        
+        if (currentInstrumentEl && soundsLoadingEl && soundsListEl) {
+            resolve({ currentInstrumentEl, soundsLoadingEl, soundsListEl });
+            return;
+        }
+
+        // If not, observe DOM changes
+        const observer = new MutationObserver((mutations) => {
+            currentInstrumentEl = document.getElementById('current-instrument');
+            soundsLoadingEl = document.getElementById('sounds-loading');
+            soundsListEl = document.getElementById('sounds-list');
+            
+            if (currentInstrumentEl && soundsLoadingEl && soundsListEl) {
+                observer.disconnect();
+                resolve({ currentInstrumentEl, soundsLoadingEl, soundsListEl });
+            }
+        });
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+
+        // Timeout after 5 seconds
+        setTimeout(() => {
+            observer.disconnect();
+            reject(new Error('Timeout waiting for sound picker elements'));
+        }, 5000);
+    });
+}
+
+export async function initializeSoundPicker(ws) {
     // Clean up audio context when page unloads
     window.addEventListener('unload', () => {
         cleanupAudio();
     });
 
-    const currentInstrumentEl = document.getElementById('current-instrument');
-    const soundsLoadingEl = document.getElementById('sounds-loading');
-    const soundsListEl = document.getElementById('sounds-list');
+    // Wait for DOM elements
+    console.log('Waiting for sound picker elements...');
+    const { currentInstrumentEl, soundsLoadingEl, soundsListEl } = await waitForElements();
+    console.log('Sound picker elements found');
+
     let currentPreviewSource = null;
     let isPlaying = false;
 
@@ -28,28 +67,43 @@ export function initializeSoundPicker(ws) {
     // Initialize with current instrument if exists
     async function initializeWithCurrentInstrument() {
         const currentInstrument = window.roomState.audio.currentInstrument;
-        if (currentInstrument) {
-            try {
-                // First update the UI to show the instrument
-                const iconClass = getInstrumentIcon(currentInstrument);
+        try {
+            if (!currentInstrument) {
+                console.warn('No current instrument set, waiting for instrument assignment...');
+                // Show loading state
                 currentInstrumentEl.innerHTML = `
-                    <i class="fas ${iconClass}"></i>
-                    <span>${currentInstrument.charAt(0).toUpperCase() + currentInstrument.slice(1)}</span>
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <span>Awaiting instrument...</span>
                 `;
-
-                // Show loading state while fetching sounds
-                soundsLoadingEl.style.display = 'block';
-                soundsListEl.style.display = 'none';
-
-                // Load available sounds
-                await loadAvailableSounds(currentInstrument);
-            } catch (error) {
-                console.error('Error initializing with current instrument:', error);
-                soundsLoadingEl.innerHTML = `
-                    <i class="fas fa-exclamation-circle"></i>
-                    <span>Error loading sounds. Please refresh.</span>
-                `;
+                // Watch for instrument to be set
+                window.roomState.watchAudio(({ currentInstrument }) => {
+                    if (currentInstrument) {
+                        console.log('Instrument assigned:', currentInstrument);
+                        initializeWithCurrentInstrument();
+                    }
+                });
+                return;
             }
+
+            // First update the UI to show the instrument
+            const iconClass = getInstrumentIcon(currentInstrument);
+            currentInstrumentEl.innerHTML = `
+                <i class="fas ${iconClass}"></i>
+                <span>${currentInstrument.charAt(0).toUpperCase() + currentInstrument.slice(1)}</span>
+            `;
+
+            // Show loading state while fetching sounds
+            soundsLoadingEl.style.display = 'block';
+            soundsListEl.style.display = 'none';
+
+            // Load available sounds
+            await loadAvailableSounds(currentInstrument);
+        } catch (error) {
+            console.error('Error initializing with current instrument:', error);
+            soundsLoadingEl.innerHTML = `
+                <i class="fas fa-exclamation-circle"></i>
+                <span>Error loading sounds. Please refresh.</span>
+            `;
         }
     }
 

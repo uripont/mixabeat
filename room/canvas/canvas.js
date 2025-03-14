@@ -21,27 +21,6 @@ export function initializeCanvas(roomState, ws) {
     
     const timeline = new Timeline(canvas);
 
-    // Room info update handler
-    function updateRoomInfo(roomInfo) {
-        const roomNameEl = document.querySelector('.room-name');
-        const roomIdEl = document.querySelector('.room-id');
-        
-        if (roomNameEl && roomIdEl) {
-            // If no room name, use "Room" + ID
-            roomNameEl.textContent = roomInfo.roomName || `Room ${roomInfo.roomId}`;
-            roomIdEl.textContent = `#${roomInfo.roomId}`;
-        }
-    }
-
-    // Initial room info update
-    updateRoomInfo({
-        roomId: roomState.roomId,
-        roomName: roomState.roomName
-    });
-
-    // Watch for room info changes
-    window.addEventListener('state:room', (e) => updateRoomInfo(e.detail));
-
     // Store user colors map
     const userColors = new Map();
     

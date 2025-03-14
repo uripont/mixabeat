@@ -214,11 +214,21 @@ export async function initializeWebSocket(token, roomId) {
                                 window.roomState.setCurrentInstrument(data.assignedInstrument);
                             }
                             
-                            // If user has an existing track, use that instrument instead
+                            // Determine instrument in priority order:
+                            // 1. User's existing track's instrument
+                            // 2. Server assigned instrument
+                            // 3. Random default instrument
                             const userTrack = tracks.find(track => track.ownerId === window.roomState.userId);
+                            
                             if (userTrack) {
-                                console.log('User has existing track, using instrument:', userTrack.instrument);
+                                console.log('Using existing track instrument:', userTrack.instrument);
                                 window.roomState.setCurrentInstrument(userTrack.instrument);
+                            } else if (data.assignedInstrument) {
+                                console.log('Using server assigned instrument:', data.assignedInstrument);
+                                window.roomState.setCurrentInstrument(data.assignedInstrument);
+                            } else {
+                                console.log('No instrument assigned, using random default');
+                                window.roomState.setCurrentInstrument(); // Will choose random
                             }
                             // Update room info
                             window.roomState.updateRoomInfo({
@@ -226,8 +236,19 @@ export async function initializeWebSocket(token, roomId) {
                                 roomName: data.roomName
                             });
                             
-                            // Resolve the WebSocket connection after room is fully joined
-                            resolve(ws);
+                            // Ensure all required state is set before resolving
+                            if (window.roomState.users && 
+                                window.roomState.roomId && 
+                                window.roomState.audio.currentInstrument) {
+                                console.log('Room state fully initialized:', {
+                                    users: window.roomState.users,
+                                    roomId: window.roomState.roomId,
+                                    instrument: window.roomState.audio.currentInstrument
+                                });
+                                resolve(ws);
+                            } else {
+                                reject(new Error('Room state not properly initialized'));
+                            }
                             break;
 
                         case 'instrument_assigned':
