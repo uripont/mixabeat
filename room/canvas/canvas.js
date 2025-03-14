@@ -109,12 +109,7 @@ export function initializeCanvas(roomState, ws) {
             });
             muteOthersButton.innerHTML = newMuteState ? '🔇' : '🔈';
             muteOthersButton.dataset.active = newMuteState;
-            
-            // Stop all audio and restart playback to apply new mute state
-            if (isPlaying) {
-                stopAllAudio();
-                startPlayback();
-            }
+            // The mute state will be applied to any new tracks that start playing
         });
 
         stopButton.addEventListener('click', () => {
