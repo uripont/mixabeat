@@ -1,17 +1,56 @@
 import { fetchAvailableSounds, fetchSoundFile, base64ToAudioBuffer, previewSound, cleanupAudio } from './sound-picker-api.js';
 import { sendMessage } from '../websocket.js';
-import { getRandomColor, calculateTrackPosition } from '../canvas/track-state.js';
+import { getRandomColor } from '../canvas/track-state.js';
 import { TIMELINE_CONFIG } from '../canvas/timeline.js';
 
-export function initializeSoundPicker(ws) {
+async function waitForElements() {
+    return new Promise((resolve, reject) => {
+        // First check if elements already exist
+        let currentInstrumentEl = document.getElementById('current-instrument');
+        let soundsLoadingEl = document.getElementById('sounds-loading');
+        let soundsListEl = document.getElementById('sounds-list');
+        
+        if (currentInstrumentEl && soundsLoadingEl && soundsListEl) {
+            resolve({ currentInstrumentEl, soundsLoadingEl, soundsListEl });
+            return;
+        }
+
+        // If not, observe DOM changes
+        const observer = new MutationObserver((mutations) => {
+            currentInstrumentEl = document.getElementById('current-instrument');
+            soundsLoadingEl = document.getElementById('sounds-loading');
+            soundsListEl = document.getElementById('sounds-list');
+            
+            if (currentInstrumentEl && soundsLoadingEl && soundsListEl) {
+                observer.disconnect();
+                resolve({ currentInstrumentEl, soundsLoadingEl, soundsListEl });
+            }
+        });
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+
+        // Timeout after 5 seconds
+        setTimeout(() => {
+            observer.disconnect();
+            reject(new Error('Timeout waiting for sound picker elements'));
+        }, 5000);
+    });
+}
+
+export async function initializeSoundPicker(ws) {
     // Clean up audio context when page unloads
     window.addEventListener('unload', () => {
         cleanupAudio();
     });
 
-    const currentInstrumentEl = document.getElementById('current-instrument');
-    const soundsLoadingEl = document.getElementById('sounds-loading');
-    const soundsListEl = document.getElementById('sounds-list');
+    // Wait for DOM elements
+    console.log('Waiting for sound picker elements...');
+    const { currentInstrumentEl, soundsLoadingEl, soundsListEl } = await waitForElements();
+    console.log('Sound picker elements found');
+
     let currentPreviewSource = null;
     let isPlaying = false;
 
@@ -28,28 +67,43 @@ export function initializeSoundPicker(ws) {
     // Initialize with current instrument if exists
     async function initializeWithCurrentInstrument() {
         const currentInstrument = window.roomState.audio.currentInstrument;
-        if (currentInstrument) {
-            try {
-                // First update the UI to show the instrument
-                const iconClass = getInstrumentIcon(currentInstrument);
+        try {
+            if (!currentInstrument) {
+                console.warn('No current instrument set, waiting for instrument assignment...');
+                // Show loading state
                 currentInstrumentEl.innerHTML = `
-                    <i class="fas ${iconClass}"></i>
-                    <span>${currentInstrument.charAt(0).toUpperCase() + currentInstrument.slice(1)}</span>
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <span>Awaiting instrument...</span>
                 `;
-
-                // Show loading state while fetching sounds
-                soundsLoadingEl.style.display = 'block';
-                soundsListEl.style.display = 'none';
-
-                // Load available sounds
-                await loadAvailableSounds(currentInstrument);
-            } catch (error) {
-                console.error('Error initializing with current instrument:', error);
-                soundsLoadingEl.innerHTML = `
-                    <i class="fas fa-exclamation-circle"></i>
-                    <span>Error loading sounds. Please refresh.</span>
-                `;
+                // Watch for instrument to be set
+                window.roomState.watchAudio(({ currentInstrument }) => {
+                    if (currentInstrument) {
+                        console.log('Instrument assigned:', currentInstrument);
+                        initializeWithCurrentInstrument();
+                    }
+                });
+                return;
             }
+
+            // First update the UI to show the instrument
+            const iconClass = getInstrumentIcon(currentInstrument);
+            currentInstrumentEl.innerHTML = `
+                <i class="fas ${iconClass}"></i>
+                <span>${currentInstrument.charAt(0).toUpperCase() + currentInstrument.slice(1)}</span>
+            `;
+
+            // Show loading state while fetching sounds
+            soundsLoadingEl.style.display = 'block';
+            soundsListEl.style.display = 'none';
+
+            // Load available sounds
+            await loadAvailableSounds(currentInstrument);
+        } catch (error) {
+            console.error('Error initializing with current instrument:', error);
+            soundsLoadingEl.innerHTML = `
+                <i class="fas fa-exclamation-circle"></i>
+                <span>Error loading sounds. Please refresh.</span>
+            `;
         }
     }
 
@@ -290,32 +344,16 @@ export function initializeSoundPicker(ws) {
         // Create a new track with the selected sound
         const trackId = Date.now(); // Simple unique ID
         
-        // Calculate position based on current playhead time
-        let position;
-        
-        // Calculate 3s boundary position (yellow line)
-        const maxPosition = (TIMELINE_CONFIG.loopPoint / TIMELINE_CONFIG.totalDuration) * 
-                          TIMELINE_CONFIG.totalWidth - 100; // Subtract track width
-        
-        // Get position based on playhead or default position
-        let rawPosition;
-        if (window.roomState.playback && window.roomState.playback.currentTime > 0) {
-            rawPosition = (window.roomState.playback.currentTime / TIMELINE_CONFIG.totalDuration) * 
-                         TIMELINE_CONFIG.totalWidth;
-        } else {
-            rawPosition = calculateTrackPosition(window.roomState.tracks);
-        }
-        
-        // Ensure position is within bounds
-        position = Math.min(Math.max(0, rawPosition), maxPosition);
-        console.log('Adding sound at position:', position, '(max allowed:', maxPosition, ')');
+        // All new tracks start at position 0
+        const position = 0;
+        console.log('Adding sound at position 0');
         
         const newTrack = {
             id: trackId,
             name: sound.name,
             instrument: window.roomState.audio.currentInstrument,
             soundName: sound.name,
-            position: position,
+            position: 0, // Force position to 0
             color: getRandomColor(),
             ownerId: window.roomState.userId
         };

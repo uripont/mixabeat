@@ -68,24 +68,5 @@
 
     <!-- Script imports will go here -->
     <script type="module" src="layout.js"></script>
-    <script type="module">
-        // Load sound picker component
-        fetch('sound-picker/sound-picker.html')
-            .then(response => response.text())
-            .then(html => {
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                const template = doc.querySelector('#sound-picker-template');
-                
-                if (template) {
-                    const soundPickerContainer = document.getElementById('soundPickerContainer');
-                    soundPickerContainer.appendChild(template.content.cloneNode(true));
-                } else {
-                    throw new Error('Sound picker template not found');
-                }
-            })
-            .catch(error => console.error('Error loading sound picker:', error));
-
-    </script>
 </body>
 </html>

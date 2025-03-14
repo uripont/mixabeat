@@ -67,10 +67,15 @@ function appendSystemMessage(message) {
 }
 
 function updateUsersList(users) {
-    if (!users || !Array.isArray(users)) return;
+    if (!users || !Array.isArray(users)) {
+        console.warn('Invalid users array received:', users);
+        return;
+    }
+    console.log('Updating connected users list:', users);
     connectedUsers.innerHTML = users
         .map(user => `<li>${user.username}</li>`)
         .join('');
+    console.log('Users list updated, total users:', users.length);
 }
 
 // Message sending
@@ -130,7 +135,7 @@ function setupEventListeners() {
                 appendMessage(
                     data.message, 
                     data.username, 
-                    data.userId === window.roomState.userId
+                    String(data.user_id) === localStorage.getItem('userId')
                 );
                 break;
         }
@@ -164,7 +169,11 @@ async function initialize() {
         }
         console.log('initialize: UI elements initialized');
 
-        // Watch connected users list
+        // First update with current users
+        console.log('Initializing with current users:', window.roomState.users);
+        updateUsersList(window.roomState.users);
+
+        // Then watch for future updates
         const cleanupUsers = window.roomState.watchUsers(users => {
             console.log('Users updated:', users);
             updateUsersList(users);
@@ -189,7 +198,7 @@ async function initialize() {
                     appendMessage(
                         msg.message_text, 
                         msg.username, 
-                        parseInt(msg.userId) === parseInt(window.roomState.userId),
+                        String(msg.user_id) === localStorage.getItem('userId'),
                         false,
                         true // Mark as history message
                     );

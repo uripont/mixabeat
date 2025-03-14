@@ -1,4 +1,5 @@
 import { config } from '../config.js';
+import { TIMELINE_CONFIG } from './canvas/timeline.js';
 
 // Fetch all audio files for a room
 async function fetchRoomAudio(roomId) {
@@ -150,15 +151,14 @@ export async function initializeWebSocket(token, roomId) {
                             clearTimeout(joinRoomTimeout);
                             hasJoinedRoom = true;
                             console.log('Room joined successfully:', data);
-                            // Filter uniqueness in the state update
-                            const uniqueUsers = [];
-                            const userIds = new Set();
-                            (data.connectedUsers || []).forEach(user => {
-                                if (user.userId && !userIds.has(user.userId)) {
-                                    userIds.add(user.userId);
-                                    uniqueUsers.push(user);
-                                }
-                            });
+                            // Initialize user list with connected users
+                            console.log('Connected users from server:', data.connectedUsers);
+                            const uniqueUsers = Array.from(new Map(
+                                (data.connectedUsers || [])
+                                    .filter(user => user && user.userId)
+                                    .map(user => [user.userId, user])
+                            ).values());
+                            console.log('Initializing users list:', uniqueUsers);
                             window.roomState.updateUsers(uniqueUsers);
                             
                             // Extract existing track info if present, or receive assigned instrument
@@ -214,11 +214,21 @@ export async function initializeWebSocket(token, roomId) {
                                 window.roomState.setCurrentInstrument(data.assignedInstrument);
                             }
                             
-                            // If user has an existing track, use that instrument instead
+                            // Determine instrument in priority order:
+                            // 1. User's existing track's instrument
+                            // 2. Server assigned instrument
+                            // 3. Random default instrument
                             const userTrack = tracks.find(track => track.ownerId === window.roomState.userId);
+                            
                             if (userTrack) {
-                                console.log('User has existing track, using instrument:', userTrack.instrument);
+                                console.log('Using existing track instrument:', userTrack.instrument);
                                 window.roomState.setCurrentInstrument(userTrack.instrument);
+                            } else if (data.assignedInstrument) {
+                                console.log('Using server assigned instrument:', data.assignedInstrument);
+                                window.roomState.setCurrentInstrument(data.assignedInstrument);
+                            } else {
+                                console.log('No instrument assigned, using random default');
+                                window.roomState.setCurrentInstrument(); // Will choose random
                             }
                             // Update room info
                             window.roomState.updateRoomInfo({
@@ -226,8 +236,19 @@ export async function initializeWebSocket(token, roomId) {
                                 roomName: data.roomName
                             });
                             
-                            // Resolve the WebSocket connection after room is fully joined
-                            resolve(ws);
+                            // Ensure all required state is set before resolving
+                            if (window.roomState.users && 
+                                window.roomState.roomId && 
+                                window.roomState.audio.currentInstrument) {
+                                console.log('Room state fully initialized:', {
+                                    users: window.roomState.users,
+                                    roomId: window.roomState.roomId,
+                                    instrument: window.roomState.audio.currentInstrument
+                                });
+                                resolve(ws);
+                            } else {
+                                reject(new Error('Room state not properly initialized'));
+                            }
                             break;
 
                         case 'instrument_assigned':
@@ -242,13 +263,12 @@ export async function initializeWebSocket(token, roomId) {
                             break;
 
                         case 'user_joined':
-                            window.roomState.updateUsers([
-                                ...window.roomState.users,
-                                {
-                                    userId: data.userId,
-                                    username: data.username
-                                }
-                            ]);
+                            // Update user list with deduplication
+                            const updatedUsers = Array.from(new Map([
+                                ...window.roomState.users.map(u => [u.userId, u]),
+                                [data.userId, { userId: data.userId, username: data.username }]
+                            ]).values());
+                            window.roomState.updateUsers(updatedUsers);
                             break;
 
                         case 'user_left':
@@ -264,16 +284,16 @@ export async function initializeWebSocket(token, roomId) {
                         case 'track_added':
                             console.log('Track added message received:', data.track);
                             if (data.track) {
-                                // Ensure position is included
+                                // Always start new tracks at position 0
                                 const trackWithPosition = {
                                     ...data.track,
-                                    position: data.track.position ?? 0
+                                    position: 0 // Force position to 0
                                 };
                                 window.roomState.addTrack(trackWithPosition);
                                 
                                 // Also apply position update immediately
                                 window.roomState.updateTracks(data.track.id, {
-                                    position: trackWithPosition.position
+                                    position: 0
                                 });
                             }
                             break;
@@ -289,10 +309,14 @@ export async function initializeWebSocket(token, roomId) {
 
                                         console.log('Processing track update for:', data.soundUrl, 'with position:', data.trackData.position);
 
-                                        // Create or update track with all data including position
+                                        // Calculate valid position within 8-second boundary
+                                        const maxPosition = (TIMELINE_CONFIG.loopPoint / TIMELINE_CONFIG.totalDuration) * TIMELINE_CONFIG.totalWidth;
+                                        const validPosition = Math.min(Math.max(0, data.trackData.position || 0), maxPosition - 100);
+
+                                        // Create or update track with all data including validated position
                                         const fullTrackData = {
                                             ...data.trackData,
-                                            position: data.trackData.position || 0,
+                                            position: validPosition,
                                             audioFile: data.trackData.audioFile,
                                             instrument: data.trackData.instrument
                                         };
@@ -421,8 +445,12 @@ export async function initializeWebSocket(token, roomId) {
                             // Only handle track movement if it's not our own track
                             const track = window.roomState.tracks.find(t => t.id === data.trackId);
                             if (track && track.ownerId !== window.roomState.userId) {
+                                // Enforce 8-second boundary (yellow line)
+                                const maxPosition = (TIMELINE_CONFIG.loopPoint / TIMELINE_CONFIG.totalDuration) * TIMELINE_CONFIG.totalWidth;
+                                const validPosition = Math.min(Math.max(0, data.position), maxPosition - 100); // Subtract track width
+                                
                                 window.roomState.updateTracks(data.trackId, {
-                                    position: data.position
+                                    position: validPosition
                                 });
                             }
                             break;

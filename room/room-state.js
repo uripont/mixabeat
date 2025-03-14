@@ -35,10 +35,15 @@ export function initializeRoomState() {
 
         // Update methods for each domain
         updateUsers(changes) {
+            console.log('Updating users state:', {
+                currentUsers: this.users,
+                newUsers: changes
+            });
             this.users = [...changes]; // Replace array
             window.dispatchEvent(new CustomEvent('state:users', {
                 detail: this.users
             }));
+            console.log('Users state updated, current users:', this.users);
         },
 
         updateTracks(trackId, changes) {

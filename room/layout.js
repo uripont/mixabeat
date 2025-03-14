@@ -30,12 +30,8 @@ function initializePlaybackControls() {
 
     // Playback control handlers
     if (playButton) {
-        playButton.addEventListener('click', () => {
-            const currentState = window.roomState.playback;
-            window.roomState.updatePlayback({
-                isPlaying: !currentState.isPlaying
-            });
-        });
+        // Play button now handled in canvas.js to avoid state conflicts
+        playButton.removeEventListener('click', () => {});
     }
 
     if (stopButton) {
@@ -83,86 +79,86 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Initialize shared state with user info and room info
         console.log('Initializing room state...');
         const state = initializeRoomState();
-        state.userId = parseInt(localStorage.getItem('userId')); // Keep userId in state to check track ownership
-        state.roomId = parseInt(roomId); // Keep roomId in state for WebSocket messages
+        state.userId = parseInt(localStorage.getItem('userId'));
+        state.roomId = parseInt(roomId);
         
         // Initialize WebSocket connection
         console.log('Initializing WebSocket connection...');
         const ws = await initializeWebSocket(token, roomId);
-        
-        // Store WebSocket reference in room state
         window.roomState.ws = ws;
 
-        // Initialize sound picker
-        initializeSoundPicker(ws);
-        
-        // Initialize panel layout
-        initializePanelResizing();
-        
-        // Load chat component
-        const chatResponse = await fetch('chat/chat.html');
-        const chatHtml = await chatResponse.text();
-        
-        // Create temporary container to parse HTML
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(chatHtml, 'text/html');
-        const template = doc.querySelector('template');
-        
-        if (template) {
-            const chatPanel = document.querySelector('.right-panel .panel-content');
-            chatPanel.appendChild(template.content.cloneNode(true));
+        // Helper function to load template
+        async function loadTemplate(url, containerId, templateId = null) {
+            const response = await fetch(url);
+            const html = await response.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const template = doc.querySelector(templateId || 'template');
             
-            // Import and initialize chat module
-            const chatModule = await import('./chat/chat.js');
-            console.log('Chat module loaded');
-        } else {
-            throw new Error('Chat template not found');
+            if (!template) {
+                throw new Error(`Template not found in ${url}`);
+            }
+
+            const container = document.getElementById(containerId);
+            if (!container) {
+                throw new Error(`Container not found: ${containerId}`);
+            }
+            container.appendChild(template.content.cloneNode(true));
+            return { container, template };
         }
 
-    // Initialize room info display
-    function updateRoomInfo(roomInfo) {
-        const roomInfoEl = document.querySelector('.room-info');
-        
-        if (roomInfoEl) {
-            roomInfoEl.textContent = `Room #${roomInfo.roomId}`;
+        // Initialize panel layout first
+        initializePanelResizing();
+
+        // Wait for room state to be fully initialized
+        console.log('Waiting for room state to be ready...');
+        while (!window.roomState || !window.roomState.users) {
+            await new Promise(resolve => setTimeout(resolve, 100));
         }
-    }
+        console.log('Room state ready');
 
-    // Watch for room info changes
-    window.addEventListener('state:room', (e) => updateRoomInfo(e.detail));
+        // Initialize all panels in sequence
+        console.log('Loading sound picker...');
+        await loadTemplate('sound-picker/sound-picker.html', 'soundPickerContainer', '#sound-picker-template');
+        console.log('Initializing sound picker...');
+        await initializeSoundPicker(ws);
+        console.log('Sound picker initialized');
 
-    // Initial room info update
-    updateRoomInfo({
-        roomId: window.roomState.roomId,
-        roomName: window.roomState.roomName
-    });
+        console.log('Loading chat component...');
+        const chatPanelSelector = '.right-panel .panel-content';
+        const chatPanel = document.querySelector(chatPanelSelector);
+        if (!chatPanel) {
+            throw new Error('Chat panel container not found');
+        }
+        chatPanel.id = 'chatPanelContainer';
+        await loadTemplate('chat/chat.html', 'chatPanelContainer');
+        console.log('Initializing chat with users:', window.roomState.users);
+        const chatModule = await import('./chat/chat.js');
+        console.log('Chat module loaded');
 
-    // Initialize shared playback controls
-    const cleanupPlayback = initializePlaybackControls();
+        console.log('Loading canvas panel...');
+        await loadTemplate('canvas/canvas.html', 'canvasPanelContainer');
+        const canvasModule = await import('./canvas/canvas.js');
+        canvasModule.initializeCanvas(window.roomState, ws);
+        console.log('Canvas module loaded');
 
-        // Load canvas panel
-        fetch('canvas/canvas.html')
-            .then(response => response.text())
-            .then(async html => { // Make callback async
-                // Create temporary container to parse HTML
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                const template = doc.querySelector('template');
-                
-                if (template) {
-            const canvasPanel = document.querySelector('#canvasPanelContainer');
-            canvasPanel.appendChild(template.content.cloneNode(true));
-                    
-                    // Import and initialize canvas module
-                    const canvasModule = await import('./canvas/canvas.js');
-                    canvasModule.initializeCanvas(window.roomState, window.roomState.ws);
-                    console.log('Canvas module loaded');
-                } else {
-                    throw new Error('Canvas template not found');
-                }
-            })
-            .catch(error => console.error('Error loading canvas panel:', error));
+        // Initialize room info display
+        function updateRoomInfo(roomInfo) {
+            const roomInfoEl = document.querySelector('.room-info');
+            if (roomInfoEl) {
+                roomInfoEl.textContent = `Room #${roomInfo.roomId}`;
+            }
+        }
 
+        // Watch for room info changes and update initial state
+        window.addEventListener('state:room', (e) => updateRoomInfo(e.detail));
+        updateRoomInfo({
+            roomId: window.roomState.roomId,
+            roomName: window.roomState.roomName
+        });
+
+        // Initialize shared playback controls
+        const cleanupPlayback = initializePlaybackControls();
 
         // Initialize navigation
         const backButton = document.querySelector('.action-btn[title="Back to Rooms"]');
