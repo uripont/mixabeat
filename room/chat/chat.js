@@ -135,7 +135,7 @@ function setupEventListeners() {
                 appendMessage(
                     data.message, 
                     data.username, 
-                    data.userId === window.roomState.userId
+                    String(data.user_id) === localStorage.getItem('userId')
                 );
                 break;
         }
@@ -198,7 +198,7 @@ async function initialize() {
                     appendMessage(
                         msg.message_text, 
                         msg.username, 
-                        parseInt(msg.userId) === parseInt(window.roomState.userId),
+                        String(msg.user_id) === localStorage.getItem('userId'),
                         false,
                         true // Mark as history message
                     );
