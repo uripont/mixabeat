@@ -67,10 +67,15 @@ function appendSystemMessage(message) {
 }
 
 function updateUsersList(users) {
-    if (!users || !Array.isArray(users)) return;
+    if (!users || !Array.isArray(users)) {
+        console.warn('Invalid users array received:', users);
+        return;
+    }
+    console.log('Updating connected users list:', users);
     connectedUsers.innerHTML = users
         .map(user => `<li>${user.username}</li>`)
         .join('');
+    console.log('Users list updated, total users:', users.length);
 }
 
 // Message sending
@@ -164,7 +169,11 @@ async function initialize() {
         }
         console.log('initialize: UI elements initialized');
 
-        // Watch connected users list
+        // First update with current users
+        console.log('Initializing with current users:', window.roomState.users);
+        updateUsersList(window.roomState.users);
+
+        // Then watch for future updates
         const cleanupUsers = window.roomState.watchUsers(users => {
             console.log('Users updated:', users);
             updateUsersList(users);

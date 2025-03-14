@@ -1,6 +1,6 @@
 import { fetchAvailableSounds, fetchSoundFile, base64ToAudioBuffer, previewSound, cleanupAudio } from './sound-picker-api.js';
 import { sendMessage } from '../websocket.js';
-import { getRandomColor, calculateTrackPosition } from '../canvas/track-state.js';
+import { getRandomColor } from '../canvas/track-state.js';
 import { TIMELINE_CONFIG } from '../canvas/timeline.js';
 
 export function initializeSoundPicker(ws) {
@@ -290,32 +290,16 @@ export function initializeSoundPicker(ws) {
         // Create a new track with the selected sound
         const trackId = Date.now(); // Simple unique ID
         
-        // Calculate position based on current playhead time
-        let position;
-        
-        // Calculate 3s boundary position (yellow line)
-        const maxPosition = (TIMELINE_CONFIG.loopPoint / TIMELINE_CONFIG.totalDuration) * 
-                          TIMELINE_CONFIG.totalWidth - 100; // Subtract track width
-        
-        // Get position based on playhead or default position
-        let rawPosition;
-        if (window.roomState.playback && window.roomState.playback.currentTime > 0) {
-            rawPosition = (window.roomState.playback.currentTime / TIMELINE_CONFIG.totalDuration) * 
-                         TIMELINE_CONFIG.totalWidth;
-        } else {
-            rawPosition = calculateTrackPosition(window.roomState.tracks);
-        }
-        
-        // Ensure position is within bounds
-        position = Math.min(Math.max(0, rawPosition), maxPosition);
-        console.log('Adding sound at position:', position, '(max allowed:', maxPosition, ')');
+        // All new tracks start at position 0
+        const position = 0;
+        console.log('Adding sound at position 0');
         
         const newTrack = {
             id: trackId,
             name: sound.name,
             instrument: window.roomState.audio.currentInstrument,
             soundName: sound.name,
-            position: position,
+            position: 0, // Force position to 0
             color: getRandomColor(),
             ownerId: window.roomState.userId
         };

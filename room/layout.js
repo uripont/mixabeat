@@ -99,6 +99,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Initialize panel layout
         initializePanelResizing();
         
+        // Wait for room state to be fully initialized
+        console.log('Waiting for room state to be ready...');
+        while (!window.roomState || !window.roomState.users) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        console.log('Room state ready, loading chat component...');
+
         // Load chat component
         const chatResponse = await fetch('chat/chat.html');
         const chatHtml = await chatResponse.text();
@@ -112,7 +119,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             const chatPanel = document.querySelector('.right-panel .panel-content');
             chatPanel.appendChild(template.content.cloneNode(true));
             
-            // Import and initialize chat module
+            // Import and initialize chat module with already loaded users
+            console.log('Initializing chat with current users:', window.roomState.users);
             const chatModule = await import('./chat/chat.js');
             console.log('Chat module loaded');
         } else {
