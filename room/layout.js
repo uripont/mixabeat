@@ -30,12 +30,8 @@ function initializePlaybackControls() {
 
     // Playback control handlers
     if (playButton) {
-        playButton.addEventListener('click', () => {
-            const currentState = window.roomState.playback;
-            window.roomState.updatePlayback({
-                isPlaying: !currentState.isPlaying
-            });
-        });
+        // Play button now handled in canvas.js to avoid state conflicts
+        playButton.removeEventListener('click', () => {});
     }
 
     if (stopButton) {

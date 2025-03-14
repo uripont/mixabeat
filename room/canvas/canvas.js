@@ -65,10 +65,36 @@ export function initializeCanvas(roomState, ws) {
         muteOthersButton.dataset.active = roomState.playback.muteOthers;
         controlsContainer.appendChild(muteOthersButton);
 
-        playButton.addEventListener('click', () => {
+        playButton.addEventListener('click', async () => {
+            console.log('Play button clicked in canvas.js:', {
+                currentPlaybackState: roomState.playback,
+                audioContextState: getAudioContext().state,
+                tracksCount: roomState.tracks.length,
+                isPlaying: isPlaying,
+                hasInterval: !!playbackInterval,
+                audioMapSize: audioMap.size
+            });
+            
+            // Toggle play state
+            const newIsPlaying = !roomState.playback.isPlaying;
+            
+            // If starting playback, ensure audio context is running first
+            if (newIsPlaying) {
+                const audioContext = getAudioContext();
+                if (audioContext.state !== 'running') {
+                    console.log('Resuming audio context before play...');
+                    try {
+                        await audioContext.resume();
+                    } catch (error) {
+                        console.error('Failed to resume audio context:', error);
+                        return;
+                    }
+                }
+            }
+            
             roomState.updatePlayback({
                 ...roomState.playback,
-                isPlaying: true,
+                isPlaying: newIsPlaying,
                 currentTime: roomState.playback.currentTime,
                 isLooping: true
             });
@@ -295,9 +321,45 @@ export function initializeCanvas(roomState, ws) {
 
     // Watch for playback state changes
     roomState.watchPlayback(playback => {
+        console.log('Playback state change detected:', {
+            newPlaybackState: playback,
+            currentIsPlaying: isPlaying,
+            hasPlaybackInterval: !!playbackInterval,
+            audioContextState: getAudioContext().state,
+            loadedTracks: Array.from(audioMap.keys())
+        });
+
+        // Prevent feedback loops by checking if state actually changed
         if (playback.isPlaying !== isPlaying) {
             isPlaying = playback.isPlaying;
+            
+            // Validate audio context before attempting playback
+            const audioContext = getAudioContext();
+            if (isPlaying && audioContext.state !== 'running') {
+                console.log('Audio context not running, attempting to resume...');
+                audioContext.resume().then(() => {
+                    if (isPlaying) startPlayback();
+                });
+                return;
+            }
+
+            // Validate audio buffers before starting playback
             if (isPlaying) {
+                const readyToPlay = roomState.tracks.every(track => {
+                    const audio = audioMap.get(track.id);
+                    return audio && audio.buffer;
+                });
+
+                if (!readyToPlay) {
+                    console.log('Not all tracks are ready to play:', {
+                        totalTracks: roomState.tracks.length,
+                        loadedTracks: audioMap.size
+                    });
+                    // Don't start playback if tracks aren't ready
+                    roomState.updatePlayback({ isPlaying: false });
+                    return;
+                }
+
                 startPlayback();
             } else {
                 pausePlayback();
@@ -341,14 +403,25 @@ export function initializeCanvas(roomState, ws) {
 
     async function loadTrackAudio(track) {
         try {
+            console.log('Loading audio for track:', {
+                trackId: track.id,
+                hasAudioBuffer: !!track.audioBuffer,
+                hasAudioUrl: !!track.audioUrl
+            });
+
             roomState.updateTrackLoadingState(track.id, 'loading');
             
             if (track.audioBuffer) {
+                // Validate audio buffer
+                if (!track.audioBuffer.duration) {
+                    throw new Error('Invalid audio buffer: no duration');
+                }
+
                 const audio = {
                     buffer: track.audioBuffer,
                     scheduledSource: null,
                     isPlaying: false,
-                    trackId: track.id,  // Store trackId in the audio object
+                    trackId: track.id,
                     element: {
                         play: () => {
                             const context = getAudioContext();
@@ -437,7 +510,22 @@ export function initializeCanvas(roomState, ws) {
 
     // Playback control functions
     function startPlayback() {
-        if (!playbackInterval) {
+        // Log detailed state before starting
+        console.log('Starting playback:', {
+            currentTime: roomState.playback.currentTime,
+            audioContextState: getAudioContext().state,
+            tracksCount: roomState.tracks.length,
+            loadedAudioCount: audioMap.size,
+            loadedTracks: Array.from(audioMap.keys()),
+            trackDetails: roomState.tracks.map(t => ({
+                id: t.id,
+                hasAudio: audioMap.has(t.id),
+                position: t.position
+            }))
+        });
+
+        // Don't create new interval if one exists
+        if (!playbackInterval && getAudioContext().state === 'running') {
             const startTime = performance.now() - (roomState.playback.currentTime * 1000);
             const audioContext = getAudioContext();
             
@@ -527,6 +615,14 @@ export function initializeCanvas(roomState, ws) {
     }
 
     function pausePlayback() {
+        console.log('Pausing playback:', {
+            hasPlaybackInterval: !!playbackInterval,
+            currentTime: roomState.playback.currentTime,
+            audioContextState: getAudioContext().state,
+            isPlaying: isPlaying,
+            activeAudioCount: Array.from(audioMap.values()).filter(audio => audio.isPlaying).length
+        });
+        
         if (playbackInterval) {
             clearInterval(playbackInterval);
             playbackInterval = null;

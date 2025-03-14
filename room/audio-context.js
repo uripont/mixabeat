@@ -2,21 +2,26 @@
 let sharedAudioContext;
 let masterGainNode;
 
-// Get or create the shared audio context
-export function getAudioContext() {
-    if (!sharedAudioContext) {
-        sharedAudioContext = new (window.AudioContext || window.webkitAudioContext)();
-        masterGainNode = sharedAudioContext.createGain();
-        masterGainNode.connect(sharedAudioContext.destination);
-    }
+    // Get or create the shared audio context
+    export function getAudioContext() {
+        if (!sharedAudioContext) {
+            sharedAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+            masterGainNode = sharedAudioContext.createGain();
+            masterGainNode.connect(sharedAudioContext.destination);
+        }
 
-    // Resume context if it was suspended (browsers require user interaction)
-    if (sharedAudioContext.state === 'suspended') {
-        sharedAudioContext.resume();
-    }
+        // Resume context if it was suspended (browsers require user interaction)
+        if (sharedAudioContext.state === 'suspended') {
+            console.log('Audio context was suspended, attempting to resume...');
+            sharedAudioContext.resume().then(() => {
+                console.log('Audio context resumed successfully:', sharedAudioContext.state);
+            }).catch(error => {
+                console.error('Error resuming audio context:', error);
+            });
+        }
 
-    return sharedAudioContext;
-}
+        return sharedAudioContext;
+    }
 
 // Create an audio source for playback
 export function createAudioSource(audioBuffer, options = {}) {
