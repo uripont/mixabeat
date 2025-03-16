@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MixaBeat - Room Selection</title>
+    <link rel="stylesheet" href="search.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="screen">
+        <header>
+            <h1>Room Selection</h1>
+            <div class="user-controls">
+                <span id="username-display"></span>
+                <button id="logout-btn" class="icon-button">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Actions Bar -->
+        <div class="actions-bar">
+            <!-- Create Room Widget -->
+            <div class="create-room-widget">
+                <h3>Create New Room</h3>
+                <div class="input-group">
+                    <input type="text" id="song-name" placeholder="Enter song name">
+                    <button id="create-room-btn">Create Room</button>
+                </div>
+            </div>
+
+            <!-- Search and Join Section -->
+            <div class="join-room-widget">
+                <h3>Search Room</h3>
+                <div class="search-section">
+                    <!-- Search By Name -->
+                    <div class="input-group">
+                        <input type="text" id="search-name" placeholder="Search rooms by name">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <input type="text" id="room-id" placeholder="Or join directly by room ID">
+                    <button id="join-room-btn">Join by ID</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Room List -->
+        <div id="rooms-container">
+            <h3>Available Rooms</h3>
+            <div id="rooms-grid">
+                <!-- Rooms will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Error message container -->
+    <div id="error-message" class="error-message hidden"></div>
+
+    <script type="module" src="search.js"></script>
+</body>
+</html>
