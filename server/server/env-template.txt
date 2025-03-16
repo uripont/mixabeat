@@ -1,0 +1,10 @@
+# Database Configuration
+DB_USER=serverUser          # MySQL user for the Node.js application
+DB_PASSWORD=your_password   # Password for the serverUser
+DB_HOST=localhost          # Database host (use localhost for local development)
+DB_PORT=3306              # Default MySQL port
+DB_DATABASE=mixabeat_db    # Database name
+SOUNDS_PATH=/home/yourname/server/sounds # Path to the sounds directory
+
+# Copy this file as .env and replace the values with your actual configuration
+# The .env file should never be committed to version control
