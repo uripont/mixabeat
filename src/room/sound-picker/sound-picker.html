@@ -1,0 +1,20 @@
+<template id="sound-picker-template">
+    <div class="sound-picker">
+        <div class="sound-picker__header">
+            <i class="fas fa-music"></i>
+            <div class="sound-picker__title">
+                <h3>Sound Picker</h3>
+                <div class="sound-picker__instrument" id="current-instrument">
+                    <i class="fas fa-spinner fa-spin"></i> Awaiting instrument...
+                </div>
+            </div>
+        </div>
+        <div class="sound-picker__content">
+            <div class="sound-picker__loading" id="sounds-loading">
+                <i class="fas fa-circle-notch fa-spin"></i>
+                Loading available sounds...
+            </div>
+            <div class="sound-picker__list" id="sounds-list"></div>
+        </div>
+    </div>
+</template>
