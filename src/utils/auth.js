@@ -1,4 +1,4 @@
-import { config } from '../config.js';
+import { config } from '../utils/config.js';
 
 export async function validateSession() {
     console.log('Checking auth state...');

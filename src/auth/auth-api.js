@@ -1,4 +1,4 @@
-import { config } from '../config.js';
+import { config } from '../utils/config.js';
 
 async function login(username, password) {
     console.log('Attempting login...');

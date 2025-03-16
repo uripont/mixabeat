@@ -1,4 +1,4 @@
-import { config } from '../config.js';
+import { config } from '../utils/config.js';
 import { TIMELINE_CONFIG } from './canvas/timeline.js';
 
 // Fetch all audio files for a room
