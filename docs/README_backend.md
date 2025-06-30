@@ -191,31 +191,3 @@ Test the root endpoint from your local machine:
 ```bash
 curl -v http://20.26.232.219:3000/
 ```
-
-Note: Currently only the root endpoint ("/") is available.
-
-## Current backend TODOs
-
-For messages & chat:
-- [x] Fix room joining websockets (sometimes it doesn't properly connect to joined room)
-- [x] Get connected users on your room, to be called when joining (async via websocket)
-
-For room management:
-- [x] Endpoint to list all available rooms to join
-- [x] Endpoint to join room by its current name (note that name can change over time, it's not an ID)
-
-For song management:
-- [x] Websocket message to update your current track
-    - [x] Also makes server update the db with the updated track
-- [x] Endpoint to get current song on this room (read from db, "checkpointed")
-
-For real-time editing experience:
-- [x] Websocket message to send mouse position on the canvas over time
-- [x] Websocket messages to send track status changes (connected but not editing, editing, marked as finished)
-- [x] Real-time track movement synchronization between users
-
-For auth:
-- [x] Better auth validation on endpoint (no repeated usernames, valid emails, minimum password length)
-- [x] Endpoint to change username
-- [x] Endpoint to change password
-- [x] Endpoint to delete account
