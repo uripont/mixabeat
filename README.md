@@ -32,6 +32,7 @@ mixabeat/
 
 ## Full functionality walkthrough
 
+https://github.com/user-attachments/assets/b72b00aa-e0f4-427c-b060-be9c9a40ab33
 
 
 ## Test it yourself
