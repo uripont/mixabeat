@@ -5,7 +5,7 @@ Test on: http://20.26.232.219
 ## Target directory structure after refactors
 
 ```
-landing/          # TODO: Landing page with links to auth
+landing/          # Landing page with links to auth
 └── ...
 
 auth/            # Login and signup forms
@@ -24,32 +24,6 @@ room/            # Main music collaboration room
 ├── canvas/...        # Center panel - Main workspace
 ├── sound-picker/...  # Left panel - Sound selection
 └── sound-editor/...  # Bottom panel - Sound effects
-```
-
-## Auth and Session Management
-Every page except the landing and auth pages implements session validation:
-
-```javascript
-// utils/auth.js
-export async function requireAuth() {
-    const token = localStorage.getItem('authToken');
-    if (!token) { // Redirect to login if logged out
-        window.location.href = '/auth.html';
-        return false;
-    }
-    // Validate token with backend
-    try {
-        const response = await fetch('/api/auth/validate', {
-            headers: { 'Authorization': token }
-        });
-        if (!response.ok) throw new Error('Invalid token');
-        return true;
-    } catch (error) { // Token invalid or expired
-        localStorage.removeItem('authToken');
-        window.location.href = '/auth.html';
-        return false;
-    }
-}
 ```
 
 ## State Management
@@ -89,7 +63,7 @@ Then the different logic parts of the application only subscribe to state they n
 
 Example: when adding a track clicking a button from sound-picker, it is updating the song's object, and we want to be making the canvas be aware of this change to display the new audio in the track correctly. This is why the song object (persisted as JSON) is stored in the room state, and the canvas is watching ("subscribed") for changes in the song object. We can have a handler that will be called every time the song object changes, and will re-render the canvas with the appropiate modifications.
 
-Current overview:
+A subset overview:
 
 ```mermaid
 graph TD
