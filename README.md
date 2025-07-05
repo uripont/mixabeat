@@ -34,6 +34,11 @@ mixabeat/
 
 https://github.com/user-attachments/assets/b72b00aa-e0f4-427c-b060-be9c9a40ab33
 
+## Docs and development notes
+
+An interesting thing about this repository is that, even after merging the frontend and backend into a monorepo, we have kept all [commits](https://github.com/uripont/mixabeat/commits/main/) and [Issue history intact](https://github.com/uripont/mixabeat/issues?q=is%3Aissue%20state%3Aclosed). This means the whole set of documentation and development conversations are preserved, to see the gradual evolution of the project from scratch, across several refactors and iterations, until the final version. 
+
+Not only there are screenshots of the different iterations ([example](https://github.com/uripont/mixabeat/issues/13)), but also explanations of the design decisions and higher-level architecture diagrams ([example](https://github.com/uripont/mixabeat/issues/9)).
 
 ## Test it yourself
 
